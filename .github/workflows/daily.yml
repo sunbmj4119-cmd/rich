@@ -5,11 +5,16 @@ on:
   workflow_dispatch:
 jobs:
   run:
-              runs-on: ubuntu-latest
-              steps:
-                        - uses: actions/checkout@v4
-                        - uses: actions/setup-python@v5
-                          with:
-                            python-version: "3.11"
-                        - name: hello test
-                          run: echo "hello success"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: install
+        run: pip install gspread
+      - name: run test
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+        run: python test_sheet.py    
