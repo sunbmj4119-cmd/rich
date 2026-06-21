@@ -10,13 +10,22 @@ jobs:
         with:
           python-version: "3.11"
       - name: install
-        run: pip install pykrx pandas
-      - name: backfill
+        run: pip install pykrx pandas OpenDartReader
+      - name: backfill prices
         run: python src/backfill.py
-      - name: commit data
+      - name: commit prices
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add data/
-          git commit -m "backfill data" || echo "no changes"
+          git commit -m "backfill prices" || echo "no changes"
+          git push
+      - name: backfill financials
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: python src/dart_financials.py
+      - name: commit financials
+        run: |
+          git add data/
+          git commit -m "backfill financials" || echo "no changes"
           git push
