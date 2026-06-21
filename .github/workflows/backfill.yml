@@ -10,7 +10,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: install
-        run: pip install pykrx pandas OpenDartReader
+        run: pip install pykrx pandas OpenDartReader pyyaml
       - name: backfill prices
         run: python src/backfill.py
       - name: commit prices
@@ -19,6 +19,7 @@ jobs:
           git config user.email "actions@github.com"
           git add data/
           git commit -m "backfill prices" || echo "no changes"
+          git pull --rebase
           git push
       - name: backfill financials
         env:
@@ -28,4 +29,5 @@ jobs:
         run: |
           git add data/
           git commit -m "backfill financials" || echo "no changes"
+          git pull --rebase
           git push
