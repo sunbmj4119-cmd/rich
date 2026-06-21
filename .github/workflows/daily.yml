@@ -13,8 +13,10 @@ jobs:
           python-version: "3.11"
       - name: install
         run: pip install gspread pykrx
-      - name: collect
+      - name: backfill
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
-        run: python collect.py
+        run: python backfill.py
+        
+            
