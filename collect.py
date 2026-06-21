@@ -58,6 +58,7 @@ for code, name in stocks.items():
         foreign = inst = indiv = ""
         try:
             tv = stock.get_market_trading_value_by_date(ymd, ymd, code)
+            print(f"  [컬럼확인] {name}: {list(tv.columns)}")
             if not tv.empty:
                 row0 = tv.iloc[-1]
                 # 컬럼명이 버전 따라 다를 수 있어 안전하게 추출
