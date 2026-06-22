@@ -1,0 +1,41 @@
+name: score_backtest
+on:
+  workflow_dispatch:
+    inputs:
+      hold:
+        description: "리밸런싱 보유일 (기본 20)"
+        required: true
+        default: "20"
+      score_col:
+        description: "검증할 점수 컬럼 (종합점수/논리점수/감성점수)"
+        required: true
+        default: "종합점수"
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: install
+        run: pip install pandas numpy pyyaml scipy
+
+      - name: score (점수 생성)
+        run: python src/score.py
+
+      - name: commit scores
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/
+          git commit -m "update scores" || echo "no changes"
+          git pull --rebase
+          git push
+
+      - name: backtest (예측력 검증)
+        run: |
+          echo "## 백테스트 결과 (점수=${{ github.event.inputs.score_col }}, 보유=${{ github.event.inputs.hold }}일)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          python src/backtest.py --score "${{ github.event.inputs.score_col }}" --hold "${{ github.event.inputs.hold }}" | tee -a $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
