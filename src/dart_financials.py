@@ -7,6 +7,10 @@ DART 분기 재무 수집 (1회 백필) — EPS/BPS/주식수 포함 버전
 - data/financials.csv 로 분리 저장. 점수 계산 시 as-of join.
 - 이어받기: 이미 받은 종목 건너뜀
 - 고정 컬럼 스키마(COLS)로 저장 → resume 시 컬럼 어긋남 방지
+
+[테스트 모드] 환경변수로 범위 축소 (없으면 전체 수집):
+  TEST_LIMIT=3        → 상위 3종목만
+  TEST_START_YEAR=2024 → 2024년부터만
 """
 import os
 import time
@@ -24,6 +28,10 @@ PRICES = "data/prices.csv"
 REPRTS = {"11013": "1Q", "11012": "2Q", "11014": "3Q", "11011": "4Q"}
 AVAIL = {"1Q": "-05-15", "2Q": "-08-15", "3Q": "-11-15", "4Q": "-04-01"}
 START_YEAR = 2016
+
+# 테스트 모드 스위치 (환경변수 없으면 전체)
+TEST_LIMIT = int(os.environ.get("TEST_LIMIT", "0"))          # 종목 수 (0=전체)
+TEST_START_YEAR = int(os.environ.get("TEST_START_YEAR", str(START_YEAR)))
 
 # 고정 컬럼 스키마 (resume 안전)
 COLS = [
@@ -100,7 +108,7 @@ def get_shares(code, year, rcode):
 def collect_one(code, name):
     rows = []
     this_year = datetime.now().year
-    for year in range(START_YEAR, this_year + 1):
+    for year in range(TEST_START_YEAR, this_year + 1):
         for rcode, qlabel in REPRTS.items():
             try:
                 fs = dart.finstate(code, year, reprt_code=rcode)
@@ -154,6 +162,11 @@ def flush(buffer):
 
 def main():
     universe = get_universe()
+
+    if TEST_LIMIT > 0:
+        universe = universe[:TEST_LIMIT]
+        print(f"⚡ 테스트 모드: 상위 {TEST_LIMIT}종목, {TEST_START_YEAR}년부터")
+
     print(f"대상 종목: {len(universe)}개")
 
     done = set()
