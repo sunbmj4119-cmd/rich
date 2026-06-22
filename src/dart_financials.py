@@ -3,7 +3,7 @@ DART 분기 재무 수집 (1회 백필) — EPS/BPS/주식수 포함 버전
 - 종목 리스트는 data/prices.csv 에서 읽음 (KRX 지수 API 회피)
 - 손익/재무상태 항목 + 파생지표(부채비율/영업이익률/순이익률/ROE)
 - 추가: 주식총수(주식의 총수 보고서) → EPS = 순이익/주식수, BPS = 자본총계/주식수
-  · score.py 에서 PER = 종가/EPS, PBR = 종가/BPS 로 가치 팩터 계산
+  · 1Q·3Q 등에서 주식총수 보고서가 비면, 같은 종목의 직전 주식수를 carry-forward
 - data/financials.csv 로 분리 저장. 점수 계산 시 as-of join.
 - 이어받기: 이미 받은 종목 건너뜀
 - 고정 컬럼 스키마(COLS)로 저장 → resume 시 컬럼 어긋남 방지
@@ -27,6 +27,8 @@ PRICES = "data/prices.csv"
 
 REPRTS = {"11013": "1Q", "11012": "2Q", "11014": "3Q", "11011": "4Q"}
 AVAIL = {"1Q": "-05-15", "2Q": "-08-15", "3Q": "-11-15", "4Q": "-04-01"}
+# 분기 순서 (carry-forward 시 직전 주식수 사용)
+QORDER = ["1Q", "2Q", "3Q", "4Q"]
 START_YEAR = 2016
 
 # 테스트 모드 스위치 (환경변수 없으면 전체)
@@ -68,7 +70,7 @@ def get_universe():
 
 def get_shares(code, year, rcode):
     """주식의 총수 현황 보고서에서 보통주 발행주식총수 추출.
-    실패하면 None (그 분기 EPS/BPS는 비움 → score 에서 중립 50 처리)."""
+    실패하면 None → 호출부에서 직전 주식수를 carry-forward."""
     try:
         rpt = dart.report(code, "주식총수", year, reprt_code=rcode)
         if rpt is None or len(rpt) == 0:
@@ -108,8 +110,10 @@ def get_shares(code, year, rcode):
 def collect_one(code, name):
     rows = []
     this_year = datetime.now().year
+    last_shares = None  # 직전에 구한 주식수 (carry-forward 용)
     for year in range(TEST_START_YEAR, this_year + 1):
-        for rcode, qlabel in REPRTS.items():
+        for qlabel in QORDER:                       # 분기 순서대로 (carry-forward 정확)
+            rcode = [k for k, v in REPRTS.items() if v == qlabel][0]
             try:
                 fs = dart.finstate(code, year, reprt_code=rcode)
                 if fs is None or len(fs) == 0:
@@ -130,7 +134,13 @@ def collect_one(code, name):
                 net_margin = (net / revenue * 100) if (net and revenue) else None
                 roe = (net / equity * 100) if (net and equity) else None
 
+                # 주식수: 못 구하면 직전 주식수 사용 (1Q·3Q 빈 분기 보정)
                 shares = get_shares(code, year, rcode)
+                if shares and shares > 0:
+                    last_shares = shares
+                else:
+                    shares = last_shares
+
                 eps = (net / shares) if (net and shares) else None
                 bps = (equity / shares) if (equity and shares) else None
 
