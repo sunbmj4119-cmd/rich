@@ -1,13 +1,14 @@
-# 점수 가중치 - 이 파일만 고치면 점수 조정됨 (config/weights.yaml 에 저장)
-# 백테스트로 검증 후 학습기간에서만 튜닝할 것 (과최적화 주의)
+# 점수 가중치 - 이 파일만 고치면 점수 조정됨 (config/weights.yaml)
+# 백테스트로 검증 후 학습기간(2018~2023)에서만 튜닝할 것 (과최적화 주의)
 
 logic_weight: 0.6      # 논리 점수 비중
 emotion_weight: 0.4    # 감성 점수 비중
 
 logic:
-  momentum: 0.35       # 모멘텀 (20/60일 수익률)
-  profit: 0.30         # 수익성 (ROE, 영업이익률)
-  stability: 0.20      # 안정성 (부채비율 낮을수록)
+  momentum: 0.25       # 모멘텀 (20/60일 수익률)
+  value: 0.20          # 가치 (PER/PBR 낮을수록 高) ← 신규
+  profit: 0.25         # 수익성 (ROE, 영업이익률)
+  stability: 0.15      # 안정성 (부채비율 낮을수록)
   growth: 0.15         # 성장성 (매출 전년동기 대비)
 
 emotion:
