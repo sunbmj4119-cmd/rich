@@ -1,9 +1,12 @@
 """
-DART 분기 재무 수집 (1회 백필)
+DART 분기 재무 수집 (1회 백필) — EPS/BPS/주식수 포함 버전
 - 종목 리스트는 data/prices.csv 에서 읽음 (KRX 지수 API 회피)
-- 매출/영업이익/순이익/자산/부채/자본 + 파생지표(부채비율/영업이익률/순이익률/ROE)
+- 손익/재무상태 항목 + 파생지표(부채비율/영업이익률/순이익률/ROE)
+- 추가: 주식총수(주식의 총수 보고서) → EPS = 순이익/주식수, BPS = 자본총계/주식수
+  · score.py 에서 PER = 종가/EPS, PBR = 종가/BPS 로 가치 팩터 계산
 - data/financials.csv 로 분리 저장. 점수 계산 시 as-of join.
 - 이어받기: 이미 받은 종목 건너뜀
+- 고정 컬럼 스키마(COLS)로 저장 → resume 시 컬럼 어긋남 방지
 """
 import os
 import time
@@ -21,6 +24,15 @@ PRICES = "data/prices.csv"
 REPRTS = {"11013": "1Q", "11012": "2Q", "11014": "3Q", "11011": "4Q"}
 AVAIL = {"1Q": "-05-15", "2Q": "-08-15", "3Q": "-11-15", "4Q": "-04-01"}
 START_YEAR = 2016
+
+# 고정 컬럼 스키마 (resume 안전)
+COLS = [
+    "종목코드", "종목명", "연도", "분기", "사용가능일",
+    "매출액", "영업이익", "당기순이익",
+    "자산총계", "부채총계", "자본총계",
+    "부채비율", "영업이익률", "순이익률", "ROE",
+    "주식수", "EPS", "BPS",
+]
 
 
 def to_num(x):
@@ -44,6 +56,45 @@ def get_universe():
     df["종목코드"] = df["종목코드"].str.zfill(6)
     uni = df[["종목코드", "종목명"]].drop_duplicates()
     return list(zip(uni["종목코드"], uni["종목명"]))
+
+
+def get_shares(code, year, rcode):
+    """주식의 총수 현황 보고서에서 보통주 발행주식총수 추출.
+    실패하면 None (그 분기 EPS/BPS는 비움 → score 에서 중립 50 처리)."""
+    try:
+        rpt = dart.report(code, "주식총수", year, reprt_code=rcode)
+        if rpt is None or len(rpt) == 0:
+            return None
+        df = rpt.copy()
+        df.columns = [c.strip() for c in df.columns]
+
+        cand_col = None
+        for c in ["istc_totqy", "distb_stock_co", "now_to_isu_stock_totqy"]:
+            if c in df.columns:
+                cand_col = c
+                break
+        if cand_col is None:
+            return None
+
+        se_col = "se" if "se" in df.columns else None
+        val = None
+        if se_col:
+            for kw in ["보통주", "합계"]:
+                row = df[df[se_col].astype(str).str.contains(kw, na=False)]
+                if not row.empty:
+                    v = to_num(row.iloc[0].get(cand_col))
+                    if v and v > 0:
+                        val = v
+                        break
+        if val is None:
+            for _, r in df.iterrows():
+                v = to_num(r.get(cand_col))
+                if v and v > 0:
+                    val = v
+                    break
+        return val
+    except Exception:
+        return None
 
 
 def collect_one(code, name):
@@ -71,6 +122,10 @@ def collect_one(code, name):
                 net_margin = (net / revenue * 100) if (net and revenue) else None
                 roe = (net / equity * 100) if (net and equity) else None
 
+                shares = get_shares(code, year, rcode)
+                eps = (net / shares) if (net and shares) else None
+                bps = (equity / shares) if (equity and shares) else None
+
                 avail = f"{year+1}{AVAIL[qlabel]}" if qlabel == "4Q" else f"{year}{AVAIL[qlabel]}"
 
                 rows.append({
@@ -80,6 +135,7 @@ def collect_one(code, name):
                     "자산총계": assets, "부채총계": liab, "자본총계": equity,
                     "부채비율": debt_ratio, "영업이익률": op_margin,
                     "순이익률": net_margin, "ROE": roe,
+                    "주식수": shares, "EPS": eps, "BPS": bps,
                 })
                 time.sleep(0.3)
             except Exception as e:
@@ -91,7 +147,7 @@ def collect_one(code, name):
 def flush(buffer):
     if not buffer:
         return
-    df = pd.DataFrame(buffer)
+    df = pd.DataFrame(buffer, columns=COLS)
     header = not os.path.exists(OUT)
     df.to_csv(OUT, mode="a", header=header, index=False)
 
@@ -119,7 +175,7 @@ def main():
 
     if buffer:
         flush(buffer)
-    print("DART 재무 수집 완료")
+    print("DART 재무 수집 완료 (EPS/BPS 포함)")
 
 
 if __name__ == "__main__":
