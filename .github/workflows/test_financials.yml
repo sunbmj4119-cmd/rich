@@ -1,0 +1,51 @@
+name: test_financials
+on:
+  workflow_dispatch:
+    inputs:
+      test_limit:
+        description: "종목 수 (테스트는 3, 전체는 0)"
+        required: true
+        default: "3"
+      test_start_year:
+        description: "시작 연도 (테스트는 2024, 전체는 2016)"
+        required: true
+        default: "2024"
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: install
+        run: pip install pandas OpenDartReader pyyaml
+      - name: financials (test or full)
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          TEST_LIMIT: ${{ github.event.inputs.test_limit }}
+          TEST_START_YEAR: ${{ github.event.inputs.test_start_year }}
+        run: python src/dart_financials.py
+      - name: check EPS/BPS
+        run: |
+          python - << 'EOF'
+          import pandas as pd
+          f = pd.read_csv("data/financials.csv", dtype={"종목코드": str})
+          n = len(f)
+          eps_ok = (f["EPS"] > 0).mean() if "EPS" in f.columns else 0
+          bps_ok = (f["BPS"] > 0).mean() if "BPS" in f.columns else 0
+          print("=" * 40)
+          print(f"총 {n}행, 종목 {f['종목코드'].nunique()}개")
+          print(f"EPS 양수비율: {eps_ok:.2f}  (0.7 이상이면 성공)")
+          print(f"BPS 양수비율: {bps_ok:.2f}")
+          print("=" * 40)
+          print(f[["종목명","연도","분기","EPS","BPS","주식수"]].tail(6).to_string(index=False))
+          EOF
+      - name: commit financials
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/
+          git commit -m "test financials EPS/BPS" || echo "no changes"
+          git pull --rebase
+          git push
