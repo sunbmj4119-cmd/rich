@@ -1,8 +1,8 @@
-# 점수 가중치 - 이 파일만 고치면 점수 조정됨 (config/weights.yaml)
+ㄱ# 점수 가중치 - 이 파일만 고치면 점수 조정됨 (config/weights.yaml)
 # 백테스트로 검증 후 학습기간(2018~2023)에서만 튜닝할 것 (과최적화 주의)
 
-logic_weight: 0.6      # 논리 점수 비중
-emotion_weight: 0.4    # 감성 점수 비중
+logic_weight: 0.85
+emotion_weight: 0.15
 
 logic:
   momentum: 0.25       # 모멘텀 (20/60일 수익률)
