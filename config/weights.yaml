@@ -1,16 +1,16 @@
-# 점수 가중치 - 이 파일만 고치면 점수 조정됨 (config/weights.yaml)
-# 백테스트로 검증 후 학습기간(2018~2023)에서만 튜닝할 것 (과최적화 주의)
-
-logic_weight: 0.85
-emotion_weight: 0.15
+# 점수 가중치 v2 - 논리 6팩터, 감성 제거(0)
+# 검증 결과: 감성(거래량·변동성)은 노이즈. 논리만 사용이 최적.
+logic_weight: 1.0
+emotion_weight: 0.0
 
 logic:
-  momentum: 0.25       # 모멘텀 (20/60일 수익률)
-  value: 0.20          # 가치 (PER/PBR 낮을수록 高) ← 신규
-  profit: 0.25         # 수익성 (ROE, 영업이익률)
-  stability: 0.15      # 안정성 (부채비율 낮을수록)
-  growth: 0.15         # 성장성 (매출 전년동기 대비)
+  momentum: 0.20       # 모멘텀 (20/60일 + 12-1개월)
+  value: 0.20          # 가치 (PER/PBR 낮을수록 高)
+  profit: 0.20         # 수익성 (ROE, 영업이익률, ROE개선)
+  stability: 0.10      # 안정성 (부채비율 낮을수록)
+  growth: 0.15         # 성장성 (매출·영업이익·순이익 성장)
+  vtrend: 0.15         # 거래대금 추세 (장기 관심 증가)
 
 emotion:
-  volume: 0.5          # 거래량 급증
-  volatility: 0.5      # 변동성 (낮을수록 안정)
+  volume: 0.5
+  volatility: 0.5
