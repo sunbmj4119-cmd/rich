@@ -16,8 +16,11 @@ jobs:
         with:
           python-version: "3.11"
       - name: install
-        run: pip install pandas numpy "pykrx==1.0.51"
+        run: pip install pandas numpy "pykrx>=1.2.8"
       - name: collect
+        env:
+          KRX_ID: ${{ secrets.KRX_ID }}
+          KRX_PW: ${{ secrets.KRX_PW }}
         run: |
           if [ -n "${{ github.event.inputs.backfill_from }}" ]; then
             python src/collect_flows.py --backfill ${{ github.event.inputs.backfill_from }}
@@ -25,6 +28,9 @@ jobs:
             python src/collect_flows.py
           fi
       - name: verify
+        env:
+          KRX_ID: ${{ secrets.KRX_ID }}
+          KRX_PW: ${{ secrets.KRX_PW }}
         run: python src/collect_flows.py --check
       - name: commit
         run: |
