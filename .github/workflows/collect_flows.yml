@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: install
-        run: pip install pandas numpy pykrx
+        run: pip install pandas numpy "pykrx==1.0.51"
       - name: collect
         run: |
           if [ -n "${{ github.event.inputs.backfill_from }}" ]; then
