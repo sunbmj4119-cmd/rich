@@ -13,7 +13,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: install
-        run: pip install pandas numpy pyyaml pykrx
+        run: pip install pandas numpy pyyaml "pykrx==1.0.51"
 
       - name: 1) 주가 갱신
         run: python src/update_prices.py
