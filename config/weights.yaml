@@ -1,16 +1,13 @@
-# 점수 가중치 v2 - 논리 6팩터, 감성 제거(0)
-# 검증 결과: 감성(거래량·변동성)은 노이즈. 논리만 사용이 최적.
-logic_weight: 1.0
-emotion_weight: 0.0
-
-logic:
-  momentum: 0.20       # 모멘텀 (20/60일 + 12-1개월)
-  value: 0.20          # 가치 (PER/PBR 낮을수록 高)
-  profit: 0.20         # 수익성 (ROE, 영업이익률, ROE개선)
-  stability: 0.10      # 안정성 (부채비율 낮을수록)
-  growth: 0.15         # 성장성 (매출·영업이익·순이익 성장)
-  vtrend: 0.15         # 거래대금 추세 (장기 관심 증가)
-
 emotion:
-  volume: 0.5
   volatility: 0.5
+  volume: 0.5
+emotion_weight: 0.0
+logic:
+  flow: 0.0
+  growth: 0.15
+  momentum: 0.2
+  profit: 0.2
+  stability: 0.1
+  value: 0.2
+  vtrend: 0.15
+logic_weight: 1.0
