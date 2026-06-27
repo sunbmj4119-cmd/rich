@@ -220,6 +220,11 @@ def main():
     flows, ff = collect_flows(codes, start, end)
     if ff:
         print(f"    수급 실패 {len(ff)}종목: {ff[:5]}{'...' if len(ff)>5 else ''}")
+    if flows.empty:
+        print("    🔴 수급 0건! 원인 추정:")
+        print(f"       - 기간({start}~{end})이 너무 짧거나 영업일 없음")
+        print(f"       - 백필 안 했으면 --backfill 2018-01-01 로 재실행 권장")
+        print(f"       - 전종목 실패면 KRX 일시 접속불가 (재시도)")
     save_merge(flows, FLOWS)
 
     # 2) OHLCV + 시총
@@ -237,4 +242,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
