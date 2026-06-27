@@ -1,5 +1,4 @@
 name: collect-flows
-# 수급·OHLCV 수집 (수동 실행). 백필은 처음 1회, 이후는 daily.yml이 매일 갱신
 on:
   workflow_dispatch:
     inputs:
@@ -10,7 +9,7 @@ on:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 330   # 백필은 오래 걸림 (최대 5.5시간)
+    timeout-minutes: 330
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,7 +30,13 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add data/flows.csv data/ohlcv.csv data/marketcap.csv
-          git commit -m "collect flows $(date +%Y-%m-%d)" || echo "no changes"
-          git pull --rebase
-          git push
+          # 존재하는 파일만 add (없어도 에러 안 남)
+          git add data/flows.csv data/ohlcv.csv data/marketcap.csv 2>/dev/null || true
+          git add -A data/
+          if git diff --cached --quiet; then
+            echo "변경된 데이터 없음 (수집 0건일 수 있음 - 로그 확인)"
+          else
+            git commit -m "collect flows $(date +%Y-%m-%d)"
+            git pull --rebase
+            git push
+          fi
