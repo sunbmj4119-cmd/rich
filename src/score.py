@@ -125,6 +125,34 @@ def main():
     df["PER"] = np.where(df["EPS"] > 0, df["종가"] / df["EPS"], np.nan)
     df["PBR"] = np.where(df["BPS"] > 0, df["종가"] / df["BPS"], np.nan)
 
+    # 2-c) 외국인 수급 (검증된 신규 팩터: valid IC +0.055, 모멘텀과 독립)
+    #     외국인이 최근 20일 순매수한 종목 = 향후 강세. 시총 대비 정규화.
+    FLOWS = "data/flows.csv"
+    MCAP = "data/marketcap.csv"
+    if os.path.exists(FLOWS):
+        fldf = pd.read_csv(FLOWS, dtype={"종목코드": str})
+        fldf["종목코드"] = fldf["종목코드"].str.zfill(6)
+        fldf["날짜"] = pd.to_datetime(fldf["날짜"])
+        fldf = fldf.sort_values(["종목코드", "날짜"])
+        # 20일 누적 외국인 순매수
+        fldf["외국인20"] = fldf.groupby("종목코드")["외국인순매수"].transform(
+            lambda x: x.rolling(20, min_periods=10).sum())
+        # 시총 정규화 (있으면)
+        if os.path.exists(MCAP):
+            mcdf = pd.read_csv(MCAP, dtype={"종목코드": str})
+            mcdf["종목코드"] = mcdf["종목코드"].str.zfill(6)
+            mcdf["날짜"] = pd.to_datetime(mcdf["날짜"])
+            fldf = fldf.merge(mcdf[["날짜", "종목코드", "시가총액"]],
+                              on=["날짜", "종목코드"], how="left")
+            fldf["외국인강도"] = fldf["외국인20"] / fldf["시가총액"]
+        else:
+            fldf["외국인강도"] = fldf["외국인20"]
+        df = df.merge(fldf[["날짜", "종목코드", "외국인강도"]],
+                      on=["날짜", "종목코드"], how="left")
+    else:
+        df["외국인강도"] = np.nan
+        print("수급 데이터(flows.csv) 없음 - 외국인 팩터 건너뜀")
+
     # 3) 백분위 정규화
     g = df.groupby("날짜")
 
@@ -153,6 +181,9 @@ def main():
     # 거래대금 추세 (신규 논리 팩터)
     df["s_vtrend"] = g["vtrend"].transform(xs_rank).fillna(50)
 
+    # 외국인 수급 (검증된 신규 팩터: 외국인 매수강도 높을수록 高점수)
+    df["s_flow"] = g["외국인강도"].transform(xs_rank).fillna(50)
+
     # 감성(호환용): 당일거래량급증 + 저변동성
     df["s_vol"] = g["vol_ratio"].transform(xs_rank).fillna(50)
     df["s_volat"] = (100 - g["volatility"].transform(xs_rank)).fillna(50)
@@ -165,7 +196,8 @@ def main():
                   + df["s_profit"] * L["profit"]
                   + df["s_stab"] * L["stability"]
                   + df["s_grow"] * L["growth"]
-                  + df["s_vtrend"] * L.get("vtrend", 0.0))
+                  + df["s_vtrend"] * L.get("vtrend", 0.0)
+                  + df["s_flow"] * L.get("flow", 0.0))
     df["감성점수"] = df["s_vol"] * E["volume"] + df["s_volat"] * E["volatility"]
     df["종합점수"] = df["논리점수"] * lw + df["감성점수"] * ew
 
@@ -174,7 +206,7 @@ def main():
     cols = ["날짜", "종목코드", "종목명", "종가",
             "논리점수", "감성점수", "종합점수",
             "s_mom", "s_value", "s_profit", "s_stab", "s_grow", "s_vtrend",
-            "s_vol", "s_volat"]
+            "s_flow", "s_vol", "s_volat"]
     out = out[cols]
     out["날짜"] = out["날짜"].dt.strftime("%Y-%m-%d")
     for c in cols[4:]:
