@@ -1,18 +1,9 @@
 name: daily-run
 on:
   schedule:
-    # 매일 오후 6시 KST = UTC 09:00, 평일(월~금)
+    # 매일 오후 6시 KST (UTC 09:00), 평일
     - cron: "0 9 * * 1-5"
   workflow_dispatch:
-    inputs:
-      top_n:
-        description: "보유 종목 수"
-        required: false
-        default: "20"
-      hold_days:
-        description: "보유 기간(거래일)"
-        required: false
-        default: "40"
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -30,19 +21,14 @@ jobs:
       - name: 2) 점수 계산
         run: python src/score.py
 
-      - name: 3) 매매 신호 생성
-        env:
-          TOP_N: ${{ github.event.inputs.top_n || '20' }}
-          HOLD_DAYS: ${{ github.event.inputs.hold_days || '40' }}
+      - name: 3) 매매 신호 (실제 거래내역 기반)
         run: |
           echo "## 🔔 매매 신호" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           python src/signal.py | tee -a $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
-      - name: 4) HTML 리포트 생성
-        env:
-          TOP_N: ${{ github.event.inputs.top_n || '20' }}
+      - name: 4) HTML 리포트
         run: python src/report.py
 
       - name: 5) 커밋
@@ -50,6 +36,6 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add data/ docs/
-          git commit -m "daily: prices + scores + signals $(date +%Y-%m-%d)" || echo "no changes"
+          git commit -m "daily $(date +%Y-%m-%d)" || echo "no changes"
           git pull --rebase
           git push
