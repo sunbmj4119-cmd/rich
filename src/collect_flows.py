@@ -63,7 +63,8 @@ def collect_flows(codes, start, end, existing=None):
     e = end.replace("-", "")
     for i, code in enumerate(codes):
         try:
-            df = stock.get_market_trading_value_by_date(s, e, code, detail=True)
+            # detail=False: 외국인합계/기관합계/개인 깔끔하게 (True면 기관이 세부항목으로 쪼개져 기관합계 사라짐)
+            df = stock.get_market_trading_value_by_date(s, e, code, detail=False)
             if df is None or df.empty:
                 fails.append(code)
                 continue
@@ -108,8 +109,8 @@ def collect_ohlcv_cap(codes, dates):
     for i, d in enumerate(dates):
         ds = d.strftime("%Y%m%d") if hasattr(d, "strftime") else str(d).replace("-", "")
         try:
-            o = stock.get_market_ohlcv_by_ticker(ds, market="KOSPI")
-            c = stock.get_market_cap_by_ticker(ds, market="KOSPI")
+            o = stock.get_market_ohlcv_by_ticker(ds, market="ALL")
+            c = stock.get_market_cap_by_ticker(ds, market="ALL")
             if o is None or o.empty:
                 fails.append(ds)
                 continue
@@ -242,5 +243,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
