@@ -18,6 +18,9 @@ jobs:
       - name: 1) 주가 갱신
         run: python src/update_prices.py
 
+      - name: 1-2) 수급·OHLCV 갱신 (최근 7일)
+        run: python src/collect_flows.py || echo "수급 수집 실패(무시하고 계속)"
+
       - name: 2) 점수 계산
         run: python src/score.py
 
