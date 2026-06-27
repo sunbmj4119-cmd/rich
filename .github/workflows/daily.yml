@@ -13,12 +13,15 @@ jobs:
         with:
           python-version: "3.11"
       - name: install
-        run: pip install pandas numpy pyyaml "pykrx==1.0.51"
+        run: pip install pandas numpy pyyaml "pykrx>=1.2.8"
 
       - name: 1) 주가 갱신
         run: python src/update_prices.py
 
       - name: 1-2) 수급·OHLCV 갱신 (최근 7일)
+        env:
+          KRX_ID: ${{ secrets.KRX_ID }}
+          KRX_PW: ${{ secrets.KRX_PW }}
         run: python src/collect_flows.py || echo "수급 수집 실패(무시하고 계속)"
 
       - name: 2) 점수 계산
