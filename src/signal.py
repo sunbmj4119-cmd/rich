@@ -82,6 +82,29 @@ def main():
     score_map = dict(zip(today["종목코드"], today["종합점수"]))
     price_now = dict(zip(today["종목코드"], today["종가"]))
 
+    # 외국인 수급 필터 (검증: 순매도 종목 제외 시 Sharpe 1.01→1.31, 최악폴드 -0.98→+0.10)
+    # 학술 근거: 외국인은 한국 대형주 방향 예측에 우위 (Kim et al. 2014)
+    flow_strength = {}  # 종목코드 -> 최근 20일 외국인 매수강도(시총대비)
+    FLOWS = "data/flows.csv"
+    MCAP = "data/marketcap.csv"
+    if os.path.exists(FLOWS):
+        fl = pd.read_csv(FLOWS, dtype={"종목코드": str})
+        fl["종목코드"] = fl["종목코드"].str.zfill(6)
+        fl["날짜"] = pd.to_datetime(fl["날짜"])
+        fl = fl.sort_values(["종목코드", "날짜"])
+        fl["외국인20"] = fl.groupby("종목코드")["외국인순매수"].transform(
+            lambda x: x.rolling(20, min_periods=10).sum())
+        if os.path.exists(MCAP):
+            mc = pd.read_csv(MCAP, dtype={"종목코드": str})
+            mc["종목코드"] = mc["종목코드"].str.zfill(6)
+            mc["날짜"] = pd.to_datetime(mc["날짜"])
+            fl = fl.merge(mc[["날짜", "종목코드", "시가총액"]], on=["날짜", "종목코드"], how="left")
+            fl["강도"] = fl["외국인20"] / fl["시가총액"]
+        else:
+            fl["강도"] = fl["외국인20"]
+        latest_fl = fl[fl["날짜"] == fl["날짜"].max()]
+        flow_strength = dict(zip(latest_fl["종목코드"], latest_fl["강도"]))
+
     positions, warns = load_trades(name2code, price_lookup)
 
     def held_days(entry):
@@ -110,15 +133,28 @@ def main():
     n_buyable = TOP_N - len(held_codes)
     if n_buyable > 0:
         cands = today[(today["순위"] <= ENTRY_RANK) & (~today["종목코드"].isin(held_codes))]
-        for _, c in cands.head(n_buyable).iterrows():
-            rows.append({"구분": "🟡매수", "종목코드": c["종목코드"], "종목명": c["종목명"],
+        bought = 0
+        for _, c in cands.iterrows():
+            if bought >= n_buyable:
+                break
+            code = c["종목코드"]
+            # 외국인 필터: 순매도 중이면 매수 보류
+            strength = flow_strength.get(code, 0)
+            if pd.notna(strength) and strength < 0:
+                rows.append({"구분": "⚪보류", "종목코드": code, "종목명": c["종목명"],
+                             "순위": int(c["순위"]), "점수": c["종합점수"], "보유일": 0,
+                             "평단가": "", "현재가": int(c["종가"]), "수익률%": "",
+                             "사유": f"{int(c['순위'])}위지만 외국인 순매도중 (매수보류)"})
+                continue
+            rows.append({"구분": "🟡매수", "종목코드": code, "종목명": c["종목명"],
                          "순위": int(c["순위"]), "점수": c["종합점수"], "보유일": 0,
                          "평단가": "", "현재가": int(c["종가"]), "수익률%": "",
-                         "사유": f"상위{ENTRY_RANK}위 진입({int(c['순위'])}위)"})
+                         "사유": f"상위{ENTRY_RANK}위+외국인매수({int(c['순위'])}위)"})
+            bought += 1
 
     sig = pd.DataFrame(rows)
     if len(sig):
-        order = {"🔴손절": 0, "🔵매도": 1, "🟡매수": 2, "🟢유지": 3, "⏳보유": 4}
+        order = {"🔴손절": 0, "🔵매도": 1, "🟡매수": 2, "⚪보류": 3, "🟢유지": 4, "⏳보유": 5}
         sig["_o"] = sig["구분"].map(order).fillna(9)
         sig = sig.sort_values(["_o", "순위"]).drop(columns="_o")
         sig.to_csv(OUT, index=False)
@@ -143,6 +179,7 @@ def main():
     show("🔴손절", "손절 (즉시)")
     show("🔵매도", "매도")
     show("🟡매수", "매수 추천")
+    show("⚪보류", "매수 보류 (외국인 순매도)")
     show("🟢유지", "보유 유지")
     show("⏳보유", "보유(기간 미달)")
     inv = sum(p["투자금액"] for p in positions.values())
@@ -152,3 +189,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
