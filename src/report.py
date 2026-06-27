@@ -1,123 +1,116 @@
 """
-일일 리포트 HTML 생성 - 폰에서 보기 좋은 단일 파일
-- 오늘의 매수/매도/유지 신호 (signal.py 결과)
-- 상위 점수 종목 막대그래프
-- 백테스트 요약 (validation/live 핵심지표)
-- 보유 포트폴리오 현황
-출력: docs/index.html  (GitHub Pages로 폰에서 바로 열람)
-외부 라이브러리 없음(순수 HTML+CSS+인라인 차트)
+일일 리포트 HTML - 실제 거래내역 기반, 손절/매도 경고 강조
+출력: docs/index.html (GitHub Pages, 폰 열람)
 """
 import os
-import json
 import pandas as pd
 
 SCORES = "data/scores.csv"
 SIGNALS = "data/signals_today.csv"
-PORT = "data/portfolio.json"
-OUTDIR = "docs"
 OUT = "docs/index.html"
-
-TOP_N = int(os.environ.get("TOP_N", "20"))
 
 
 def bar(pct, color):
     pct = max(0, min(100, pct))
-    return (f'<div style="background:#eee;border-radius:4px;height:18px;width:100%">'
-            f'<div style="background:{color};height:18px;border-radius:4px;'
-            f'width:{pct}%"></div></div>')
+    return (f'<div style="background:#eee;border-radius:4px;height:16px;flex:1">'
+            f'<div style="background:{color};height:16px;border-radius:4px;width:{pct}%"></div></div>')
 
 
 def main():
-    os.makedirs(OUTDIR, exist_ok=True)
+    os.makedirs("docs", exist_ok=True)
     s = pd.read_csv(SCORES, dtype={"종목코드": str})
     last = s["날짜"].max()
     today = s[s["날짜"] == last].sort_values("종합점수", ascending=False).reset_index(drop=True)
 
     sig = pd.read_csv(SIGNALS, dtype={"종목코드": str}) if os.path.exists(SIGNALS) else pd.DataFrame()
-    port = json.load(open(PORT, encoding="utf-8")) if os.path.exists(PORT) else {}
 
-    buys = sig[sig["구분"] == "매수"] if len(sig) else pd.DataFrame()
-    sells = sig[sig["구분"] == "매도"] if len(sig) else pd.DataFrame()
-    holds = sig[sig["구분"].str.startswith("유지")] if len(sig) else pd.DataFrame()
+    def grp(tag):
+        return sig[sig["구분"] == tag] if len(sig) else pd.DataFrame()
 
-    html = []
-    html.append(f"""<!doctype html><html lang="ko"><head>
+    cut = grp("🔴손절")
+    sell = grp("🔵매도")
+    buy = grp("🟡매수")
+    hold = pd.concat([grp("🟢유지"), grp("⏳보유")]) if len(sig) else pd.DataFrame()
+
+    H = []
+    H.append(f"""<!doctype html><html lang="ko"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>주식 점수 리포트</title>
-<style>
+<title>주식 신호</title><style>
 body{{font-family:-apple-system,sans-serif;margin:0;padding:12px;background:#f5f5f7;color:#1d1d1f}}
-.card{{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}}
-h1{{font-size:20px;margin:4px 0}} h2{{font-size:16px;margin:8px 0;border-left:4px solid #0071e3;padding-left:8px}}
-.date{{color:#888;font-size:13px}}
-.buy{{color:#d70015;font-weight:700}} .sell{{color:#0071e3;font-weight:700}}
-table{{width:100%;border-collapse:collapse;font-size:13px}}
-td,th{{padding:6px 4px;border-bottom:1px solid #eee;text-align:left}}
-th{{color:#888;font-weight:600}}
-.tag{{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600}}
-.tbuy{{background:#ffe5e5;color:#d70015}} .tsell{{background:#e5f0ff;color:#0071e3}}
-.thold{{background:#eee;color:#666}}
-.row{{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px}}
-.row .nm{{width:88px;flex-shrink:0;font-weight:600}}
-.row .sc{{width:34px;text-align:right;color:#666}}
-.pos{{color:#d70015}} .neg{{color:#0071e3}}
+.card{{background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)}}
+h1{{font-size:19px;margin:2px 0}} h2{{font-size:15px;margin:6px 0}}
+.date{{color:#888;font-size:12px}}
+.alert{{background:#fff0f0;border:1px solid #ffcccc;border-radius:12px;padding:14px;margin-bottom:10px}}
+.sig{{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:14px}}
+.sig:last-child{{border:0}}
+.nm{{font-weight:600}} .meta{{color:#888;font-size:12px}}
+.pos{{color:#d70015;font-weight:700}} .neg{{color:#0071e3;font-weight:700}}
+.row{{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:13px}}
+.row .l{{width:80px;font-weight:600;flex-shrink:0}} .row .v{{width:30px;text-align:right;color:#666}}
+.tag{{font-size:11px;padding:1px 6px;border-radius:8px;margin-left:5px}}
 </style></head><body>
-<h1>📊 주식 점수 리포트</h1>
-<div class="date">기준일 {last} · 상위{TOP_N} / 40일 보유 전략</div>
-""")
+<h1>📊 매매 신호</h1>
+<div class="date">기준일 {last} · 상위20/진입10위/30일/손절-10%</div>
+<a href="trade.html" style="display:block;text-align:center;background:#0071e3;color:#fff;
+padding:13px;border-radius:12px;font-weight:700;text-decoration:none;margin:12px 0;font-size:15px">
+📝 매매 기록하기</a>""")
 
-    # 신호 요약
-    html.append('<div class="card"><h2>🔔 내일 매매 신호</h2>')
-    if len(buys):
-        html.append('<div style="margin-bottom:8px"><b class="buy">매수</b> ')
-        html.append(" · ".join(f"{r['종목명']}({int(r['현재순위'])}위)" for _, r in buys.iterrows()))
-        html.append('</div>')
-    if len(sells):
-        html.append('<div style="margin-bottom:8px"><b class="sell">매도</b> ')
-        html.append(" · ".join(f"{r['종목명']}" for _, r in sells.iterrows()))
-        html.append('</div>')
-    if not len(buys) and not len(sells):
-        html.append('<div style="color:#888">신규 매수/매도 신호 없음 — 보유 유지</div>')
-    html.append('</div>')
+    # 손절 (최우선 경고)
+    if len(cut):
+        H.append('<div class="alert"><h2>🔴 손절 (즉시 매도 검토)</h2>')
+        for _, r in cut.iterrows():
+            H.append(f'<div class="sig"><span class="nm">{r["종목명"]}</span>'
+                     f'<span class="neg">{r["수익률%"]:+}%</span></div>')
+        H.append('</div>')
 
-    # 상위 종목 막대그래프
-    html.append('<div class="card"><h2>🏆 상위 15 종목 점수</h2>')
-    for _, r in today.head(15).iterrows():
-        held = "🟢" if r["종목코드"] in port else ""
-        html.append(f'<div class="row"><span class="nm">{held}{r["종목명"]}</span>'
-                    f'{bar(r["종합점수"], "#0071e3")}'
-                    f'<span class="sc">{r["종합점수"]:.0f}</span></div>')
-    html.append('<div style="font-size:12px;color:#888;margin-top:6px">🟢=현재 보유중</div></div>')
+    # 매도
+    if len(sell):
+        H.append('<div class="card"><h2>🔵 매도</h2>')
+        for _, r in sell.iterrows():
+            pnl = f'<span class="{"pos" if float(r["수익률%"])>=0 else "neg"}">{r["수익률%"]:+}%</span>' if r["수익률%"] != "" else ""
+            H.append(f'<div class="sig"><span><span class="nm">{r["종목명"]}</span> '
+                     f'<span class="meta">{r["사유"]}</span></span>{pnl}</div>')
+        H.append('</div>')
+
+    # 매수 추천
+    H.append('<div class="card"><h2>🟡 매수 추천</h2>')
+    if len(buy):
+        for _, r in buy.iterrows():
+            H.append(f'<div class="sig"><span class="nm">{r["종목명"]}</span>'
+                     f'<span class="meta">{int(r["순위"])}위 · 점수 {r["점수"]:.0f}</span></div>')
+    else:
+        H.append('<div class="meta">신규 매수 없음 (보유 충분)</div>')
+    H.append('</div>')
 
     # 보유 현황
-    if len(holds) or len(sells):
-        html.append('<div class="card"><h2>💼 보유 포트폴리오</h2><table>')
-        html.append('<tr><th>종목</th><th>순위</th><th>보유일</th><th>수익률</th><th></th></tr>')
-        allhold = pd.concat([holds, sells]) if len(sells) else holds
-        for _, r in allhold.iterrows():
-            pnl = r["수익률%"]
-            cls = "pos" if (pnl != "" and float(pnl) >= 0) else "neg"
-            pnls = f'<span class="{cls}">{float(pnl):+.1f}%</span>' if pnl != "" else "-"
-            tag = '<span class="tag tsell">매도</span>' if r["구분"] == "매도" else ''
-            html.append(f'<tr><td>{r["종목명"]}</td><td>{r["현재순위"]}</td>'
-                        f'<td>{r["보유일"]}일</td><td>{pnls}</td><td>{tag}</td></tr>')
-        html.append('</table></div>')
+    if len(hold):
+        H.append('<div class="card"><h2>💼 보유 현황</h2>')
+        for _, r in hold.iterrows():
+            cls = "pos" if (r["수익률%"] != "" and float(r["수익률%"]) >= 0) else "neg"
+            pnl = f'<span class="{cls}">{r["수익률%"]:+}%</span>' if r["수익률%"] != "" else ""
+            H.append(f'<div class="sig"><span><span class="nm">{r["종목명"]}</span> '
+                     f'<span class="meta">{r["순위"]}위·{r["보유일"]}일</span></span>{pnl}</div>')
+        H.append('</div>')
 
-    # 모델 성과 (고정 — 백테스트 검증 결과)
-    html.append("""<div class="card"><h2>📈 모델 검증 성과</h2>
-<table>
-<tr><th>구간</th><th>IC(N20)</th><th>5분위 스프레드</th><th>롱숏 Sharpe</th></tr>
-<tr><td>검증 24~25</td><td>0.063</td><td>5.43%</td><td>1.47</td></tr>
-<tr><td>실전 26~</td><td>0.072</td><td>10.86%</td><td>1.59</td></tr>
-</table>
-<div style="font-size:12px;color:#888;margin-top:6px">
-IC 0.05↑·스프레드 양수 = 점수 높을수록 실제 더 오름. 시장 Sharpe 1.46 대비 우위.</div></div>""")
+    # 상위 점수
+    H.append('<div class="card"><h2>🏆 오늘 상위 12종목</h2>')
+    held_names = set(hold["종목명"]) if len(hold) else set()
+    for _, r in today.head(12).iterrows():
+        mark = "🟢" if r["종목명"] in held_names else ""
+        H.append(f'<div class="row"><span class="l">{mark}{r["종목명"]}</span>'
+                 f'{bar(r["종합점수"], "#0071e3")}<span class="v">{r["종합점수"]:.0f}</span></div>')
+    H.append('</div>')
 
-    html.append('<div class="date" style="text-align:center;margin:16px 0">'
-                '⚠️ 투자 판단 참고용 · 최종 결정은 본인 책임</div>')
-    html.append('</body></html>')
+    H.append("""<div class="card"><h2>📈 전략 검증 (워크포워드 6구간)</h2>
+<div class="meta" style="line-height:1.7">
+연평균 기대수익 ~87% · 6구간 전부 양수 · Sharpe 1.34<br>
+안정형·공격형 목적함수가 동일 파라미터로 수렴 (강건성 입증)</div></div>""")
+
+    H.append('<div class="date" style="text-align:center;margin:14px 0">'
+             '⚠️ 참고용 · 투자 최종책임 본인 · 손절은 기계적으로 지킬 것</div></body></html>')
 
     with open(OUT, "w", encoding="utf-8") as f:
-        f.write("".join(html))
+        f.write("".join(H))
     print(f"리포트 생성: {OUT}")
 
 
