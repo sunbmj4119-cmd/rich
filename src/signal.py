@@ -1,158 +1,154 @@
 """
-매매 신호 생성 - 매일 장마감 후 실행
-백테스트로 검증된 규칙을 실전 신호로 변환:
-  · 상위 N종목(기본 20)을 목표 보유 종목으로
-  · 보유기간 HOLD일(기본 40) 경과 후 재평가
-  · 매수신호: 목표에 새로 진입한 종목 (지금 안 갖고 있는데 상위권 진입)
-  · 매도신호: 보유 중인데 상위권에서 이탈 + 보유 HOLD일 경과
-  · 유지: 보유 중이고 아직 상위권 or 보유기간 미달
-
-상태파일 data/portfolio.json 으로 보유현황을 다음날까지 기억.
-출력:
-  · data/signals_today.csv (오늘 신호 표)
-  · data/portfolio.json (갱신된 보유현황)
-  · 콘솔/Summary 출력
-환경변수:
-  TOP_N (기본 20), HOLD_DAYS (기본 40)
+매매 신호 생성 v2 - 실제 거래내역(my_trades.csv) 기반
+확정 전략: 상위20종목/진입10위/이탈20위/최소30일/손절-10% (워크포워드 검증)
+입력: data/my_trades.csv  (날짜,종목명,구분,금액) — 종목명만 적으면 코드/가격 자동
 """
 import os
-import json
-from datetime import datetime
 import pandas as pd
+import numpy as np
 
 SCORES = "data/scores.csv"
-PORT = "data/portfolio.json"
+PRICES = "data/prices.csv"
+TRADES = "data/my_trades.csv"
 OUT = "data/signals_today.csv"
 
-TOP_N = int(os.environ.get("TOP_N", "20"))
-HOLD_DAYS = int(os.environ.get("HOLD_DAYS", "40"))
+TOP_N = 20
+ENTRY_RANK = 10
+EXIT_RANK = 20
+MIN_HOLD = 30
+STOP_LOSS = -0.10
 
 
-def load_portfolio():
-    if os.path.exists(PORT):
-        with open(PORT, encoding="utf-8") as f:
-            return json.load(f)
-    return {}  # {종목코드: {"종목명":.., "진입일":.., "진입점수":.., "진입가":..}}
-
-
-def save_portfolio(p):
-    with open(PORT, "w", encoding="utf-8") as f:
-        json.dump(p, f, ensure_ascii=False, indent=2)
-
-
-def biz_days_between(d1, d2, trading_dates):
-    """두 날짜 사이 거래일 수 (보유기간 계산)"""
-    td = [d for d in trading_dates if d1 <= d <= d2]
-    return max(len(td) - 1, 0)
+def load_trades(name2code, price_lookup):
+    if not os.path.exists(TRADES):
+        return {}, []
+    t = pd.read_csv(TRADES, dtype=str)
+    t.columns = [c.strip() for c in t.columns]
+    t["날짜"] = pd.to_datetime(t["날짜"], errors="coerce")
+    t = t.dropna(subset=["날짜"]).sort_values("날짜")
+    positions = {}
+    warnings = []
+    for _, r in t.iterrows():
+        name = str(r["종목명"]).strip()
+        action = str(r["구분"]).strip()
+        d = r["날짜"]
+        code = name2code.get(name)
+        if code is None:
+            warnings.append(f"종목명 '{name}' 매칭 실패 (오타 확인)")
+            continue
+        price = price_lookup(code, d)
+        if price is None:
+            warnings.append(f"{name} {d.date()} 가격 없음")
+            continue
+        if action == "매수":
+            amt = r.get("금액")
+            amt = float(amt) if (pd.notna(amt) and str(amt).strip()) else None
+            if code in positions:
+                old = positions[code]
+                old_sh = old["투자금액"] / old["평단가"] if old["평단가"] else 0
+                new_sh = old_sh + (amt or 0) / price
+                new_amt = old["투자금액"] + (amt or 0)
+                positions[code] = {"종목명": name, "진입일": old["진입일"],
+                                   "평단가": new_amt / new_sh if new_sh else price,
+                                   "투자금액": new_amt}
+            else:
+                positions[code] = {"종목명": name, "진입일": d,
+                                   "평단가": price, "투자금액": amt or 0}
+        elif action == "매도":
+            positions.pop(code, None)
+    return positions, warnings
 
 
 def main():
     s = pd.read_csv(SCORES, dtype={"종목코드": str})
     s["종목코드"] = s["종목코드"].str.zfill(6)
+    s["날짜"] = pd.to_datetime(s["날짜"])
     last = s["날짜"].max()
     trading_dates = sorted(s["날짜"].unique())
 
-    today = s[s["날짜"] == last].copy().sort_values("종합점수", ascending=False)
-    today = today.reset_index(drop=True)
+    px = pd.read_csv(PRICES, dtype={"종목코드": str})
+    px["종목코드"] = px["종목코드"].str.zfill(6)
+    px["날짜"] = pd.to_datetime(px["날짜"])
+    name2code = dict(zip(px["종목명"], px["종목코드"]))
+    px_sorted = px.sort_values("날짜")
+
+    def price_lookup(code, d):
+        sub = px_sorted[(px_sorted["종목코드"] == code) & (px_sorted["날짜"] <= d)]
+        return int(sub.iloc[-1]["종가"]) if len(sub) else None
+
+    today = s[s["날짜"] == last].sort_values("종합점수", ascending=False).reset_index(drop=True)
     today["순위"] = today.index + 1
-    top_codes = set(today.head(TOP_N)["종목코드"])
-
-    port = load_portfolio()
-    score_map = dict(zip(today["종목코드"], today["종합점수"]))
-    name_map = dict(zip(today["종목코드"], today["종목명"]))
-    price_map = dict(zip(today["종목코드"], today["종가"]))
     rank_map = dict(zip(today["종목코드"], today["순위"]))
+    score_map = dict(zip(today["종목코드"], today["종합점수"]))
+    price_now = dict(zip(today["종목코드"], today["종가"]))
 
-    signals = []  # 출력용
+    positions, warns = load_trades(name2code, price_lookup)
 
-    # 1) 매도/유지 판정 (현재 보유종목 순회)
-    still_hold = {}
-    for code, info in port.items():
-        cur_score = score_map.get(code)
-        cur_rank = rank_map.get(code)
-        cur_price = price_map.get(code)
-        held = biz_days_between(info["진입일"], last, trading_dates)
-        in_top = code in top_codes
+    def held_days(entry):
+        return sum(1 for d in trading_dates if entry <= d <= last) - 1
 
-        pnl = None
-        if cur_price and info.get("진입가"):
-            pnl = (cur_price / info["진입가"] - 1) * 100
-
-        if not in_top and held >= HOLD_DAYS:
-            action = "매도"
-            reason = f"상위{TOP_N}위 이탈 + {held}일 보유(≥{HOLD_DAYS})"
-        elif not in_top and held < HOLD_DAYS:
-            action = "유지(관찰)"
-            reason = f"상위 이탈했으나 보유 {held}일(<{HOLD_DAYS}), 기간 미달"
-            still_hold[code] = info
+    rows = []
+    for code, pos in positions.items():
+        r = rank_map.get(code)
+        p_now = price_now.get(code) or price_lookup(code, last)
+        ret = (p_now / pos["평단가"] - 1) if pos["평단가"] else 0
+        days = held_days(pos["진입일"])
+        if ret <= STOP_LOSS:
+            action, reason = "🔴손절", f"{ret*100:.1f}% (손절선 {STOP_LOSS*100:.0f}%)"
+        elif (r is None or r > EXIT_RANK) and days >= MIN_HOLD:
+            action, reason = "🔵매도", f"{r if r else '권외'}위 이탈+{days}일"
+        elif (r is None or r > EXIT_RANK):
+            action, reason = "⏳보유", f"{r if r else '권외'}위지만 {days}일(<{MIN_HOLD})"
         else:
-            action = "유지"
-            reason = f"상위{TOP_N}위 유지(현 {cur_rank}위), 보유 {held}일"
-            still_hold[code] = info
+            action, reason = "🟢유지", f"{r}위 유지, {days}일"
+        rows.append({"구분": action, "종목코드": code, "종목명": pos["종목명"],
+                     "순위": r, "점수": score_map.get(code), "보유일": days,
+                     "평단가": int(pos["평단가"]), "현재가": int(p_now),
+                     "수익률%": round(ret*100, 1), "사유": reason})
 
-        signals.append({
-            "구분": action, "종목코드": code,
-            "종목명": name_map.get(code, info.get("종목명", "")),
-            "현재순위": cur_rank, "현재점수": cur_score,
-            "보유일": held, "수익률%": round(pnl, 1) if pnl is not None else "",
-            "사유": reason,
-        })
+    held_codes = set(positions.keys())
+    n_buyable = TOP_N - len(held_codes)
+    if n_buyable > 0:
+        cands = today[(today["순위"] <= ENTRY_RANK) & (~today["종목코드"].isin(held_codes))]
+        for _, c in cands.head(n_buyable).iterrows():
+            rows.append({"구분": "🟡매수", "종목코드": c["종목코드"], "종목명": c["종목명"],
+                         "순위": int(c["순위"]), "점수": c["종합점수"], "보유일": 0,
+                         "평단가": "", "현재가": int(c["종가"]), "수익률%": "",
+                         "사유": f"상위{ENTRY_RANK}위 진입({int(c['순위'])}위)"})
 
-    # 2) 매수 판정 (상위 N 중 아직 미보유)
-    for _, r in today.head(TOP_N).iterrows():
-        code = r["종목코드"]
-        if code in port:
-            continue  # 이미 보유 → 위에서 처리됨
-        signals.append({
-            "구분": "매수", "종목코드": code, "종목명": r["종목명"],
-            "현재순위": int(r["순위"]), "현재점수": r["종합점수"],
-            "보유일": 0, "수익률%": "",
-            "사유": f"신규 상위{TOP_N}위 진입({int(r['순위'])}위)",
-        })
-        still_hold[code] = {
-            "종목명": r["종목명"], "진입일": last,
-            "진입점수": float(r["종합점수"]), "진입가": int(r["종가"]),
-        }
+    sig = pd.DataFrame(rows)
+    if len(sig):
+        order = {"🔴손절": 0, "🔵매도": 1, "🟡매수": 2, "🟢유지": 3, "⏳보유": 4}
+        sig["_o"] = sig["구분"].map(order).fillna(9)
+        sig = sig.sort_values(["_o", "순위"]).drop(columns="_o")
+        sig.to_csv(OUT, index=False)
 
-    save_portfolio(still_hold)
+    print(f"\n{'='*54}")
+    print(f"  {last.date()} 매매 신호  (상위20/진입10/30일/손절-10%)")
+    print(f"{'='*54}")
+    if warns:
+        print("\n⚠️ 입력 확인 필요:")
+        for w in warns:
+            print(f"   - {w}")
 
-    # 3) 출력
-    sig = pd.DataFrame(signals)
-    order = {"매수": 0, "매도": 1, "유지": 2, "유지(관찰)": 3}
-    sig["_o"] = sig["구분"].map(order).fillna(9)
-    sig = sig.sort_values(["_o", "현재순위"]).drop(columns="_o")
-    sig.to_csv(OUT, index=False)
+    def show(tag, label):
+        sub = sig[sig["구분"] == tag] if len(sig) else pd.DataFrame()
+        print(f"\n■ {label} ({len(sub)})")
+        if not len(sub):
+            print("   없음"); return
+        for _, r in sub.iterrows():
+            pnl = f" ({r['수익률%']:+}%)" if r["수익률%"] != "" else ""
+            print(f"   {r['종목명']}  {r['순위']}위{pnl}  {r['사유']}")
 
-    buys = sig[sig["구분"] == "매수"]
-    sells = sig[sig["구분"] == "매도"]
-
-    print(f"\n{'='*50}")
-    print(f"  {last} 매매 신호  (상위{TOP_N} / {HOLD_DAYS}일 보유)")
-    print(f"{'='*50}")
-    print(f"\n■ 내일 매수 ({len(buys)}종목)")
-    if len(buys):
-        for _, r in buys.iterrows():
-            print(f"   [{r['현재순위']:>2}위] {r['종목명']}  점수 {r['현재점수']}")
-    else:
-        print("   없음")
-
-    print(f"\n■ 내일 매도 ({len(sells)}종목)")
-    if len(sells):
-        for _, r in sells.iterrows():
-            pnl = f"{r['수익률%']:+}%" if r['수익률%'] != "" else ""
-            print(f"   {r['종목명']}  ({r['사유']}) {pnl}")
-    else:
-        print("   없음")
-
-    holds = sig[sig["구분"].str.startswith("유지")]
-    print(f"\n■ 보유 유지 ({len(holds)}종목)")
-    for _, r in holds.iterrows():
-        pnl = f"{r['수익률%']:+}%" if r['수익률%'] != "" else ""
-        print(f"   {r['종목명']}  {r['현재순위']}위  보유{r['보유일']}일  {pnl}")
-
-    print(f"\n총 보유 예정: {len(still_hold)}종목\n")
+    show("🔴손절", "손절 (즉시)")
+    show("🔵매도", "매도")
+    show("🟡매수", "매수 추천")
+    show("🟢유지", "보유 유지")
+    show("⏳보유", "보유(기간 미달)")
+    inv = sum(p["투자금액"] for p in positions.values())
+    print(f"\n현재 보유: {len(positions)}종목" + (f", 투자원금 {inv:,.0f}원" if inv else ""))
+    print()
 
 
 if __name__ == "__main__":
     main()
-
