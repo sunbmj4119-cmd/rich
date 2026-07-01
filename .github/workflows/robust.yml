@@ -1,0 +1,26 @@
+name: robust-backtest
+on:
+  schedule:
+    - cron: "0 8 * * 6"   # 매주 토요일 오후5시 KST
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install pandas numpy
+      - name: 보완 백테스트 (생존편향+비용)
+        run: |
+          echo "## 🔬 보완 백테스트" >> $GITHUB_STEP_SUMMARY
+          echo '\`\`\`' >> $GITHUB_STEP_SUMMARY
+          python src/robust_backtest.py | tee -a $GITHUB_STEP_SUMMARY
+          echo '\`\`\`' >> $GITHUB_STEP_SUMMARY
+      - name: 커밋
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add docs/robust.json
+          git commit -m "robust backtest $(date +%F)" || echo "no change"
+          git pull --rebase && git push

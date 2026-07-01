@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# 로컬 테스트/임시 산출물
+trade_test.html
+scratchpad/

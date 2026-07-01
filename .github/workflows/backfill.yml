@@ -1,0 +1,33 @@
+name: backfill
+on:
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: install
+        run: pip install pykrx pandas OpenDartReader pyyaml
+      - name: backfill prices
+        run: python src/backfill.py
+      - name: commit prices
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/
+          git commit -m "backfill prices" || echo "no changes"
+          git pull --rebase
+          git push
+      - name: backfill financials
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: python src/dart_financials.py
+      - name: commit financials
+        run: |
+          git add data/
+          git commit -m "backfill financials" || echo "no changes"
+          git pull --rebase
+          git push

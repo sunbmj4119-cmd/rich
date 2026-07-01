@@ -1,0 +1,30 @@
+name: collect-universe
+on:
+  schedule:
+    # 매월 1일 01:00 UTC — 스냅샷을 쌓아 향후 point-in-time 백테스트가 가능해지도록
+    - cron: "0 1 1 * *"
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install pandas finance-datareader
+      - name: KOSPI200 구성종목 + 상장폐지 수집
+        run: python src/collect_universe.py
+      - name: 커밋 (파일이 생겼을 때만)
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          ADDED=0
+          if [ -f data/universe.csv ]; then git add data/universe.csv; ADDED=1; fi
+          if [ -f data/delisted.csv ]; then git add data/delisted.csv; ADDED=1; fi
+          if [ "$ADDED" = "1" ] && ! git diff --cached --quiet; then
+            git commit -m "universe snapshot $(date +%F)"
+            git pull --rebase && git push
+            echo "✅ 커밋 완료"
+          else
+            echo "⚠️ 수집된 파일이 없어 커밋 생략"
+          fi

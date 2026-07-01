@@ -1,0 +1,67 @@
+name: collect-flows
+on:
+  workflow_dispatch:
+    inputs:
+      shorts_from:
+        description: "공매도만 이 날짜부터 (예: 2018-01-01). 수급/OHLCV는 건너뜀"
+        required: false
+        default: ""
+      backfill_from:
+        description: "전체 백필 시작일 (예: 2018-01-01). 비우면 최근 7일만"
+        required: false
+        default: ""
+      fresh:
+        description: "기존 데이터 삭제하고 새로 받기 (재수집시 yes)"
+        required: false
+        default: "no"
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: install
+        # pykrx 1.2.8(PyPI)은 KRX 공매도 응답 변경으로 KeyError 'output'/'거래량' 발생.
+        # GitHub 최신 코드에서 공매도 잔고 함수가 수정됨 → GitHub HEAD에서 설치.
+        run: |
+          pip install pandas numpy
+          pip install "git+https://github.com/sharebook-kr/pykrx.git"
+      - name: collect
+        env:
+          KRX_ID: ${{ secrets.KRX_ID }}
+          KRX_PW: ${{ secrets.KRX_PW }}
+        run: |
+          if [ "${{ github.event.inputs.fresh }}" = "yes" ]; then
+            echo "기존 수집 데이터 삭제 (깨끗이 재수집)"
+            rm -f data/flows.csv data/shorts.csv data/ohlcv.csv data/marketcap.csv
+          fi
+          if [ -n "${{ github.event.inputs.shorts_from }}" ]; then
+            echo "공매도 전용 수집 모드"
+            python src/collect_flows.py --shorts-only ${{ github.event.inputs.shorts_from }}
+          elif [ -n "${{ github.event.inputs.backfill_from }}" ]; then
+            echo "전체 백필 모드"
+            python src/collect_flows.py --backfill ${{ github.event.inputs.backfill_from }}
+          else
+            echo "데일리 모드 (최근 7일)"
+            python src/collect_flows.py
+          fi
+      - name: verify
+        env:
+          KRX_ID: ${{ secrets.KRX_ID }}
+          KRX_PW: ${{ secrets.KRX_PW }}
+        run: python src/collect_flows.py --check
+      - name: commit
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add -A data/
+          if git diff --cached --quiet; then
+            echo "변경된 데이터 없음 (수집 0건일 수 있음 - 로그 확인)"
+          else
+            git commit -m "collect flows $(date +%Y-%m-%d)"
+            git pull --rebase
+            git push
+          fi

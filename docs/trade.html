@@ -1,0 +1,275 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="매매기록">
+<title>매매 기록 · 내 포트폴리오</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;padding:14px;background:#f2f2f7;color:#1d1d1f;-webkit-text-size-adjust:100%}
+h1{font-size:20px;margin:4px 0 12px}
+.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+label{display:block;font-size:13px;color:#666;margin:10px 0 4px;font-weight:600}
+input,select{width:100%;padding:12px;font-size:16px;border:1px solid #ddd;border-radius:10px;background:#fff}
+.row2{display:flex;gap:8px}.row2>div{flex:1}
+.seg{display:flex;gap:8px;margin-top:4px}
+.seg button{flex:1;padding:12px;font-size:15px;border:1px solid #ddd;border-radius:10px;background:#fff;font-weight:600}
+.seg button.on-buy{background:#ffecec;border-color:#d70015;color:#d70015}
+.seg button.on-sell{background:#e8f0fe;border-color:#0071e3;color:#0071e3}
+.big{width:100%;padding:15px;font-size:17px;font-weight:700;border:0;border-radius:12px;background:#0071e3;color:#fff;margin-top:16px}
+.big:active{opacity:.7}
+.rec{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #f0f0f0;font-size:14px}
+.rec:last-child{border:0}
+.del{color:#d70015;background:none;border:0;font-size:13px;padding:4px 8px}
+.tag-b{color:#d70015;font-weight:700} .tag-s{color:#0071e3;font-weight:700}
+.copy{width:100%;padding:14px;font-size:15px;font-weight:700;border:0;border-radius:12px;background:#34c759;color:#fff;margin-top:8px}
+.copy:active{opacity:.7}
+.hint{font-size:12px;color:#999;line-height:1.6;margin-top:8px}
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:12px 22px;border-radius:24px;font-size:14px;opacity:0;transition:.3s;pointer-events:none;z-index:99}
+.toast.show{opacity:1}
+.empty{color:#aaa;text-align:center;padding:20px;font-size:14px}
+.sumrow{display:flex;gap:8px;margin-bottom:10px}
+.sumrow>div{flex:1;background:#f7f7fa;border-radius:11px;padding:11px 6px;text-align:center}
+.sumrow .v{font-size:19px;font-weight:800}.sumrow .k{font-size:10px;color:#888;margin-top:2px}
+.hd{display:flex;align-items:center;padding:11px 4px;border-bottom:1px solid #f0f0f0}
+.hd:last-child{border:0}
+.hd .nm{font-weight:700;font-size:15px;flex:1}
+.hd .sub{font-size:11px;color:#999;margin-top:2px}
+.hd .rt{text-align:right;flex-shrink:0;min-width:96px}
+.pp{color:#d70015;font-weight:700}.pn{color:#0071e3;font-weight:700}
+.mini{font-size:11px;color:#888}
+a.back{display:inline-block;color:#0071e3;text-decoration:none;font-size:14px;margin-bottom:8px}
+</style></head><body>
+<a href="index.html" class="back">← 신호 대시보드</a>
+<h1>📝 매매 기록 · 내 포트폴리오</h1>
+
+<!-- 실시간 보유 현황 -->
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <b style="font-size:15px">💼 내 보유 (실시간 추정)</b>
+    <span id="asof" class="mini"></span>
+  </div>
+  <div class="sumrow">
+    <div><div class="v" id="sUpnl">-</div><div class="k">평가손익</div></div>
+    <div><div class="v" id="sVal">-</div><div class="k">평가액</div></div>
+    <div><div class="v" id="sReal">-</div><div class="k">실현손익</div></div>
+  </div>
+  <div id="holdings"></div>
+  <div class="hint">현재가는 대시보드 데이터(data.json)에서 가져옵니다. 정확한 평단을 보려면 매수 시 <b>수량과 금액을 함께</b> 입력하세요. 공식 수치는 대시보드 <b>💼 내 계좌</b> 카드가 기준입니다.</div>
+</div>
+
+<!-- 매매 입력 -->
+<div class="card">
+  <label>종목</label>
+  <select id="stock"></select>
+
+  <label>구분</label>
+  <div class="seg">
+    <button id="bBuy" class="on-buy" onclick="setType('매수')">매수</button>
+    <button id="bSell" onclick="setType('매도')">매도</button>
+  </div>
+
+  <label>날짜</label>
+  <input type="date" id="date">
+
+  <div class="row2">
+    <div>
+      <label>수량 (주)</label>
+      <input type="number" id="qty" inputmode="numeric" placeholder="예: 10">
+    </div>
+    <div>
+      <label id="amtLabel">금액 (원)</label>
+      <input type="number" id="amount" inputmode="numeric" placeholder="예: 1000000">
+    </div>
+  </div>
+  <div class="hint" id="hint">매수: 수량·금액 함께 적으면 평단이 정확합니다. 매도: 수량만 적으면 부분매도, 둘 다 비우면 전량매도.</div>
+
+  <button class="big" onclick="addRecord()">기록 추가</button>
+</div>
+
+<!-- 기록 목록 -->
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <b style="font-size:15px">기록 목록</b>
+    <span id="count" style="font-size:12px;color:#999"></span>
+  </div>
+  <div id="list"></div>
+  <button class="copy" onclick="copyCSV()">📋 GitHub용 CSV 전체 복사</button>
+  <div class="hint">복사 후 GitHub의 <b>data/my_trades.csv</b> 전체를 이걸로 교체하세요. (헤더: 날짜,종목명,구분,금액,수량)</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const FALLBACK_NAMES = ["CJ제일제당","DB손해보험","DB하이텍","DL이앤씨","GS","GS리테일","HD현대","HD현대일렉트릭","HD현대중공업","HMM","KB금융","KCC","KT","KT&G","LG","LG생활건강","LG에너지솔루션","LG이노텍","LG전자","LG화학","NAVER","NC","OCI","POSCO홀딩스","S-Oil","SK","SK바이오팜","SK스퀘어","SK이노베이션","SK텔레콤","SK하이닉스","고려아연","금양","기아","기업은행","넷마블","녹십자","두산","두산밥캣","롯데지주","롯데케미칼","리노공업","메리츠금융지주","미래에셋증권","삼성SDI","삼성물산","삼성바이오로직스","삼성생명","삼성에스디에스","삼성전기","삼성전자","삼성전자우","삼성중공업","삼성카드","삼성화재","셀트리온","솔브레인","신세계","신한지주","아모레퍼시픽","아모레퍼시픽홀딩스","알체라","에코프로머티","영원무역","오리온","우리금융지주","유한양행","이마트","종근당","카카오","카카오뱅크","케어젠","코오롱인더","코웨이","크래프톤","포스코인터내셔널","포스코퓨처엠","하나금융지주","한국금융지주","한국전력","한국타이어앤테크놀로지","한국항공우주","한미사이언스","한미약품","한전기술","한화생명","한화솔루션","한화시스템","한화에어로스페이스","한화오션","현대건설","현대로템","현대모비스","현대백화점","현대제철","현대차","현대차2우B","현대해상","호텔신라","후성"];
+let NAMES = FALLBACK_NAMES.slice();
+let PRICE = {};   // 종목명 -> 현재가
+let ASOF = "";
+let type = '매수';
+
+const won = v => Math.round(v).toLocaleString();
+const sign = v => (v>=0?'+':'')+won(v);
+const colOf = v => v>=0?'pp':'pn';   // 한국식 빨강=이익
+
+// data.json에서 현재가·종목목록 로드 (실패해도 fallback으로 동작)
+fetch('data.json').then(r=>r.json()).then(d=>{
+  if(d.items&&d.items.length){
+    NAMES = d.items.map(i=>i.name).sort((a,b)=>a.localeCompare(b,'ko'));
+    d.items.forEach(i=>PRICE[i.name]=i.price);
+    ASOF = (d.market&&d.market.date)||"";
+  }
+  fillStocks(); renderAll();
+}).catch(()=>{ fillStocks(); renderAll(); });
+
+const sel = document.getElementById('stock');
+function fillStocks(){
+  const cur = sel.value;
+  sel.innerHTML='';
+  NAMES.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
+  if(cur) sel.value=cur;
+}
+document.getElementById('date').value = new Date().toISOString().slice(0,10);
+
+function setType(t){
+  type=t;
+  document.getElementById('bBuy').className = t==='매수'?'on-buy':'';
+  document.getElementById('bSell').className = t==='매도'?'on-sell':'';
+  document.getElementById('amtLabel').textContent = t==='매수'?'금액 (원)':'금액 (부분/전량)';
+  document.getElementById('hint').textContent = t==='매수'
+    ? '매수: 수량·금액 함께 적으면 평단이 정확합니다. 하나만 적어도 됩니다.'
+    : '매도: 수량만 적으면 부분매도, 둘 다 비우면 전량매도.';
+}
+
+function load(){ return JSON.parse(localStorage.getItem('trades')||'[]'); }
+function save(r){ localStorage.setItem('trades', JSON.stringify(r)); }
+
+function addRecord(){
+  const stock=sel.value, date=document.getElementById('date').value;
+  const amount=document.getElementById('amount').value.trim();
+  const qty=document.getElementById('qty').value.trim();
+  if(!date){toast('날짜를 선택하세요');return;}
+  if(type==='매수' && !amount && !qty){toast('매수는 수량 또는 금액을 적으세요');return;}
+  const recs=load();
+  recs.push({date,stock,type,amount:amount||'',qty:qty||''});
+  recs.sort((a,b)=>a.date.localeCompare(b.date));
+  save(recs);
+  document.getElementById('amount').value=''; document.getElementById('qty').value='';
+  renderAll();
+  toast('✅ '+stock+' '+type+' 기록됨');
+}
+function delRecord(i){ const recs=load(); recs.splice(i,1); save(recs); renderAll(); }
+
+// 주식수 기반 보유 재구성.
+// 주의: trade.html은 '매수 당시 가격'을 모르므로(현재가만 있음), 금액·수량을 함께 적었을 때만
+// 평단이 정확(exact). 하나만 적으면 현재가로 추정(estimated)하고 손익%는 표시하지 않는다.
+// 공식 손익은 대시보드 '내 계좌'(signal.py 과거체결가 기반)가 기준.
+function computeHoldings(recs){
+  const pos={}; let realized=0, realizedExact=true; const warns=[];
+  recs.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(r=>{
+    const px=PRICE[r.stock];
+    const qty=parseFloat(r.qty)||0, amt=parseFloat(r.amount)||0;
+    if(r.type==='매수'){
+      let sh, cost, exact;
+      if(qty && amt){ sh=qty; cost=amt; exact=true; }              // 정확: 평단=금액/수량
+      else if(qty){ sh=qty; cost=px?qty*px:0; exact=false; }        // 수량만 → 원가는 현재가로 추정
+      else if(amt){ if(!px){warns.push(r.stock+' 매수: 현재가 없어 건너뜀'); return;} sh=amt/px; cost=amt; exact=false; }
+      else return;
+      if(!pos[r.stock]) pos[r.stock]={shares:0,cost:0,exact:true};
+      pos[r.stock].shares+=sh; pos[r.stock].cost+=cost;
+      if(!exact) pos[r.stock].exact=false;
+    } else {  // 매도
+      const p=pos[r.stock]; if(!p||p.shares<=1e-9){warns.push(r.stock+' 매도: 보유 없음 → 무시'); return;}
+      const avg=p.cost/p.shares;
+      let sell;
+      if(qty){ sell=Math.min(qty,p.shares); }
+      else if(amt){ if(!px){warns.push(r.stock+' 매도: 현재가 없어 건너뜀(전량청산 방지)'); return;} sell=Math.min(amt/px,p.shares); }
+      else { sell=p.shares; }        // 공란 = 전량
+      // 실현손익은 '체결가'가 필요하나 현재가로 근사 → 추정치. px 없으면 계산 보류.
+      if(px && p.exact){ realized += sell*(px-avg); } else { realizedExact=false; }
+      p.shares-=sell; p.cost-=sell*avg;
+      if(p.shares<=1e-6) delete pos[r.stock];
+    }
+  });
+  return {pos,realized,realizedExact,warns};
+}
+
+function renderHoldings(){
+  const {pos,realized,realizedExact,warns}=computeHoldings(load());
+  const box=document.getElementById('holdings');
+  document.getElementById('asof').textContent = ASOF? ('기준 '+ASOF) : '';
+  const names=Object.keys(pos);
+  let totVal=0, totCost=0, anyEst=false, exactVal=0, exactCost=0;
+  if(!names.length){
+    box.innerHTML='<div class="empty">보유 종목 없음</div>';
+  } else {
+    let html='';
+    names.forEach(n=>{
+      const p=pos[n], avg=p.cost/p.shares, px=PRICE[n];
+      const shTxt=p.shares.toLocaleString(undefined,{maximumFractionDigits:2})+'주';
+      if(p.exact && px){
+        const val=p.shares*px, upnl=val-p.cost, rt=p.cost?upnl/p.cost*100:0;
+        totVal+=val; totCost+=p.cost; exactVal+=val; exactCost+=p.cost;
+        html+=`<div class="hd"><div style="flex:1;min-width:0">
+          <div class="nm">${n}</div>
+          <div class="sub">${shTxt} · 평단 ${won(avg)} · 현재 ${won(px)}</div></div>
+          <div class="rt"><div class="${colOf(upnl)}">${sign(upnl)}</div>
+          <div class="mini ${colOf(rt)}">${rt>=0?'+':''}${rt.toFixed(1)}%</div></div></div>`;
+      } else {
+        // 추정 포지션: 손익%를 지어내지 않는다. 대시보드를 기준으로 안내.
+        anyEst=true;
+        const pxTxt = px? ('현재 '+won(px)) : '현재가 없음';
+        html+=`<div class="hd"><div style="flex:1;min-width:0">
+          <div class="nm">${n}</div>
+          <div class="sub">${shTxt} · 평단 ≈${won(avg)}(추정) · ${pxTxt}</div></div>
+          <div class="rt"><div class="mini" style="color:#aaa">손익 대시보드 확인</div></div></div>`;
+      }
+    });
+    if(anyEst) html+=`<div class="hint" style="margin-top:4px">‘추정’ 표시 종목은 매수 시 <b>수량·금액을 함께</b> 적으면 평단·손익이 정확해집니다. 공식 손익은 대시보드 <b>내 계좌</b> 참고.</div>`;
+    if(warns.length) html+=`<div class="hint" style="color:#c60">⚠ ${warns.join(' · ')}</div>`;
+    box.innerHTML=html;
+  }
+  const upnl=exactVal-exactCost;
+  const set=(id,v,cls)=>{const e=document.getElementById(id);e.textContent=v;e.className='v '+(cls||'');};
+  set('sUpnl', exactCost?sign(upnl):'—', exactCost?colOf(upnl):'');
+  set('sVal', exactCost?won(exactVal):'—', '');
+  set('sReal', Math.abs(realized)>=1?(sign(realized)+(realizedExact?'':'≈')):'0', Math.abs(realized)>=1?colOf(realized):'');
+}
+
+function renderList(){
+  const recs=load(), list=document.getElementById('list');
+  document.getElementById('count').textContent = recs.length+'건';
+  if(!recs.length){list.innerHTML='<div class="empty">아직 기록이 없습니다</div>';return;}
+  list.innerHTML='';
+  recs.forEach((r,i)=>{
+    const parts=[];
+    if(r.qty) parts.push(r.qty+'주');
+    if(r.amount) parts.push(Number(r.amount).toLocaleString()+'원');
+    if(!parts.length) parts.push('전량');
+    const tag = r.type==='매수'?'tag-b':'tag-s';
+    const d=document.createElement('div'); d.className='rec';
+    d.innerHTML='<span><b>'+r.stock+'</b> <span class="'+tag+'">'+r.type+'</span>'+
+      ' <span style="color:#999;font-size:12px">'+r.date+' · '+parts.join(' · ')+'</span></span>'+
+      '<button class="del" onclick="delRecord('+i+')">삭제</button>';
+    list.appendChild(d);
+  });
+}
+function renderAll(){ renderHoldings(); renderList(); }
+
+function copyCSV(){
+  const recs=load();
+  let csv='날짜,종목명,구분,금액,수량\n';
+  recs.forEach(r=>{csv+=r.date+','+r.stock+','+r.type+','+(r.amount||'')+','+(r.qty||'')+'\n';});
+  navigator.clipboard.writeText(csv).then(()=>toast('📋 복사됨! GitHub에 붙여넣으세요'))
+    .catch(()=>{
+      const ta=document.createElement('textarea');ta.value=csv;document.body.appendChild(ta);
+      ta.select();document.execCommand('copy');document.body.removeChild(ta);
+      toast('📋 복사됨! GitHub에 붙여넣으세요');
+    });
+}
+function toast(m){
+  const t=document.getElementById('toast');t.textContent=m;t.className='toast show';
+  setTimeout(()=>t.className='toast',1800);
+}
+setType('매수'); fillStocks(); renderAll();
+</script>
+</body></html>

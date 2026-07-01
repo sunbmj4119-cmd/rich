@@ -1,0 +1,26 @@
+# 점수 가중치 (v5: 신호 백테스트 기반 최종 확정)
+#
+# 확정 근거 (2018-2026 신호 백테스트, 익일체결·비용0.15%·외국인필터ON):
+#   - 룩어헤드 제거(t일 점수 → t+1일 종가 체결)한 정직한 백테스트로 재검증
+#   - v3(momentum 0.25) vs v4(value 0.35) 단일 승자 없음을 손익으로 재확인
+#   - mix_B: v3의 전체수익 + v4의 검증구간 강점을 절충한 최적 균형점
+#       · momentum은 대형주 평균회귀로 0.08만 시험 반영 (v3의 0.25는 과대)
+#       · value/profit/growth 핵심 팩터 중심, flow는 z-score로 점수에도 반영
+#   - 성과: 누적 +442% (시장 +193%), Sharpe 0.98, MDD -39%, 승률 40%
+#       · valid(24-25) +128% Sh1.84 / live(26) +42% Sh1.83 / train(18-23) +68%
+#
+# 실전 매매는 signal.py + 트레일링스탑 8% (별도 파라미터)로 운용.
+emotion:
+  volatility: 0.5
+  volume: 0.5
+emotion_weight: 0.0
+logic:
+  value: 0.32       # 핵심 (t-stat 최강) — 중심 팩터
+  profit: 0.22      # 강함 (IC 0.062)
+  flow: 0.20        # 외국인 z-score — 필터 겸 점수 반영
+  growth: 0.18      # 강함 (IC 0.058)
+  momentum: 0.08    # 대형주 평균회귀 → 소액만 (v3의 0.25에서 축소)
+  short: 0.00       # 공매도잔고비중(약세) — 데이터 백필+verify_factor 검증 후 가중 부여
+  stability: 0.00   # 제거 (조합효과 미미)
+  vtrend: 0.00      # 노이즈 → 제거
+logic_weight: 1.0
