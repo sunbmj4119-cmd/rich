@@ -76,10 +76,53 @@ h1{{font-size:22px;margin:2px 0}} h2{{font-size:17px;margin:4px 0 10px}}
 .rlab{{position:absolute;top:32px;font-size:10px;color:#666;transform:translateX(-50%);white-space:nowrap}}
 .warn{{font-size:11px;color:#8a7;background:#fffbe6;border-radius:8px;padding:9px;margin-top:8px;line-height:1.6}}
 svg{{display:block;background:#fafafa;border-radius:8px}}
+/* 판단 등급 배지 */
+.gr{{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;
+     color:#fff;font-weight:800;font-size:12px;flex-shrink:0}}
+.gA{{background:#34c759}}.gB{{background:#30a2e8}}.gC{{background:#ff9500}}.gD{{background:#c7c7cc}}
+/* 반대논리 / 상승논리 행 */
+.rk2{{display:flex;gap:9px;padding:10px 0;border-bottom:1px solid #f2f2f5;align-items:flex-start}}
+.rk2:last-child{{border:0}}
+.sev{{font-size:10px;font-weight:800;color:#fff;border-radius:6px;padding:3px 6px;flex-shrink:0;margin-top:1px}}
+.sHigh{{background:#ff3b30}}.sMed{{background:#ff9500}}.sLow{{background:#c7c7cc}}
+.rtx{{flex:1;min-width:0;font-size:13px;line-height:1.65}}
+.rev{{font-size:11px;color:#999;margin-top:3px}}
+/* 시나리오 표 — 좁은 화면(390px)에서도 잘리지 않게. 넘치면 가로 스크롤. */
+.tw{{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:6px}}
+.stab{{width:100%;border-collapse:collapse;font-size:12px}}
+.stab th{{font-size:10px;color:#999;font-weight:600;text-align:right;padding:5px 2px;border-bottom:1px solid #eee;white-space:nowrap}}
+.stab th:first-child{{text-align:left}}
+.stab td{{padding:8px 2px;text-align:right;border-bottom:1px solid #f5f5f7;white-space:nowrap}}
+.stab td:first-child{{text-align:left;font-weight:600;white-space:normal}}
+.stab tr:last-child td{{border:0}}
+.stab tr.now td{{background:#eef5ff}}
+.stab tr.now td:first-child{{border-left:3px solid #0071e3;padding-left:5px}}
+/* 확률 막대 */
+.pbar{{display:flex;height:26px;border-radius:7px;overflow:hidden;margin:8px 0 4px}}
+.pbar>div{{display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;min-width:0}}
+.ci{{position:relative;height:34px;margin:10px 4px 4px}}
+.citrack{{position:absolute;top:13px;left:0;right:0;height:8px;background:#eee;border-radius:4px}}
+.cirange{{position:absolute;top:13px;height:8px;background:#0071e3;opacity:.32;border-radius:4px}}
+.cidot{{position:absolute;top:8px;width:18px;height:18px;border-radius:50%;background:#0071e3;border:3px solid #fff;
+        box-shadow:0 0 0 1px #0071e3;transform:translateX(-50%)}}
+.cibase{{position:absolute;top:9px;width:2px;height:16px;background:#ff3b30}}
+.cilab{{position:absolute;top:26px;font-size:9.5px;color:#888;transform:translateX(-50%);white-space:nowrap}}
+/* 뉴스 */
+.nw{{display:block;padding:10px 0;border-bottom:1px solid #f2f2f5;text-decoration:none;color:inherit}}
+.nw:last-child{{border:0}}
+.nwt{{font-size:13.5px;line-height:1.5;font-weight:600}}
+.nws{{font-size:11px;color:#999;margin-top:3px}}
+.chip{{display:inline-block;border-radius:7px;padding:2px 7px;font-size:11px;font-weight:700;margin-right:4px}}
+.cpos{{background:#e8f8ec;color:#1a8b38}}.cneg{{background:#ffecec;color:#d70015}}.cneu{{background:#f0f0f3;color:#888}}
+.regbox{{display:flex;align-items:center;gap:12px;padding:4px 0 10px}}
+.regemo{{font-size:34px;line-height:1}}
 </style></head><body>
 <h1>🎯 매수적합도 분석</h1>
-<div class="date">기준일 {m['date']} · <b>BuyFit</b> = 종합점수 + 진입타이밍(평균회귀)을 합친 '지금 사기 좋은 순서'<br>종목을 터치하면 근거·그래프·승률을 봅니다</div>
-<a href="trade.html" class="btn">📝 매매 기록하기</a>
+<div class="date">기준일 {m['date']} · <b>BuyFit</b> = 종합점수 + 진입타이밍(평균회귀)을 합친 '지금 사기 좋은 순서'<br>종목을 터치하면 상승·하락 시나리오와 확률을 봅니다</div>
+<div style="display:flex;gap:8px;margin:14px 0">
+  <a href="trade.html" class="btn" style="flex:1;margin:0">📝 매매 기록</a>
+  <a href="journal.html" class="btn" style="flex:1;margin:0;background:#5856d6">📓 투자논리</a>
+</div>
 """
 
     def small_row(i,pnl=False):
@@ -109,6 +152,41 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
     if sells:
         H+='<div class="card"><h2>🔵 매도</h2>'+"".join(small_row(i,True) for i in sells)+'</div>'
 
+    # 🌡 지금 어떤 시장인가 — 국면 판정 + 국면별 이 전략의 과거 성적
+    rg=d.get("regime")
+    if rg:
+        c=rg["current"]
+        rows=""
+        for h in rg["history"]:
+            now=' class="now"' if h["name"]==c["name"] else ""
+            if "win" in h:
+                wc="#34c759" if h["win"]>=60 else ("#ff9500" if h["win"]>=52 else "#ff3b30")
+                rows+=(f'<tr{now}><td>{h["emoji"]} {h["name"]}</td>'
+                       f'<td style="color:{wc};font-weight:800">{h["win"]:.0f}%</td>'
+                       f'<td>{h["med"]:+.1f}%</td>'
+                       f'<td style="color:#999">{h["edge"]:+.1f}%p</td>'
+                       f'<td style="color:#bbb">{h["eff_n"]:.0f}</td></tr>')
+            else:
+                rows+=(f'<tr{now}><td>{h["emoji"]} {h["name"]}</td>'
+                       f'<td colspan="4" style="color:#bbb;text-align:left">표본 부족 ({h["days"]}일)</td></tr>')
+        tr=rg.get("transition",{}).get(c["name"],{})
+        trtxt=" · ".join(f'{k} {v:.0f}%' for k,v in sorted(tr.items(),key=lambda x:-x[1])) if tr else "표본 부족"
+        H+=f"""<div class="card"><h2>🌡 지금 어떤 시장인가</h2>
+<div class="regbox"><div class="regemo">{c['emoji']}</div>
+  <div style="flex:1;min-width:0">
+    <div style="font-size:19px;font-weight:800;color:{c['color']}">{c['name']}</div>
+    <div class="date" style="margin-top:2px">{c['streak']}거래일째 ({c['since']}~) · {c['desc']}</div></div></div>
+<div class="stat">
+  <div><div class="v" style="font-size:17px">{c['trend']:+.1f}%</div><div class="k">200일선 대비</div></div>
+  <div><div class="v" style="font-size:17px">{c['breadth']:.0f}%</div><div class="k">60일선 위 종목비율</div></div>
+  <div><div class="v" style="font-size:17px">{c['vol']:.0f}%</div><div class="k">연환산 변동성</div></div>
+</div>
+<div id="ridx" style="margin-top:10px"></div>
+<div class="leg" style="margin-top:10px"><b>국면별로 이 전략(상위10종목·30일보유)이 과거에 어땠나</b> <span style="color:#0071e3">파란 줄 = 지금</span></div>
+<div class="tw"><table class="stab"><tr><th>국면</th><th>승률</th><th>중앙</th><th>vs시장</th><th>표본</th></tr>{rows}</table></div>
+<div class="note" style="margin-top:8px;background:#f7f7fa">🔮 <b>{c['name']}</b>에서 30거래일 뒤 국면 (과거 실측 빈도)<br>{trtxt}</div>
+<div class="warn">국면 판정은 <b>그날 알 수 있는 정보</b>(200일선·상승종목비율·고점대비낙폭)만 씁니다. 급락장은 표본이 적어 그 줄의 통계는 특히 불확실합니다. 30일 수익을 매일 겹쳐 표집하므로 '독립표본'만 실질 관측치입니다.</div></div>"""
+
     # 💼 내 계좌 요약 + 최악의 날 리스크
     if pf:
         up=pf["upnl"]; upc=pf["upnl_pct"]
@@ -134,6 +212,27 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
             else:
                 cwarn=f'<div class="leg" style="margin-top:4px;color:#aaa">{approx}</div>'
             sec_html=f'<div style="margin-top:10px"><div class="leg" style="margin:0 0 4px">📦 업종 편중 (평가액 기준)</div>{chips}{cwarn}</div>'
+        # 🌐 시장이 이렇게 되면 내 계좌는 — 베타 기반 스트레스 테스트
+        stress_html=""
+        if pf.get("stress"):
+            srows=""
+            for st in pf["stress"]:
+                col="#d70015" if st["pnl"]>=0 else "#0071e3"
+                mcol="#ff3b30" if st["move"]<0 else ("#8e8e93" if st["move"]==0 else "#34c759")
+                pb=f'{st["prob"]:.0f}%' if st.get("prob") is not None else "-"
+                stp=f'<span style="color:#ff3b30;font-weight:700">{st["stops"]}종목</span>' if st["stops"] else '<span style="color:#c7c7cc">0</span>'
+                srows+=(f'<tr><td style="color:{mcol}">시장 {st["move"]:+d}%</td>'
+                        f'<td style="color:#999">{pb}</td>'
+                        f'<td>{st["value"]:,}</td>'
+                        f'<td style="color:{col};font-weight:700">{st["pnl"]:+,}</td>'
+                        f'<td>{stp}</td></tr>')
+            bt=f' · 내 계좌 베타 <b>{pf["beta"]}</b>' if pf.get("beta") else ""
+            stress_html=(f'<div style="margin-top:12px"><div class="leg" style="margin:0 0 2px">'
+                f'🌐 <b>시장이 이렇게 되면 내 계좌는</b>{bt}</div>'
+                f'<div class="tw"><table class="stab"><tr><th>시장</th><th>확률</th><th>평가액</th><th>손익</th><th>손절발동</th></tr>{srows}</table></div>'
+                f'<div class="leg">각 종목의 <b>베타</b>(시장 1% 움직일 때 이 종목이 몇 % 움직였나, 최근 250일)로 추정. '
+                f'내릴 때는 <b>하락베타</b>를 씁니다. 확률은 현재 국면에서 30일 뒤 그 구간이 나온 과거 빈도.<br>'
+                f'※ 베타는 과거 평균일 뿐 급락장에서는 상관이 1에 수렴해 <b>더 나쁘게</b> 나오는 경향이 있습니다.</div></div>')
         H+=f"""<div class="card"><h2>💼 내 계좌</h2>
 <div class="stat">
   <div><div class="v" style="color:{upcol}">{'+' if up>=0 else ''}{up:,}</div><div class="k">평가손익 ({'+' if upc>=0 else ''}{upc}%)</div></div>
@@ -144,7 +243,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
   <div style="background:#fff0f0"><div class="v" style="color:#ff3b30">{pf['worst']:,}</div><div class="k">모든 손절 동시발동 시(원)</div></div>
   <div style="background:#fff0f0"><div class="v" style="color:#ff3b30">{pf['worst_pct']}%</div><div class="k">최악의 날 손실률</div></div>
   <div><div class="v">{pf['n']}</div><div class="k">보유 종목</div></div>
-</div>{real_html}{sec_html}{eqdiv}
+</div>{real_html}{stress_html}{sec_html}{eqdiv}
 <div class="leg"><b>최악의 날</b> = 지금 걸어둔 감시가(손절·트레일 중 먼저 닿는 값)가 전 종목 동시 체결될 때의 추가손실. 실제 동시발동은 드물지만 <b>감내 가능한 최대 손실</b>을 미리 확인하세요.</div></div>"""
 
     # ★ 핵심: 매수적합도 추천
@@ -154,14 +253,39 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
         cls="brk" if k==0 else ("brk r2" if k==1 else ("brk r3" if k==2 else "brk rx"))
         tcol = "#34c759" if i["timing"]>=66 else ("#ff9500" if i["timing"]>=33 else "#ff3b30")
         ddtxt = f'{i["dd"]}%' if i["dd"] is not None else "-"
+        v=i["verdict"]; pr=i.get("prob")
+        # 두 번째 줄은 '왜 이 순위인가'가 아니라 '얼마나 믿을 만한가'를 보여준다
+        bits=[f'점수 {i["score"]:.0f}({i["rank"]}위)']
+        if pr: bits.append(f'승률 {pr["win"]:.0f}%<span style="color:#bbb">(기준 {pr["base_win"]:.0f})</span>')
+        if pr: bits.append(f'손절 {pr["p_stop"]:.0f}%')
+        nrisk=len(i["bear"]["risks"])
+        if nrisk: bits.append(f'<span style="color:#ff9500">반대 {nrisk}</span>')
         H+=(f'<div class="bi" onclick="openD(\'{i["code"]}\')">'
             f'<div class="{cls}">{k+1}</div>'
-            f'<div class="bmid"><div class="bn">{i["name"]}</div>'
-            f'<div class="bsub">점수 {i["score"]:.0f} (전체 {i["rank"]}위) · 60일고점대비 {ddtxt} · '
+            f'<div class="bmid"><div class="bn">{i["name"]} '
+            f'<span class="gr g{v["grade"]}" style="vertical-align:middle">{v["grade"]}</span></div>'
+            f'<div class="bsub">{" · ".join(bits)}</div>'
+            f'<div class="bsub" style="color:#aaa">60일고점대비 {ddtxt} · '
             f'<span style="color:{tcol};font-weight:700">타이밍 {i["timing"]:.0f}</span></div></div>'
             f'<div class="fit"><div class="fitv">{i["buyfit"]:.0f}</div><div class="fitk">BuyFit</div></div>'
             f'<span class="chev">›</span></div>')
-    H+='<div class="leg">BuyFit(0~100): 펀더멘털 점수 + 진입타이밍 종합. 높을수록 "지금" 매수 적합.</div></div>'
+    H+=('<div class="leg">BuyFit(0~100): 펀더멘털 점수 + 진입타이밍 종합. 높을수록 "지금" 매수 적합.<br>'
+        '<b>A~D 등급</b>은 초과승률·기대값·표본두께·반대논리·시장국면을 합친 <b>근거의 두께</b>입니다. '
+        '"오른다"는 예측이 아니라 "같은 잣대로 줄 세웠을 때 어디쯤인가"입니다.</div></div>')
+
+    # 📰 시장 뉴스
+    mnews=m.get("news") or []
+    if mnews:
+        nrows=""
+        for a in mnews[:5]:
+            cc="cpos" if a["sent"]>0 else ("cneg" if a["sent"]<0 else "cneu")
+            lbl="호재" if a["sent"]>0 else ("악재" if a["sent"]<0 else "중립")
+            nrows+=(f'<a class="nw" href="{a["link"]}" target="_blank" rel="noopener">'
+                    f'<div class="nwt"><span class="chip {cc}">{lbl}</span>{a["title"]}</div>'
+                    f'<div class="nws">{a["src"]} · {a["pub"]}</div></a>')
+        H+=(f'<div class="card"><h2>📰 시장 뉴스</h2>{nrows}'
+            f'<div class="leg">호재/악재 표시는 <b>제목의 키워드만</b> 본 자동 분류입니다. 점수에는 반영하지 않으며, '
+            f'"내 판단을 뒤집을 사건이 있나" 확인용입니다.</div></div>')
 
     if holds:
         H+='<div class="card"><h2>💼 보유 현황</h2>'+"".join(hold_row(i) for i in holds)+'</div>'
@@ -217,9 +341,37 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 const DATA="""+payload+""";
 const FCOLOR={가치:'#0071e3',수익성:'#34c759',성장:'#ff9500',수급:'#af52de',모멘텀:'#ff2d55'};
 const map={};DATA.items.forEach(i=>map[i.code]=i);
+const META=DATA.meta||{};
+// data.json은 100종목이 공유하는 설명문을 meta에 한 번만 담는다 → 여기서 되돌려 붙인다
+const catOf=t=>(META.catalysts||{})[t]||{};
+const riskTxt=r=>r.text||(META.risks||{})[r.tag]||'';
+const noteOf=k=>(META.verdict_notes||{})[k]||'';
+const factMeta=k=>(META.factors||{})[k]||{};
+function invalList(b){
+  const tpl=META.invalidation||[], iv=b.invalidation;
+  if(Array.isArray(iv))return iv;                       // meta 없이 만든 구버전 호환
+  const stop=iv&&iv.stop, bull=iv&&iv.bull_first;
+  return tpl.map(t=>{
+    if(t.indexOf('{stop}')>=0){return stop?t.replace('{stop}',(+stop).toLocaleString()):null;}
+    if(t.indexOf('{bull}')>=0){return bull?t.replace('{bull}',bull):null;}
+    return t;
+  }).filter(Boolean);
+}
+function mustList(b){
+  const out=(b.drivers||[]).map(d=>d.must||catOf(d.title).must).filter(Boolean);
+  return out.concat(b.extra_musts||[]);
+}
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 (function(){const m=DATA.market,mx=Math.max(...m.hist,1),el=document.getElementById('mhist');
  m.hist.forEach((c,k)=>{const h=Math.round(c/mx*92)+4,lab=m.hist_labels[k],col=(+lab>=65)?'#ff9500':'#0071e3';
  el.innerHTML+=`<div class="hcol"><div class="hnum">${c}</div><div class="hbar" style="height:${h}px;background:${col}"></div><div class="hlab">${lab}</div></div>`;});})();
+// 🌡 시장 지수(등가중 100종목) 최근 120거래일
+(function(){const rg=DATA.regime,el=document.getElementById('ridx');
+ if(!rg||!el||!rg.index||rg.index.length<2)return;
+ const W=Math.min(window.innerWidth-64,470);
+ el.innerHTML='<div class="date" style="margin-bottom:2px">KOSPI100 등가중 지수 (120거래일, 시작=100)</div>'+
+   lineChart(rg.index.map(p=>p.date),rg.index.map(p=>p.v),rg.current.color,W,130,
+             {refs:[{v:100,color:'#c7c7cc',label:'시작'}]});})();
 // 계좌 손익 추이 차트 (보유가 2거래일 이상 쌓이면 표시)
 (function(){const pf=DATA.portfolio;const el=document.getElementById('eqchart');
  if(!pf||!el||!pf.equity||pf.equity.length<2)return;
@@ -230,7 +382,7 @@ const map={};DATA.items.forEach(i=>map[i.code]=i);
 // 🔎 전체 종목 검색·정렬 (앱처럼 자유 탐색)
 let SORT='score';
 (function(){const sb=document.getElementById('sortBtns');if(!sb)return;
- [['score','종합점수'],['buyfit','BuyFit'],['timing','타이밍']].forEach((o,k)=>{
+ [['score','종합점수'],['buyfit','BuyFit'],['conf','판단등급'],['timing','타이밍']].forEach((o,k)=>{
   const b=document.createElement('button');b.textContent=o[1];
   b.style.cssText='flex:1;padding:8px;border:0;border-radius:9px;background:'+(k==0?'#0071e3':'#e5e5ea')+';color:'+(k==0?'#fff':'#333')+';font-weight:700;font-size:13px';
   b.onclick=()=>{SORT=o[0];sb.querySelectorAll('button').forEach(x=>{x.style.background='#e5e5ea';x.style.color='#333'});b.style.background='#0071e3';b.style.color='#fff';renderStocks();};
@@ -240,13 +392,15 @@ function renderStocks(){
  const q=(document.getElementById('q').value||'').trim();
  let arr=DATA.items.slice();
  if(q)arr=arr.filter(i=>i.name.indexOf(q)>=0||(i.sector&&i.sector.indexOf(q)>=0)||(i.industry&&i.industry.indexOf(q)>=0));
- arr.sort((a,b)=>(b[SORT]||0)-(a[SORT]||0));
+ const key=i=>SORT==='conf'?(i.verdict?i.verdict.conf:0):(i[SORT]||0);
+ arr.sort((a,b)=>key(b)-key(a));
  el.innerHTML=arr.slice(0,60).map(i=>{
    const sig=i.signal?`<span style="font-size:11px;margin-left:4px">${i.signal}</span>`:'';
    const pnl=(i.pnl!==''&&i.pnl!=null)?`<span class="${i.pnl>=0?'pp':'pn'}" style="font-size:13px;margin-right:6px">${i.pnl>=0?'+':''}${i.pnl}%</span>`:'';
    const sec=i.sector?`<div style="font-size:11px;color:#999;margin-top:1px">${i.sector}</div>`:'';
+   const g=i.verdict?`<span class="gr g${i.verdict.grade}" style="margin-right:7px">${i.verdict.grade}</span>`:'';
    return `<div class="item" onclick="openD('${i.code}')"><div class="rk">${i.rank}</div>`+
-     `<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">${i.name}${sig}</div>${sec}</div>${pnl}`+
+     `<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">${i.name}${sig}</div>${sec}</div>${pnl}${g}`+
      `<span style="font-size:12px;color:#888;margin-right:6px">BF ${(i.buyfit||0).toFixed(0)}</span>`+
      `<span class="sc">${i.score.toFixed(0)}</span><span class="chev">›</span></div>`;
  }).join('')||'<div class="empty" style="color:#aaa;text-align:center;padding:16px">검색 결과 없음</div>';
@@ -288,6 +442,29 @@ function openD(code){
    <button class="x" onclick="closeD()">✕</button></div>`;
  if(i.signal)h+=`<div class="note"><b>${i.signal}</b> · ${i.reason}</div>`;
 
+ // ⚖️ 판단 요약 — 등급 · 확신도 · 지금 할 행동
+ const v=i.verdict, pr=i.prob;
+ const MODE={buy:['#0071e3','신규 매수 관점'],hold:['#34c759','보유 관점'],
+             sell:['#ff3b30','청산 관점'],wait:['#ff9500','대기 관점']};
+ const md=MODE[v.mode]||MODE.buy;
+ let vparts='';
+ v.parts.forEach(p=>{
+   const c=p.d>=0?'#34c759':'#ff3b30';
+   vparts+=`<div class="rk2"><span class="sev" style="background:${c}">${p.d>=0?'+':''}${p.d}</span>`+
+     `<div class="rtx"><b>${p.k}</b> · ${p.v}<div class="rev">${noteOf(p.k)}</div></div></div>`;
+ });
+ h+=`<div class="card" style="border:2px solid ${md[0]}"><h2>⚖️ 판단 요약</h2>
+   <div style="display:flex;align-items:center;gap:12px;margin:6px 0 10px">
+     <div class="gr g${v.grade}" style="width:46px;height:46px;border-radius:13px;font-size:24px">${v.grade}</div>
+     <div style="flex:1;min-width:0">
+       <div style="font-size:15px;font-weight:800;color:${md[0]}">${md[1]} · ${v.action}</div>
+       <div class="date" style="margin-top:2px">확신도 ${v.conf}/100 — ${v.grade_text}</div></div></div>
+   <div class="note" style="line-height:1.8;background:#f7f7fa">${v.line}</div>
+   <details style="margin-top:6px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">확신도는 이렇게 계산됐습니다</summary>
+     <div style="margin-top:4px">${vparts}</div>
+     <div class="leg">기본 50점에서 시작해 위 항목을 더하고 뺍니다. A≥68 · B≥56 · C≥44 · D&lt;44.</div></details>
+   ${v.proven?'':'<div class="warn">⚠ 이 종목의 우위는 <b>통계적으로 입증되지 않았습니다</b>(신뢰구간 하한이 기준선 아래). 이 데이터로는 거의 모든 종목이 그렇습니다. 등급은 <b>근거의 두께 순위</b>일 뿐 "오른다"는 뜻이 아닙니다.</div>'}</div>`;
+
  // BuyFit 요약 카드
  const tcol=i.timing>=66?'#34c759':(i.timing>=33?'#ff9500':'#ff3b30');
  h+=`<div class="card"><h2>🎯 지금 매수 적합도</h2><div class="stat">
@@ -296,14 +473,133 @@ function openD(code){
    <div><div class="v">${i.dd!=null?i.dd:'-'}%</div><div class="k">60일고점대비</div></div></div>
    <div class="leg">타이밍↑ = 최근 조정으로 반등여지 큼(평균회귀). 점수가 높아도 신고가권이면 타이밍은 낮게 나옵니다.</div></div>`;
 
- // 🎓 왜 추천하나 — 근거 서술 (전문가 설득용)
- const tnote=i.timing>=66?'최근 조정으로 반등 여지가 큰 국면(평균회귀)':(i.timing>=33?'중립적 진입 구간':'신고가권 — 눌림을 기다릴 여지');
- let recTxt=`<b>${i.name}</b>는 ${i.basis||'복합 지표'}가 이끌어 종합 <b>${i.score.toFixed(0)}점</b>(100종목 중 ${i.rank}위). 진입타이밍 ${i.timing.toFixed(0)}/100 → ${tnote}.`;
- if(i.analog){const a=i.analog;recTxt+=` 과거 <b>점수·타이밍이 비슷했던 ${a.n}회</b>에서 30일 뒤 상승확률 <b>${a.win}%</b>, 중앙 <b>${a.med>=0?'+':''}${a.med}%</b>(통상 ${a.p25}~${a.p75}%).`;}
- else recTxt+=` (과거 유사표본이 적어 통계적 기대는 참고만).`;
- recTxt+=` 이는 개별 예측이 아니라 <b>규칙을 반복 적용해 분포의 평균</b>을 취하는 통계적 접근입니다.`;
- if(i.edge_weak)recTxt+=` <span style="color:#946200"><b>단, 이 국면은 승률/기대가 약해 확신은 낮습니다.</b></span>`;
- h+=`<div class="card" style="background:#f7fbff"><h2>🎓 왜 추천하나 (근거)</h2><div class="note" style="background:transparent;padding:0;line-height:1.8">${recTxt}</div></div>`;
+ // 📈 상승 시나리오
+ const bl=i.bull;
+ let drv='';
+ (bl.drivers||[]).forEach(dv=>{
+   const why=dv.why||catOf(dv.title).why||'';
+   drv+=`<div class="rk2"><span class="sev" style="background:#34c759">${Math.round(dv.val)}</span>`+
+     `<div class="rtx"><b>${dv.title}</b> <span style="color:#999">(${dv.name})</span><div class="rev">${why}</div></div></div>`;
+ });
+ const musts=mustList(bl);
+ let mustHtml='';
+ if(musts.length)mustHtml='<div class="note" style="background:#fffdf0;margin-top:8px"><b>이 논리가 성립하려면 (전제조건)</b><br>'+
+   musts.map(x=>'· '+x).join('<br>')+'</div>';
+ let tgtHtml='';
+ if(bl.target&&bl.target.price){
+   tgtHtml=`<div class="stat" style="margin-top:8px">
+     <div><div class="v" style="color:#34c759;font-size:18px">${bl.target.price.toLocaleString()}</div><div class="k">강세 목표(상위25%)</div></div>
+     <div><div class="v" style="font-size:18px">${bl.target.p_up10}%</div><div class="k">+10% 이상 확률</div></div>
+     <div><div class="v" style="font-size:18px">${bl.target.p_up20}%</div><div class="k">+20% 이상 확률</div></div></div>`;
+ }
+ h+=`<div class="card" style="background:#f5fbf6"><h2>📈 상승 시나리오</h2>
+   <div class="note" style="background:transparent;padding:0;line-height:1.8">${bl.summary}</div>
+   ${drv?'<div style="margin-top:6px">'+drv+'</div>':''}${tgtHtml}${mustHtml}
+   <div class="leg">전제조건이 깨지면 상승 논리도 같이 깨집니다. 다음 실적 발표 때 여기부터 확인하세요.</div></div>`;
+
+ // 📉 하락 시나리오 · 반대 논리
+ const be=i.bear;
+ const SEVN={high:['sHigh','치명'],med:['sMed','주의'],low:['sLow','참고']};
+ let rsk='';
+ (be.risks||[]).forEach(r=>{
+   const sv=SEVN[r.sev]||SEVN.low;
+   rsk+=`<div class="rk2"><span class="sev ${sv[0]}">${sv[1]}</span>`+
+     `<div class="rtx"><b>${r.tag}</b> — ${riskTxt(r)}<div class="rev">근거: ${esc(r.evidence)}</div></div></div>`;
+ });
+ if(!rsk)rsk='<div class="leg">자동 점검에 걸린 항목 없음.</div>';
+ const bs=be.bear_score, bcol=bs>=45?'#ff3b30':(bs>=22?'#ff9500':'#34c759');
+ let dnHtml='';
+ if(be.downside){
+   const dn=be.downside;
+   dnHtml=`<div class="stat" style="margin-top:8px">
+     <div><div class="v" style="color:#ff3b30;font-size:18px">${dn.p_stop}%</div><div class="k">-10% 손절 맞을 확률</div></div>
+     <div><div class="v" style="font-size:18px">${dn.p25_price?dn.p25_price.toLocaleString():'-'}</div><div class="k">약세 시(하위25%)</div></div>
+     <div><div class="v" style="color:#8e0000;font-size:18px">${dn.worst!=null?dn.worst+'%':'-'}</div><div class="k">과거 최악</div></div></div>`;
+ }
+ h+=`<div class="card" style="background:#fff8f8"><h2>📉 하락 시나리오 · 반대 논리</h2>
+   <div class="note" style="background:transparent;padding:0;line-height:1.8">${be.summary}</div>
+   <div class="bigbar-wrap" style="margin-top:10px"><span class="bl">반대논리</span>
+     <div class="bigbar"><div style="width:${bs}%;background:${bcol}"></div></div>
+     <span class="bv" style="color:${bcol}">${bs}</span></div>
+   <div style="margin-top:4px">${rsk}</div>${dnHtml}
+   <div class="note" style="background:#fff;margin-top:8px"><b>🚨 무효화 조건 — 여기 닿으면 논리와 무관하게 실행</b><br>
+     ${invalList(be).map(x=>'· '+x).join('<br>')}</div>
+   <div class="leg">사람은 산 종목의 좋은 점만 찾게 됩니다(확증편향). 이 목록은 <b>규칙이 자동으로 제시하는 반대 의견</b>이라 기분에 좌우되지 않습니다.</div></div>`;
+
+ // 🎲 확률 계산
+ if(pr){
+   const lo=Math.max(0,Math.min(100,pr.win_lo)), hi=Math.max(0,Math.min(100,pr.win_hi));
+   const ec=pr.edge_pp>=0?'#34c759':'#ff3b30';
+   const kc=pr.kelly_use>0?'#0071e3':'#c7c7cc';
+   h+=`<div class="card"><h2>🎲 확률 계산</h2>
+   <div class="leg" style="margin-top:0">과거 <b>점수·타이밍이 비슷했던 ${pr.n}회</b> 중 서로 겹치지 않는 <b>${pr.eff_n.toFixed(0)}회</b>가 실질 관측치입니다.</div>
+   <div class="ci">
+     <div class="citrack"></div><div class="cirange" style="left:${lo}%;width:${hi-lo}%"></div>
+     <div class="cidot" style="left:${pr.win}%"></div>
+     <div class="cibase" style="left:${pr.base_win}%"></div>
+     <div class="cilab" style="left:${lo}%">${lo}%</div>
+     <div class="cilab" style="left:${pr.win}%;color:#0071e3;font-weight:700">${pr.win}%</div>
+     <div class="cilab" style="left:${hi}%">${hi}%</div>
+   </div>
+   <div class="leg">파란 점=승률 추정치, 파란 띠=95% 신뢰구간, <span style="color:#ff3b30">빨간 선</span>=기준선 ${pr.base_win}%(아무 종목이나 아무 날 샀을 때 30일 뒤 오를 확률). <b>띠가 빨간 선을 확실히 넘어야</b> 진짜 우위입니다.</div>
+   <div class="stat" style="margin-top:8px">
+     <div><div class="v" style="color:${ec};font-size:19px">${pr.edge_pp>=0?'+':''}${pr.edge_pp}%p</div><div class="k">기준선 대비 초과승률</div></div>
+     <div><div class="v" style="font-size:19px">${pr.ev>=0?'+':''}${pr.ev}%</div><div class="k">기대수익(비용·손절 반영)</div></div>
+     <div><div class="v" style="font-size:19px">${pr.payoff||'-'}</div><div class="k">손익비(이익÷손실)</div></div>
+   </div>
+   <div class="leg" style="margin-top:6px"><b>30일 뒤 결과 분포</b></div>
+   <div class="pbar">
+     <div style="width:${pr.p_stop}%;background:#ff3b30">${pr.p_stop>=8?pr.p_stop+'%':''}</div>
+     <div style="width:${Math.max(0,pr.p_down5-pr.p_stop)}%;background:#ff9500">${(pr.p_down5-pr.p_stop)>=8?(pr.p_down5-pr.p_stop).toFixed(0)+'%':''}</div>
+     <div style="width:${Math.max(0,100-pr.p_down5-pr.p_up10)}%;background:#c7c7cc">${(100-pr.p_down5-pr.p_up10)>=8?(100-pr.p_down5-pr.p_up10).toFixed(0)+'%':''}</div>
+     <div style="width:${pr.p_up10}%;background:#34c759">${pr.p_up10>=8?pr.p_up10+'%':''}</div>
+   </div>
+   <div class="leg"><span style="color:#ff3b30">■</span> -10%↓(손절) ${pr.p_stop}% · <span style="color:#ff9500">■</span> -10~-5% · <span style="color:#8e8e93">■</span> -5~+10% · <span style="color:#34c759">■</span> +10%↑ ${pr.p_up10}%</div>
+   <div class="stat" style="margin-top:10px">
+     <div><div class="v" style="color:${kc};font-size:19px">${pr.kelly_use}%</div><div class="k">권장 계좌비중(하프켈리)</div></div>
+     <div><div class="v" style="color:#999;font-size:19px">${pr.kelly}%</div><div class="k">켈리 상한</div></div>
+     <div><div class="v" style="font-size:19px">${pr.sd}%</div><div class="k">수익 표준편차</div></div>
+   </div>
+   <div class="leg"><b>켈리 공식</b>은 "장기 자산 성장률을 최대화하는 베팅 비중"입니다. 여기선 세 겹으로 깎았습니다:
+     ① 기대수익에서 <b>추정오차 1σ</b>(${pr.se}%p) 차감 → 보수적 기대 ${pr.mu_lo}%,
+     ② 이 전략은 <b>${pr.concurrent}종목을 동시에</b> 들므로 나눔,
+     ③ 상한 20% + <b>절반만</b> 사용.
+     <b>0%면 "이 표본으로는 비중을 키울 근거가 없다"</b>는 뜻입니다.
+     아래 '손실예산으로 수량 정하기'와 함께 보고 <b>더 작은 쪽</b>을 택하세요.</div>
+   </div>`;
+ } else {
+   h+=`<div class="card"><h2>🎲 확률 계산</h2><div class="warn">과거 유사 국면이 <b>10회 미만</b>이라 확률을 계산하지 않았습니다. 숫자를 지어내는 대신 <b>"모른다"</b>로 둡니다. 이런 종목은 비중을 키우지 마세요.</div></div>`;
+ }
+
+ // 🌐 시장 상황별 시나리오
+ if(i.mscen&&i.mscen.rows){
+   const LB=META.mscen_labels||[], MV=META.mscen_moves||[];
+   let srow='';
+   i.mscen.rows.forEach((r,k)=>{
+     const lab=r.label||LB[k]||'', col=r.exp>=0?'#d70015':'#0071e3';
+     const st=r.stop_hit?'<span style="color:#ff3b30;font-weight:700">손절</span>':'<span style="color:#c7c7cc">-</span>';
+     srow+=`<tr><td style="font-size:11.5px">${lab}</td><td style="color:#999">${r.prob!=null?r.prob+'%':'-'}</td>`+
+       `<td style="color:${col};font-weight:700">${r.exp>=0?'+':''}${r.exp}%</td><td>${r.price.toLocaleString()}</td><td>${st}</td></tr>`;
+   });
+   h+=`<div class="card"><h2>🌐 시장이 이렇게 되면</h2>
+   <div class="leg" style="margin-top:0">현재 <b>${i.mscen.regime}</b> 기준. 이 종목 베타 <b>${i.beta}</b>(내릴 때 <b>${i.down_beta}</b>) 적용.</div>
+   <div class="tw"><table class="stab"><tr><th>30일 뒤 시장</th><th>확률</th><th>이 종목</th><th>주가</th><th>손절</th></tr>${srow}</table></div>
+   <div class="leg">기대 = (유사사례 중앙수익) + 베타 × (시장수익 − 시장 중앙수익 ${i.mscen.mkt_med}%). 확률은 현재 국면에서 그 구간이 나온 과거 빈도.<br>
+   ※ 베타는 과거 평균입니다. <b>진짜 급락장에서는 상관이 1로 수렴</b>해 표보다 더 나빠지는 경향이 있습니다.</div></div>`;
+ }
+
+ // 📰 최신 뉴스
+ if(i.news&&i.news.length){
+   let nr='';
+   i.news.forEach(a=>{
+     const cc=a.sent>0?'cpos':(a.sent<0?'cneg':'cneu'), lbl=a.sent>0?'호재':(a.sent<0?'악재':'중립');
+     nr+=`<a class="nw" href="${a.link}" target="_blank" rel="noopener">
+       <div class="nwt"><span class="chip ${cc}">${lbl}</span>${esc(a.title)}</div>
+       <div class="nws">${esc(a.src)} · ${a.pub}${a.kw?' · '+esc(a.kw):''}</div></a>`;
+   });
+   h+=`<div class="card"><h2>📰 최신 뉴스 (14일)</h2>${nr}
+   <div class="leg">제목 키워드만 본 자동 분류이며 <b>점수에는 반영하지 않습니다</b>. 위 상승·하락 논리를 <b>뒤집을 사건</b>이 있는지 직접 확인하세요.</div></div>`;
+ }
 
  // 🩳 공매도 부담 (참고 지표 · 점수 미반영)
  if(i.short_pct!=null){
@@ -339,7 +635,8 @@ function openD(code){
  let why=[];if(stg.length)why.push('강점 '+stg.join('·'));if(wk.length)why.push('약점 '+wk.join('·'));
  if(why.length)h+=`<div class="note">📌 ${why.join(' / ')}</div>`;
  h+='<details style="margin-top:6px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">각 팩터의 학술적 근거 보기</summary>';
- i.factors.filter(f=>f.w>0).forEach(f=>{h+=`<div class="leg" style="margin:8px 0 0"><b>${f.name}</b> — ${f.why}<br><span style="color:#0071e3">📚 ${f.academic}</span><br><span style="color:#946200">📊 ${f.evidence}</span></div>`;});
+ i.factors.filter(f=>f.w>0).forEach(f=>{const fm=factMeta(f.key);
+  h+=`<div class="leg" style="margin:8px 0 0"><b>${f.name}</b> — ${f.why||fm.why||''}<br><span style="color:#0071e3">📚 ${f.academic||fm.academic||''}</span><br><span style="color:#946200">📊 ${f.evidence||fm.evidence||''}</span></div>`;});
  h+='</details></div>';
 
 
@@ -406,6 +703,26 @@ function openD(code){
  }
  h+=`<div class="card"><h2>🚪 매도 시점 / 주문 가격</h2>${priceBox}${holdInfo}<div class="note">${i.sell_hint}</div>
   <div class="warn">※ 개별 가격 예측이 아니라 위 통계 분포로 해석하세요. 이 시스템은 규칙대로 사고팔아 분포의 평균을 취하는 전략입니다.</div></div>`;
+
+ // 📓 내 투자논리 기록 — 판단한 이유를 남기고, 나중에 그 논리가 맞았는지 대조한다
+ let jr='';
+ (i.journal||[]).forEach(e=>{
+   const px=parseFloat(e.px)||0;
+   const chg=px?((i.price/px-1)*100):null;
+   const cc=chg==null?'#999':(chg>=0?'#d70015':'#0071e3');
+   const since=chg==null?'':` · 기록 후 <span style="color:${cc};font-weight:700">${chg>=0?'+':''}${chg.toFixed(1)}%</span>`;
+   jr+=`<div class="rk2"><span class="sev" style="background:#5856d6">${esc(e.kind||'기록')}</span>
+     <div class="rtx"><b>${e.date}</b>${e.conv?' · 확신 '+esc(e.conv)+'/5':''}${since}
+       ${e.bull?'<div class="rev" style="color:#1a8b38">▲ '+esc(e.bull)+'</div>':''}
+       ${e.bear?'<div class="rev" style="color:#d70015">▼ '+esc(e.bear)+'</div>':''}
+       ${e.inval?'<div class="rev">🚨 무효화: '+esc(e.inval)+'</div>':''}
+       ${e.memo?'<div class="rev">'+esc(e.memo)+'</div>':''}</div></div>`;
+ });
+ if(!jr)jr='<div class="leg">아직 기록이 없습니다. 지금 사려는 이유를 남겨두면, 한 달 뒤 <b>내 판단이 맞았는지</b> 대조할 수 있습니다.</div>';
+ h+=`<div class="card"><h2>📓 내 투자논리 기록</h2>${jr}
+   <a class="btn" style="background:#5856d6;margin-top:10px" href="journal.html?code=${i.code}">✍️ ${i.name} 논리 기록하기</a>
+   <div class="leg">위 상승·하락 논리가 자동으로 채워집니다. <b>기억은 결과에 맞춰 왜곡됩니다</b> — 사기 전에 적어두는 것이 유일한 방어입니다.</div></div>`;
+
  document.getElementById('sheet').innerHTML=h;
 
  // 기대손익 계산기 활성화 (매수 카드가 렌더된 경우에만 — invBtns/expOut이 그 안에 있음)
