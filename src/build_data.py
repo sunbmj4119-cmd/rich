@@ -329,7 +329,7 @@ def main():
         prob=dict(cell) if cell else None      # 기준집단 = 판단에 쓰는 확률
         if prob: prob["band"]=band
         ctx["prob"]=prob
-        ctx["buyfit_pct"]=float(r["buyfit_pct"])
+        ctx["buyfit_pct"]=float(r["buyfit_pct"]); ctx["buyrank"]=int(r["buyrank"])
         # 종목별 유사사례 통계는 '참고'로만 남긴다 (예측력 검증 실패 — 아래 note)
         analog_prob=thesis.probability(rets,eff_n,base_win) if rets else None
         bull=thesis.bull_case(ctx,meta)

@@ -116,6 +116,25 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 .cpos{{background:#e8f8ec;color:#1a8b38}}.cneg{{background:#ffecec;color:#d70015}}.cneu{{background:#f0f0f3;color:#888}}
 .regbox{{display:flex;align-items:center;gap:12px;padding:4px 0 10px}}
 .regemo{{font-size:34px;line-height:1}}
+/* 신뢰도 배지 — 이 숫자를 얼마나 믿을지 카드마다 한눈에 */
+.tb{{display:inline-block;font-size:10px;font-weight:800;border-radius:6px;padding:2px 6px;
+     margin-left:6px;vertical-align:middle;white-space:nowrap}}
+.t1{{background:#e3f7e8;color:#137a33}}   /* 검증됨 */
+.t2{{background:#fff2e0;color:#9a5800}}   /* 참고 */
+.t3{{background:#ffe9e9;color:#c00}}      /* 미검증 */
+/* 종목 상세 탭 — 17개 카드를 3묶음으로 */
+.tabs{{display:flex;gap:6px;position:sticky;top:0;background:#f2f2f7;padding:6px 0 10px;z-index:5}}
+.tabs button{{flex:1;padding:11px 3px;border:0;border-radius:11px;background:#e5e5ea;color:#555;
+              font-weight:800;font-size:13.5px}}
+.tabs button.on{{background:#0071e3;color:#fff}}
+.pane{{display:none}} .pane.on{{display:block}}
+/* 오늘 할 일 */
+.todo{{display:flex;gap:10px;align-items:flex-start;padding:12px 2px;border-bottom:1px solid #f0f0f0;cursor:pointer}}
+.todo:last-child{{border:0}} .todo:active{{background:#f5f5f7}}
+.tnum{{width:26px;height:26px;border-radius:8px;color:#fff;font-weight:800;font-size:13px;
+       display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}}
+.ttx{{flex:1;min-width:0;font-size:14px;line-height:1.6}}
+.tsub{{font-size:12px;color:#888;margin-top:3px;line-height:1.55}}
 </style></head><body>
 <h1>🎯 매수적합도 분석</h1>
 <div class="date">기준일 {m['date']} · <b>BuyFit</b> = 종합점수 + 진입타이밍(평균회귀)을 합친 '지금 사기 좋은 순서'<br>종목을 터치하면 상승·하락 시나리오와 확률을 봅니다</div>
@@ -147,6 +166,63 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
                 f'<div style="font-size:11px;color:#999;margin-top:1px">{sub}</div></div>'
                 f'{p}<span class="sc">{i["score"]:.0f}</span><span class="chev">›</span></div>')
 
+    # ── 📋 오늘 할 일 — 화면 맨 위. 스크롤 없이 '무엇을 하면 되는가'만. ──
+    todos=[]
+    for i in cuts:
+        todos.append(("#ff3b30", f'<b>{i["name"]}</b> 손절 — {i["reason"]}',
+                      f'지정가 매도 {i["price"]:,}원 · 규칙이 정한 것이니 논리와 무관하게 실행'))
+    for i in sells:
+        todos.append(("#0071e3", f'<b>{i["name"]}</b> 매도 — {i["reason"]}',
+                      f'지정가 매도 {i["price"]:,}원'))
+    # 매수 후보: 실제로 '지금 살 수 있는' 것만.
+    #  · 이미 보유(🟢유지·⏳보유)나 청산 예정(🔴손절·🔵매도)은 매수 대상이 아니다
+    #  · ⚪보류는 외국인 순매도라 시스템이 보류시킨 것
+    #  · D등급 제외 — 검증에서 시장 수익률을 밑돌았다
+    BUYABLE=("🟡매수","")
+    cands=[i for i in buylist
+           if i["signal"] in BUYABLE and i["verdict"]["grade"]!="D"][:3]
+    for i in cands:
+        pr=i.get("prob") or {}
+        kel=pr.get("kelly_use") or 0
+        amt=(f'권장비중 계좌의 <b>{kel}%</b>까지' if kel > 0
+             else '<b>비중을 키울 근거 없음</b> → 손실예산(원금 1~2%)으로만')
+        todos.append(("#34c759",
+            f'<b>{i["name"]}</b> 매수 검토 <span class="gr g{i["verdict"]["grade"]}">{i["verdict"]["grade"]}</span>',
+            f'지정가 {i["buy_limit"]:,}원 · 손절 {int(i["buy_limit"]*0.9):,}원<br>'
+            f'{amt} · 이 구간 손절확률 {pr.get("p_stop","-")}%'))
+    if not todos:
+        todos.append(("#8e8e93","오늘은 실행할 주문이 없습니다","보유 종목의 감시가만 확인하세요"))
+    trisk=""
+    if pf and pf.get("stress"):
+        s10=next((x for x in pf["stress"] if x["move"]==-10),None)
+        if s10:
+            trisk=(f'<div class="warn" style="margin-top:8px">시장이 30일 안에 <b>-10%</b>면(과거 빈도 '
+                   f'{s10["prob"]:.0f}%) 내 계좌는 <b>{s10["pnl"]:+,}원</b>, 손절 <b>{s10["stops"]}종목</b> 발동. '
+                   f'감당 가능한지 먼저 보세요.</div>')
+    todo_codes=([i["code"] for i in cuts]+[i["code"] for i in sells]
+                +[i["code"] for i in cands]+[""]*3)
+
+    def todo_row(n, item, code):
+        col, txt, sub = item
+        click = f''' onclick="openD('{code}')"''' if code else ""
+        return (f'<div class="todo"{click}><div class="tnum" style="background:{col}">{n+1}</div>'
+                f'<div class="ttx">{txt}<div class="tsub">{sub}</div></div></div>')
+
+    H+=('<div class="card" style="border:2px solid #0071e3"><h2>📋 오늘 할 일</h2>'
+        +"".join(todo_row(n,t,c) for n,(t,c) in enumerate(zip(todos,todo_codes)))
+        +trisk
+        +'<div class="leg">매수 후보는 <b>BuyFit 상위</b>에서 D등급을 뺀 것입니다. '
+         'D등급은 검증에서 시장 수익률을 밑돌았습니다.</div></div>')
+
+    # 신뢰도 범례 — 아래 모든 카드의 배지를 읽는 법 (한 번만)
+    H+=('<div class="card"><h2>🏷 숫자 읽는 법</h2>'
+        '<div class="leg" style="margin-top:0;line-height:2">'
+        '<span class="tb t1">검증됨</span> 과거 데이터로 실제 맞았는지 확인함 → <b>판단 근거로 쓰세요</b><br>'
+        '<span class="tb t2">참고</span> 논리적 근거는 있으나 이 저장소가 검증하지 않음 → <b>확인할 거리</b><br>'
+        '<span class="tb t3">미검증</span> 검증에서 예측력이 없었음 → <b>기록으로만 보세요</b>'
+        '</div><div class="warn">가장 흔한 실수는 <b>승률 숫자를 예보로 읽는 것</b>입니다. '
+        '35,163건 검증에서 개별 종목 승률의 예측력은 0이었습니다. 승률은 "과거에 이랬다"는 기록입니다.</div></div>')
+
     if cuts:
         H+='<div class="card alert"><h2>🔴 손절 (즉시 검토)</h2>'+"".join(small_row(i,True) for i in cuts)+'</div>'
     if sells:
@@ -171,7 +247,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
                        f'<td colspan="4" style="color:#bbb;text-align:left">표본 부족 ({h["days"]}일)</td></tr>')
         tr=rg.get("transition",{}).get(c["name"],{})
         trtxt=" · ".join(f'{k} {v:.0f}%' for k,v in sorted(tr.items(),key=lambda x:-x[1])) if tr else "표본 부족"
-        H+=f"""<div class="card"><h2>🌡 지금 어떤 시장인가</h2>
+        H+=f"""<div class="card"><h2>🌡 지금 어떤 시장인가<span class="tb t1">검증됨</span></h2>
 <div class="regbox"><div class="regemo">{c['emoji']}</div>
   <div style="flex:1;min-width:0">
     <div style="font-size:19px;font-weight:800;color:{c['color']}">{c['name']}</div>
@@ -247,7 +323,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 <div class="leg"><b>최악의 날</b> = 지금 걸어둔 감시가(손절·트레일 중 먼저 닿는 값)가 전 종목 동시 체결될 때의 추가손실. 실제 동시발동은 드물지만 <b>감내 가능한 최대 손실</b>을 미리 확인하세요.</div></div>"""
 
     # ★ 핵심: 매수적합도 추천
-    H+='<div class="card"><h2>🟢 지금 사기 좋은 순서 (BuyFit)</h2>'
+    H+='<div class="card"><h2>🟢 지금 사기 좋은 순서 (BuyFit)<span class="tb t1">검증됨</span></h2>'
     H+='<div class="leg" style="margin-top:0;margin-bottom:6px">점수 상위 풀에서, 최근 조정받아 반등 여지가 큰 종목을 앞으로. (백테스트에서 <b>관찰된</b> 단기 평균회귀 · 생존편향 미보정 → 아래 한계 참고)</div>'
     for k,i in enumerate(buylist):
         cls="brk" if k==0 else ("brk r2" if k==1 else ("brk r3" if k==2 else "brk rx"))
@@ -283,7 +359,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
             nrows+=(f'<a class="nw" href="{a["link"]}" target="_blank" rel="noopener">'
                     f'<div class="nwt"><span class="chip {cc}">{lbl}</span>{a["title"]}</div>'
                     f'<div class="nws">{a["src"]} · {a["pub"]}</div></a>')
-        H+=(f'<div class="card"><h2>📰 시장 뉴스</h2>{nrows}'
+        H+=(f'<div class="card"><h2>📰 시장 뉴스<span class="tb t2">참고</span></h2>{nrows}'
             f'<div class="leg">호재/악재 표시는 <b>제목의 키워드만</b> 본 자동 분류입니다. 점수에는 반영하지 않으며, '
             f'"내 판단을 뒤집을 사건이 있나" 확인용입니다.</div></div>')
 
@@ -295,11 +371,12 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 <div id="sortBtns" style="display:flex;gap:6px;margin-bottom:6px"></div>
 <div id="stockList"></div></div>'''
 
-    H+=f"""<div class="card"><h2>📊 시장 점수 분포</h2>
-<div class="date">평균 {m['avg']} · 중앙값 {m['median']} · 최고 {m['max']}</div>
+    H+=f"""<div class="card"><details><summary style="font-size:17px;font-weight:700;cursor:pointer">📊 시장 점수 분포</summary>
+<div class="date" style="margin-top:8px">평균 {m['avg']} · 중앙값 {m['median']} · 최고 {m['max']}</div>
 <div class="hist" id="mhist"></div>
-<div class="leg">100종목 점수 분포. 상위 추천권은 보통 65점+.</div></div>"""
+<div class="leg">100종목 점수 분포. 상위 추천권은 보통 65점+.</div></details></div>"""
 
+    T2X='<span class="tb t2">참고</span>'
     if rb:
         scen_rows="".join(
           f'<div class="bigbar-wrap"><span class="bl" style="width:auto;flex:1;font-size:12px">{x["name"]}</span>'
@@ -315,12 +392,13 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
                          f'<b>{surv["n_kospi"]}건</b>(연 {surv["rate"]:.1f}건) 상장폐지됐지만 백테스트엔 <b>없습니다</b>. '
                          f'가정(상폐 평균 -60%) 반영 시 추가 <b>-{surv["haircut"]:.1f}%p/년</b> → <b style="color:#d70015">초보수 기대 연 {surv["ann_after"]:+.0f}%</b>. '
                          f'<span style="color:#999">(haircut은 가정에 따른 근사치)</span></div>')
-        H+=f"""<div class="card"><h2>🔬 현실적 기대수익 (비용 보정·생존편향 일부)</h2>
+        H+=f"""<div class="card"><h2>🔬 현실적 기대수익{T2X}</h2>
 <div class="note" style="background:#f0f7ff">백테스트 숫자를 그대로 믿지 않기 위해 <b>거래비용을 현실화하고 생존편향을 일부</b> 보정한 결과:<br><br>
 이상적 가정 연 <b>{rb['base_ann']:+.0f}%</b> → 보수적 가정 연 <b style="color:#0071e3">{rb['concl_ann']:+.0f}%</b> (비용·편향으로 <b>{rb['erosion']:.0f}%p</b> 증발)</div>
-<div class="date" style="margin:8px 0 4px">가정별 연율 수익(보수일수록 아래):</div>
+<details style="margin-top:6px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">가정별 연율 수익 자세히</summary>
+<div class="date" style="margin:8px 0 4px">보수적일수록 아래:</div>
 {scen_rows}
-{surv_html}
+{surv_html}</details>
 <div class="warn">※ {pit_line}<br>이 표본은 <b>강세장 비중이 큰 2018~2026</b> 구간이니 <b>실전 기대는 더 보수적으로</b> 잡으세요. 상장폐지 {rb.get('delisted_n',0):,}종목은 애초에 데이터에 없습니다.</div></div>"""
     else:
         H+='<div class="card"><h2>🔬 전략 검증</h2><div class="note">보완 백테스트 미실행. Actions의 robust-backtest를 한 번 돌리면 생존편향·비용 보정 기대수익이 여기 표시됩니다.</div></div>'
@@ -341,7 +419,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
                     f'<td>{r["sharpe"]:.2f}</td><td>{r["worst"]:+.0f}%</td></tr>')
         cal_ok=sum(1 for c in vf.get("calibration",[]) if c["ok"])
         cal_n=len(vf.get("calibration",[]))
-        H+=f"""<div class="card" style="border:2px solid #5856d6"><h2>🔍 이 숫자를 믿어도 되나</h2>
+        H+=f"""<div class="card" style="border:2px solid #5856d6"><h2>🔍 이 숫자를 믿어도 되나<span class="tb t1">검증됨</span></h2>
 <div class="leg" style="margin-top:0">대시보드가 말하는 등급·확률을 <b>과거 시점 정보만으로 다시 계산해</b> 실제 결과와 대조했습니다.
 ({vf['period'][0]}~{vf['period'][1]} · {vf['n_eval']:,}건 · 미래참조 차단)</div>
 <div class="note" style="background:#fff6f6;margin-top:8px">❌ <b>승률 예측은 실패했습니다.</b>
@@ -350,13 +428,14 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 <div class="note" style="background:#f2fbf4;margin-top:6px">✅ <b>기대수익 방향은 살아있습니다.</b>
 등급별 실제 30일 평균수익이 A {vf['grades'][0]['avg']:+.2f}% → D {vf['grades'][-1]['avg']:+.2f}%로 갈렸고,
 손절 발동률도 A {vf['grades'][0]['p_stop']:.0f}% vs D {vf['grades'][-1]['p_stop']:.0f}%로 차이가 납니다.</div>
-<div class="leg" style="margin-top:10px"><b>등급별 실제 결과</b></div>
+<details style="margin-top:10px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">검증 표 자세히 보기 (등급별 결과 · 전략 시뮬레이션)</summary>
+<div class="leg" style="margin-top:8px"><b>등급별 실제 결과</b></div>
 <div class="tw"><table class="stab"><tr><th>등급</th><th>승률</th><th>평균수익</th><th>손절률</th><th>독립표본</th></tr>{grows}</table></div>
 <div class="leg" style="margin-top:10px"><b>이 방법으로 투자했다면 (30일 리밸런싱·비용 0.3%)</b></div>
 <div class="tw"><table class="stab"><tr><th>전략</th><th>연율</th><th>Sharpe</th><th>최악</th></tr>{srows}</table></div>
 <div class="warn">파란 줄이 <b>대조군</b>입니다. 등급을 무시하고 BuyFit 상위5만 사도 결과가 같거나 더 낫습니다 →
 <b>등급은 추천을 요약할 뿐 추가 수익을 만들지 못합니다.</b> 등급은 "얼마나 확신할지"를 보는 용도로만 쓰세요.<br>
-리밸런싱 {vf['sims'][0]['n_rebal']}회는 통계적으로 적은 표본입니다. 연율 차이는 우연일 수 있습니다.</div></div>"""
+리밸런싱 {vf['sims'][0]['n_rebal']}회는 통계적으로 적은 표본입니다. 연율 차이는 우연일 수 있습니다.</div></details></div>"""
 
     H+="""<div class="card"><h2>📚 방법론 · 이 추천의 근거</h2>
 <details><summary style="font-size:14px;color:#0071e3;cursor:pointer;font-weight:600">계산 방식 전체 보기 (전문가용)</summary>
@@ -469,7 +548,10 @@ function openD(code){
  const isBuy=i.signal&&i.signal.includes("매수");
  const blocked=i.signal==='🟢유지'||i.signal==='⏳보유'||i.signal==='⚪보류';
  const showBuy=isBuy||(i.rank<=20&&!blocked);
+ // 카드가 17개라 한 화면에 다 쌓으면 9번을 스크롤해야 한다 → 3묶음으로 나눈다
+ // A 판단(지금 뭘 할까) · B 근거(왜 그런가) · C 숫자(얼마나 확실한가)
  let h='<div class="shandle"></div>';
+ let A='',B='',C='';
  let pnl='';if(i.pnl!==''&&i.pnl!=null){const c=i.pnl>=0?'pp':'pn';pnl=` <span class="${c}">${i.pnl>=0?'+':''}${i.pnl}%</span>`;}
  h+=`<div class="dh"><div><div style="font-size:24px;font-weight:800">${i.name}${i.sector?` <span style="font-size:12px;font-weight:600;color:#0071e3;background:#eef;border-radius:7px;padding:2px 7px;vertical-align:middle">${i.sector}</span>`:''}</div>
    <div class="date">점수 ${i.score.toFixed(0)} (전체 ${i.rank}위) · 매수적합 ${i.buyrank}위 · ${i.price.toLocaleString()}원${pnl}${i.industry?' · '+i.industry:''}</div></div>
@@ -487,7 +569,7 @@ function openD(code){
    vparts+=`<div class="rk2"><span class="sev" style="background:${c}">${p.d>=0?'+':''}${p.d}</span>`+
      `<div class="rtx"><b>${p.k}</b> · ${p.v}<div class="rev">${noteOf(p.k)}</div></div></div>`;
  });
- h+=`<div class="card" style="border:2px solid ${md[0]}"><h2>⚖️ 판단 요약</h2>
+ A+=`<div class="card" style="border:2px solid ${md[0]}"><h2>⚖️ 판단 요약<span class="tb t2">참고</span></h2>
    <div style="display:flex;align-items:center;gap:12px;margin:6px 0 10px">
      <div class="gr g${v.grade}" style="width:46px;height:46px;border-radius:13px;font-size:24px">${v.grade}</div>
      <div style="flex:1;min-width:0">
@@ -501,7 +583,7 @@ function openD(code){
 
  // BuyFit 요약 카드
  const tcol=i.timing>=66?'#34c759':(i.timing>=33?'#ff9500':'#ff3b30');
- h+=`<div class="card"><h2>🎯 지금 매수 적합도</h2><div class="stat">
+ A+=`<div class="card"><h2>🎯 지금 매수 적합도<span class="tb t1">검증됨</span></h2><div class="stat">
    <div><div class="v" style="color:#34c759">${i.buyfit.toFixed(0)}</div><div class="k">BuyFit(0~100)</div></div>
    <div><div class="v" style="color:${tcol}">${i.timing.toFixed(0)}</div><div class="k">진입타이밍</div></div>
    <div><div class="v">${i.dd!=null?i.dd:'-'}%</div><div class="k">60일고점대비</div></div></div>
@@ -526,7 +608,7 @@ function openD(code){
      <div><div class="v" style="font-size:18px">${bl.target.p_up10}%</div><div class="k">+10% 이상 확률</div></div>
      <div><div class="v" style="font-size:18px">${bl.target.p_up20}%</div><div class="k">+20% 이상 확률</div></div></div>`;
  }
- h+=`<div class="card" style="background:#f5fbf6"><h2>📈 상승 시나리오</h2>
+ B+=`<div class="card" style="background:#f5fbf6"><h2>📈 상승 시나리오<span class="tb t2">참고</span></h2>
    <div class="note" style="background:transparent;padding:0;line-height:1.8">${bl.summary}</div>
    ${drv?'<div style="margin-top:6px">'+drv+'</div>':''}${tgtHtml}${mustHtml}
    <div class="leg">전제조건이 깨지면 상승 논리도 같이 깨집니다. 다음 실적 발표 때 여기부터 확인하세요.</div></div>`;
@@ -550,7 +632,7 @@ function openD(code){
      <div><div class="v" style="font-size:18px">${dn.p25_price?dn.p25_price.toLocaleString():'-'}</div><div class="k">약세 시(하위25%)</div></div>
      <div><div class="v" style="color:#8e0000;font-size:18px">${dn.worst!=null?dn.worst+'%':'-'}</div><div class="k">과거 최악</div></div></div>`;
  }
- h+=`<div class="card" style="background:#fff8f8"><h2>📉 하락 시나리오 · 반대 논리</h2>
+ B+=`<div class="card" style="background:#fff8f8"><h2>📉 하락 시나리오 · 반대 논리<span class="tb t2">참고</span></h2>
    <div class="note" style="background:transparent;padding:0;line-height:1.8">${be.summary}</div>
    <div class="bigbar-wrap" style="margin-top:10px"><span class="bl">반대논리</span>
      <div class="bigbar"><div style="width:${bs}%;background:${bcol}"></div></div>
@@ -566,10 +648,19 @@ function openD(code){
    const ec=pr.edge_pp>=0?'#34c759':'#ff3b30';
    const kc=pr.kelly_use>0?'#0071e3':'#c7c7cc';
    const rgn=(DATA.regime&&DATA.regime.current)?DATA.regime.current.name:'';
-   h+=`<div class="card"><h2>🎲 확률 계산</h2>
+   // 검증에서 살아남은 숫자(손절률·구간 평균수익)를 먼저, 죽은 숫자(승률)는 접어서 뒤로.
+   C+=`<div class="card"><h2>🎲 확률 계산</h2>
    <div class="note" style="background:#f0f7ff;margin-top:0">기준집단: <b>종합 ${pr.band}위</b>${rgn?` · <b>${rgn}</b>`:''}
-   <div class="leg" style="margin-top:4px">이 종목의 과거가 아니라 <b>같은 순위·같은 국면이었던 100종목 전체 ${pr.n.toLocaleString()}건</b>(서로 겹치지 않는 기간 ${pr.eff_n.toFixed(0)}개)의 30일 후 결과입니다.
-   한 종목의 과거 15~25번은 그 시기 시장이 뭘 했는지를 잴 뿐이라 <b>검증에서 예측력이 0으로 나왔고</b>, 그래서 기준집단을 바꿨습니다.</div></div>
+   <div class="leg" style="margin-top:4px">이 종목의 과거가 아니라 <b>같은 순위·같은 국면이었던 100종목 전체 ${pr.n.toLocaleString()}건</b>(겹치지 않는 기간 ${pr.eff_n.toFixed(0)}개)의 30일 후 결과입니다.</div></div>
+
+   <div class="leg" style="margin-top:10px"><span class="tb t1">검증됨</span> <b>이 두 개는 판단에 쓰세요</b></div>
+   <div class="stat">
+     <div><div class="v" style="color:#ff3b30;font-size:21px">${pr.p_stop}%</div><div class="k">-10% 손절 맞을 확률</div></div>
+     <div><div class="v" style="font-size:21px">${pr.ev>=0?'+':''}${pr.ev}%</div><div class="k">30일 기대수익(비용·손절 반영)</div></div>
+   </div>
+   <div class="leg">구간이 올라갈수록 기대수익이 실제로 갈렸습니다(1-5위 <b>+3.5%</b> vs 51-100위 <b>+1.7%</b>). 손절 발동률도 15~19%로 구간마다 다릅니다. 이 둘은 <b>표본 18만건</b>으로 뒷받침됩니다.</div>
+
+   <div class="leg" style="margin-top:12px"><span class="tb t3">미검증</span> <b>승률은 기록이지 예보가 아닙니다</b></div>
    <div class="ci">
      <div class="citrack"></div><div class="cirange" style="left:${lo}%;width:${hi-lo}%"></div>
      <div class="cidot" style="left:${pr.win}%"></div>
@@ -578,15 +669,14 @@ function openD(code){
      <div class="cilab" style="left:${pr.win}%;color:#0071e3;font-weight:700">${pr.win}%</div>
      <div class="cilab" style="left:${hi}%">${hi}%</div>
    </div>
-   <div class="leg">파란 점=승률 추정치, 파란 띠=95% 신뢰구간, <span style="color:#ff3b30">빨간 선</span>=기준선 ${pr.base_win}%(아무 종목이나 아무 날 샀을 때 30일 뒤 오를 확률). <b>띠가 빨간 선을 확실히 넘어야</b> 진짜 우위인데, 실제로 넘는 칸은 거의 없습니다.<br>
-   표시 승률은 관측값 ${pr.win_raw}%를 표본 두께에 맞춰 전체 평균 쪽으로 당긴 값입니다(얇은 칸의 극단값을 그대로 믿지 않기 위해).</div>
-   <div class="stat" style="margin-top:8px">
-     <div><div class="v" style="color:${ec};font-size:19px">${pr.edge_pp>=0?'+':''}${pr.edge_pp}%p</div><div class="k">기준선 대비 초과승률</div></div>
-     <div><div class="v" style="font-size:19px">${pr.ev>=0?'+':''}${pr.ev}%</div><div class="k">기대수익(비용·손절 반영)</div></div>
-     <div><div class="v" style="font-size:19px">${pr.payoff||'-'}</div><div class="k">손익비(이익÷손실)</div></div>
+   <div class="warn">35,163건 검증에서 예측 승률과 실제 결과의 상관은 <b>≈0</b>이었습니다. 파란 띠(95% 구간)가 <span style="color:#ff3b30">빨간 선</span>(기준선 ${pr.base_win}%)을 확실히 넘어야 우위인데 넘는 칸이 거의 없습니다. <b>승률은 50% 근처로 보세요.</b></div>
+   <details style="margin-top:4px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">그래도 자세히 보기 (초과승률·손익비·켈리)</summary>
+   <div class="stat" style="margin-top:6px">
+     <div><div class="v" style="color:${ec};font-size:17px">${pr.edge_pp>=0?'+':''}${pr.edge_pp}%p</div><div class="k">기준선 대비 초과승률</div></div>
+     <div><div class="v" style="font-size:17px">${pr.payoff||'-'}</div><div class="k">손익비(이익÷손실)</div></div>
+     <div><div class="v" style="font-size:17px">${pr.sd}%</div><div class="k">수익 표준편차</div></div>
    </div>
-   <div class="warn">⚠️ <b>승률은 어떤 방법으로도 신뢰성 있게 예측되지 않았습니다</b>(35,163건 검증, 예측-실제 상관 ≈0). 위 승률은 "이 구간이 과거에 이랬다"는 기록이지 예보가 아닙니다.<br>
-   그나마 의미가 남은 건 <b>구간별 평균수익 차이</b>(1-5위 +3.5% vs 51-100위 +1.7%)와 <b>손절 발동률</b>입니다. 승률 숫자는 <b>50% 근처로</b> 보세요.</div>
+   <div class="leg">표시 승률은 관측값 ${pr.win_raw}%를 표본 두께에 맞춰 전체 평균 쪽으로 당긴 값입니다(얇은 칸의 극단값을 그대로 믿지 않기 위해).</div></details>
    <div class="leg" style="margin-top:6px"><b>30일 뒤 결과 분포</b></div>
    <div class="pbar">
      <div style="width:${pr.p_stop}%;background:#ff3b30">${pr.p_stop>=8?pr.p_stop+'%':''}</div>
@@ -595,10 +685,10 @@ function openD(code){
      <div style="width:${pr.p_up10}%;background:#34c759">${pr.p_up10>=8?pr.p_up10+'%':''}</div>
    </div>
    <div class="leg"><span style="color:#ff3b30">■</span> -10%↓(손절) ${pr.p_stop}% · <span style="color:#ff9500">■</span> -10~-5% · <span style="color:#8e8e93">■</span> -5~+10% · <span style="color:#34c759">■</span> +10%↑ ${pr.p_up10}%</div>
-   <div class="stat" style="margin-top:10px">
-     <div><div class="v" style="color:${kc};font-size:19px">${pr.kelly_use}%</div><div class="k">권장 계좌비중(하프켈리)</div></div>
+   <div class="leg" style="margin-top:12px"><span class="tb t2">참고</span> <b>비중 계산</b></div>
+   <div class="stat">
+     <div><div class="v" style="color:${kc};font-size:21px">${pr.kelly_use}%</div><div class="k">권장 계좌비중(하프켈리)</div></div>
      <div><div class="v" style="color:#999;font-size:19px">${pr.kelly}%</div><div class="k">켈리 상한</div></div>
-     <div><div class="v" style="font-size:19px">${pr.sd}%</div><div class="k">수익 표준편차</div></div>
    </div>
    <div class="leg"><b>켈리 공식</b>은 "장기 자산 성장률을 최대화하는 베팅 비중"입니다. 여기선 세 겹으로 깎았습니다:
      ① 기대수익에서 <b>추정오차 1σ</b>(${pr.se}%p) 차감 → 보수적 기대 ${pr.mu_lo}%,
@@ -608,7 +698,7 @@ function openD(code){
      아래 '손실예산으로 수량 정하기'와 함께 보고 <b>더 작은 쪽</b>을 택하세요.</div>
    </div>`;
  } else {
-   h+=`<div class="card"><h2>🎲 확률 계산</h2><div class="warn">과거 유사 국면이 <b>10회 미만</b>이라 확률을 계산하지 않았습니다. 숫자를 지어내는 대신 <b>"모른다"</b>로 둡니다. 이런 종목은 비중을 키우지 마세요.</div></div>`;
+   C+=`<div class="card"><h2>🎲 확률 계산</h2><div class="warn">과거 유사 국면이 <b>10회 미만</b>이라 확률을 계산하지 않았습니다. 숫자를 지어내는 대신 <b>"모른다"</b>로 둡니다. 이런 종목은 비중을 키우지 마세요.</div></div>`;
  }
 
  // 🌐 시장 상황별 시나리오
@@ -621,7 +711,7 @@ function openD(code){
      srow+=`<tr><td style="font-size:11.5px">${lab}</td><td style="color:#999">${r.prob!=null?r.prob+'%':'-'}</td>`+
        `<td style="color:${col};font-weight:700">${r.exp>=0?'+':''}${r.exp}%</td><td>${r.price.toLocaleString()}</td><td>${st}</td></tr>`;
    });
-   h+=`<div class="card"><h2>🌐 시장이 이렇게 되면</h2>
+   C+=`<div class="card"><h2>🌐 시장이 이렇게 되면<span class="tb t2">참고</span></h2>
    <div class="leg" style="margin-top:0">현재 <b>${i.mscen.regime}</b> 기준. 이 종목 베타 <b>${i.beta}</b>(내릴 때 <b>${i.down_beta}</b>) 적용.</div>
    <div class="tw"><table class="stab"><tr><th>30일 뒤 시장</th><th>확률</th><th>이 종목</th><th>주가</th><th>손절</th></tr>${srow}</table></div>
    <div class="leg">기대 = (유사사례 중앙수익) + 베타 × (시장수익 − 시장 중앙수익 ${i.mscen.mkt_med}%). 확률은 현재 국면에서 그 구간이 나온 과거 빈도.<br>
@@ -637,20 +727,20 @@ function openD(code){
        <div class="nwt"><span class="chip ${cc}">${lbl}</span>${esc(a.title)}</div>
        <div class="nws">${esc(a.src)} · ${a.pub}${a.kw?' · '+esc(a.kw):''}</div></a>`;
    });
-   h+=`<div class="card"><h2>📰 최신 뉴스 (14일)</h2>${nr}
+   B+=`<div class="card"><h2>📰 최신 뉴스 (14일)<span class="tb t2">참고</span></h2>${nr}
    <div class="leg">제목 키워드만 본 자동 분류이며 <b>점수에는 반영하지 않습니다</b>. 위 상승·하락 논리를 <b>뒤집을 사건</b>이 있는지 직접 확인하세요.</div></div>`;
  }
 
  // 🩳 공매도 부담 (참고 지표 · 점수 미반영)
  if(i.short_pct!=null){
    const shHi=i.short_rank>=80;const shc=shHi?'#ff3b30':'#1d1d1f';
-   h+=`<div class="card"><h2>🩳 공매도 부담 (참고)</h2><div class="stat">
+   B+=`<div class="card"><h2>🩳 공매도 부담<span class="tb t2">참고</span></h2><div class="stat">
      <div><div class="v" style="color:${shc}">${i.short_pct}%</div><div class="k">잔고비중 (${i.short_asof} 기준)</div></div>
      <div><div class="v" style="color:${shc}">${i.short_rank}</div><div class="k">공매도 백분위(100=최다)</div></div>
      <div><div class="v">${shHi?'⚠ 높음':'보통'}</div><div class="k">부담도</div></div></div>
      <div class="leg">공매도 잔고비중↑ = 하락에 베팅한 물량이 많다는 약세 신호(Boehmer·Jones·Zhang 2008). <b>KRX 잔고는 T+2 지연</b> 공시이고 표본이 최근뿐이라 <b>아직 종합점수엔 반영하지 않은</b> 참고 지표입니다.</div></div>`;
  }
- h+=`<div class="card"><h2>📈 최근 60일 종합점수</h2>${lineChart(i.dates,i.scores,'#0071e3',W,180)}</div>`;
+ C+=`<div class="card"><h2>📈 최근 60일 종합점수</h2>${lineChart(i.dates,i.scores,'#0071e3',W,180)}</div>`;
  // 주가 차트에 매매 기준선(밴드) 오버레이
  let pb={refs:[],shade:null};
  if(i.avg_price!==''&&i.avg_price!=null)pb.refs.push({v:+i.avg_price,color:'#8e8e93',label:'평단'});
@@ -663,26 +753,26 @@ function openD(code){
  const legParts=['<span style="color:#34c759">초록</span>=과거통계 목표(중앙값)·25~75%밴드'];
  if(showBuy)legParts.unshift('<span style="color:#0071e3">파랑</span>=권장지정가·<span style="color:#ff3b30">빨강</span>=손절선');
  if(i.avg_price!==''&&i.avg_price!=null)legParts.push('<span style="color:#8e8e93">회색</span>=내 평단·<span style="color:#ff3b30">빨강</span>=감시가');
- h+=`<div class="card"><h2>💰 최근 60일 주가 + 매매 밴드</h2>${lineChart(i.dates,i.prices,'#34c759',W,196,pb)}<div class="leg">${legParts.join(' · ')}</div></div>`;
+ C+=`<div class="card"><h2>💰 최근 60일 주가 + 매매 밴드</h2>${lineChart(i.dates,i.prices,'#34c759',W,196,pb)}<div class="leg">${legParts.join(' · ')}</div></div>`;
 
- h+='<div class="card"><h2>🧩 점수 구성 · 근거</h2>';
- h+=`<div class="leg" style="margin-top:0">종합점수 = 각 팩터의 <b>당일 100종목 중 백분위(0~100)</b> × 가중치. 오른쪽 숫자는 <b>기여점수</b>(백분위×가중).</div>`;
+ B+='<div class="card"><h2>🧩 점수 구성 · 근거<span class="tb t2">참고</span></h2>';
+ B+=`<div class="leg" style="margin-top:0">종합점수 = 각 팩터의 <b>당일 100종목 중 백분위(0~100)</b> × 가중치. 오른쪽 숫자는 <b>기여점수</b>(백분위×가중).</div>`;
  i.factors.forEach(f=>{const col=FCOLOR[f.name]||'#888',wcol=f.w>0?'#1d1d1f':'#c7c7cc';
-  h+=`<div class="bigbar-wrap"><span class="bl">${f.name}</span>
+  B+=`<div class="bigbar-wrap"><span class="bl">${f.name}</span>
    <div class="bigbar"><div style="width:${Math.max(0,Math.min(100,f.val))}%;background:${col}"></div></div>
    <span class="bv">${f.val.toFixed(0)}</span><span class="bw" style="color:${wcol}">${f.w>0?'+'+f.contrib.toFixed(1):'미사용'}</span></div>`;});
  const stg=i.factors.filter(f=>f.val>=70&&f.w>0).map(f=>f.name),wk=i.factors.filter(f=>f.val<=35&&f.w>0).map(f=>f.name);
  let why=[];if(stg.length)why.push('강점 '+stg.join('·'));if(wk.length)why.push('약점 '+wk.join('·'));
- if(why.length)h+=`<div class="note">📌 ${why.join(' / ')}</div>`;
- h+='<details style="margin-top:6px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">각 팩터의 학술적 근거 보기</summary>';
+ if(why.length)B+=`<div class="note">📌 ${why.join(' / ')}</div>`;
+ B+='<details style="margin-top:6px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">각 팩터의 학술적 근거 보기</summary>';
  i.factors.filter(f=>f.w>0).forEach(f=>{const fm=factMeta(f.key);
-  h+=`<div class="leg" style="margin:8px 0 0"><b>${f.name}</b> — ${f.why||fm.why||''}<br><span style="color:#0071e3">📚 ${f.academic||fm.academic||''}</span><br><span style="color:#946200">📊 ${f.evidence||fm.evidence||''}</span></div>`;});
- h+='</details></div>';
+  B+=`<div class="leg" style="margin:8px 0 0"><b>${f.name}</b> — ${f.why||fm.why||''}<br><span style="color:#0071e3">📚 ${f.academic||fm.academic||''}</span><br><span style="color:#946200">📊 ${f.evidence||fm.evidence||''}</span></div>`;});
+ B+='</details></div>';
 
 
  // 💵 매수 가격 안내 + 기대손익 계산기 (이미 보유/보류 종목엔 숨김)
  if(showBuy){
-   h+=`<div class="card"><h2>💵 이 가격에 매수 (지정가)</h2>
+   A+=`<div class="card"><h2>💵 이 가격에 매수 (지정가)</h2>
      <div class="stat">
        <div><div class="v" style="color:#0071e3">${(+i.buy_limit).toLocaleString()}</div><div class="k">권장 지정가</div></div>
        <div><div class="v">${(+i.price).toLocaleString()}</div><div class="k">현재가</div></div>
@@ -690,7 +780,7 @@ function openD(code){
      </div>
      <div class="leg">권장 지정가 = 현재가와 최근 5일 저가 사이(평균회귀 전략상 살짝 눌렀을 때 매수). 이 가격에 안 닿으면 미체결될 수 있으니, 확실히 사려면 현재가로.<br><b>손절가는 실제 체결가의 -10%</b>로 거세요 (표시값은 현재가 체결 기준). 지정가 ${(+i.buy_limit).toLocaleString()}원에 체결되면 손절가는 ${Math.round(i.buy_limit*0.9).toLocaleString()}원.</div></div>`;
    // 손실예산 기반 수량 계산 (지정가 체결·손절 -10% → 잃는 돈 ≈ 매수금액의 10%)
-   h+=`<div class="card"><h2>🎯 손실예산으로 수량 정하기</h2>
+   A+=`<div class="card"><h2>🎯 손실예산으로 수량 정하기</h2>
      <div class="leg" style="margin-top:0">"이 종목에서 최대 얼마까지 잃어도 되나"를 고르면, 지정가 ${(+i.buy_limit).toLocaleString()}원·손절 -10% 기준 <b>살 수량과 매수금액</b>을 계산합니다.</div>
      <div id="riskBtns" style="display:flex;gap:6px;margin:8px 0"></div>
      <div id="riskOut"></div>
@@ -698,7 +788,7 @@ function openD(code){
    // 기대손익 계산기
    if(i.exp){
      const e=i.exp;
-     h+=`<div class="card"><h2>💰 이 금액으로 사면? (과거 통계 기반)</h2>
+     A+=`<div class="card"><h2>💰 이 금액으로 사면? (과거 통계 기반)</h2>
        <div class="leg" style="margin-top:0">투자금 선택 → 30일 뒤 예상 손익 (점수·타이밍 유사했던 과거 사례 분포)</div>
        <div id="invBtns" style="display:flex;gap:6px;margin:8px 0"></div>
        <div id="expOut"></div>
@@ -707,19 +797,19 @@ function openD(code){
  }
 
  if(i.analog){const a=i.analog,wc=a.win>=53?'#34c759':(a.win>=45?'#ff9500':'#ff3b30');
-  h+=`<div class="card"><h2>🎯 과거 비슷할 때 (30일 후 실제)</h2>`;
-  if(i.edge_weak)h+=`<div class="warn" style="color:#946200;background:#fff8e1">⚠ <b>엣지 약함</b> — 승률 ${a.win}% · 평균 ${a.avg>=0?'+':''}${a.avg}%. 과거 유사국면에서 뚜렷한 우위가 없었습니다. 매수는 소액·보류를 고려하세요.</div>`;
-  h+=`<div class="date">점수 ±5${a.fine?' + 타이밍 동일분위':''} 였던 <b>${a.n}회</b>의 30일 뒤 수익 분포</div>
+  C+=`<div class="card"><h2>🎯 과거 비슷할 때<span class="tb t3">미검증</span></h2>`;
+  if(i.edge_weak)C+=`<div class="warn" style="color:#946200;background:#fff8e1">이 표본에서는 승률 ${a.win}% · 평균 ${a.avg>=0?'+':''}${a.avg}%로 뚜렷한 우위가 없었습니다. <b>다만 이 지표(종목별 유사사례)는 검증에서 예측력이 0이었으므로 매수 판단의 근거로 쓰지 마세요.</b></div>`;
+  C+=`<div class="date">점수 ±5${a.fine?' + 타이밍 동일분위':''} 였던 <b>${a.n}회</b>의 30일 뒤 수익 분포</div>
    <div class="stat">
     <div><div class="v" style="color:${wc}">${a.win}%</div><div class="k">상승확률(승률)</div></div>
     <div><div class="v">${a.med>=0?'+':''}${a.med}%</div><div class="k">중앙값</div></div>
     <div><div class="v">${a.avg>=0?'+':''}${a.avg}%</div><div class="k">평균</div></div></div>`;
   const lo=a.worst,hi=a.best,rng=(hi-lo)||1,pos=v=>((v-lo)/rng*100);
-  h+=`<div class="range"><div class="rtrack"></div><div class="rdot" style="left:${pos(a.med)}%"></div>
+  C+=`<div class="range"><div class="rtrack"></div><div class="rdot" style="left:${pos(a.med)}%"></div>
    <div class="rlab" style="left:${pos(a.worst)}%">${a.worst}%</div>
    <div class="rlab" style="left:${pos(a.best)}%">${a.best}%</div></div>
    <div class="leg">검정점=중앙값. 50% 구간 ${a.p25}%~${a.p75}%. 최악 ${a.worst}% · 최선 ${a.best}% (표본 ${a.n}).<br>※ 표본은 <b>겹치는 기간·생존종목 한정</b>이라 실제 독립 관측치는 적고 불확실성은 더 큽니다.</div></div>`;
- } else h+=`<div class="card"><h2>🎯 과거 유사사례</h2><div class="date">유사 표본 부족</div></div>`;
+ } else C+=`<div class="card"><h2>🎯 과거 유사사례<span class="tb t3">미검증</span></h2><div class="date">유사 표본 부족</div></div>`;
 
   let priceBox="";
   if(i.signal&&(i.signal.includes("손절")||i.signal.includes("매도"))){
@@ -741,7 +831,7 @@ function openD(code){
      (i.dmin_remain!=null?`<div><div class="v">${i.dmin_remain<=0?'가능':'D-'+i.dmin_remain}</div><div class="k">${i.dmin_remain<=0?'최소보유 충족':'매도가능('+(i.dmin_date||'')+')'}</div></div>`:``)+
      `</div>`;
  }
- h+=`<div class="card"><h2>🚪 매도 시점 / 주문 가격</h2>${priceBox}${holdInfo}<div class="note">${i.sell_hint}</div>
+ A+=`<div class="card"><h2>🚪 매도 시점 / 주문 가격</h2>${priceBox}${holdInfo}<div class="note">${i.sell_hint}</div>
   <div class="warn">※ 개별 가격 예측이 아니라 위 통계 분포로 해석하세요. 이 시스템은 규칙대로 사고팔아 분포의 평균을 취하는 전략입니다.</div></div>`;
 
  // 📓 내 투자논리 기록 — 판단한 이유를 남기고, 나중에 그 논리가 맞았는지 대조한다
@@ -759,10 +849,18 @@ function openD(code){
        ${e.memo?'<div class="rev">'+esc(e.memo)+'</div>':''}</div></div>`;
  });
  if(!jr)jr='<div class="leg">아직 기록이 없습니다. 지금 사려는 이유를 남겨두면, 한 달 뒤 <b>내 판단이 맞았는지</b> 대조할 수 있습니다.</div>';
- h+=`<div class="card"><h2>📓 내 투자논리 기록</h2>${jr}
+ B+=`<div class="card"><h2>📓 내 투자논리 기록</h2>${jr}
    <a class="btn" style="background:#5856d6;margin-top:10px" href="journal.html?code=${i.code}">✍️ ${i.name} 논리 기록하기</a>
    <div class="leg">위 상승·하락 논리가 자동으로 채워집니다. <b>기억은 결과에 맞춰 왜곡됩니다</b> — 사기 전에 적어두는 것이 유일한 방어입니다.</div></div>`;
 
+ // 탭 조립 — 기본은 '판단'(지금 뭘 할까). 근거·숫자는 필요할 때만 편다.
+ const nR=(i.bear&&i.bear.risks?i.bear.risks.length:0);
+ const nN=(i.news?i.news.length:0);
+ h+=`<div class="tabs">
+   <button class="on" onclick="tabD(0)">판단</button>
+   <button onclick="tabD(1)">근거${nR?` <span style="display:inline-block;background:#ff9500;color:#fff;border-radius:9px;min-width:17px;padding:1px 4px;font-size:11px;vertical-align:top">${nR}</span>`:''}</button>
+   <button onclick="tabD(2)">숫자</button></div>
+  <div class="pane on">${A}</div><div class="pane">${B}</div><div class="pane">${C}</div>`;
  document.getElementById('sheet').innerHTML=h;
 
  // 기대손익 계산기 활성화 (매수 카드가 렌더된 경우에만 — invBtns/expOut이 그 안에 있음)
@@ -822,6 +920,12 @@ function openD(code){
  }
 
  document.getElementById('modal').classList.add('on');document.body.style.overflow='hidden';
+}
+function tabD(k){
+ const sh=document.getElementById('sheet');
+ sh.querySelectorAll('.tabs button').forEach((b,j)=>b.className=(j===k?'on':''));
+ sh.querySelectorAll('.pane').forEach((p,j)=>p.className='pane'+(j===k?' on':''));
+ sh.scrollTop=0;
 }
 function closeD(){document.getElementById('modal').classList.remove('on');document.body.style.overflow='';}
 </script></body></html>"""

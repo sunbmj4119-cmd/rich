@@ -459,7 +459,7 @@ def verdict(ctx, bull, bear, regime, base_win=None, meta=None):
     if bp is not None:
         d = _clamp((bp - 50) * 0.50, -25, 25)
         conf += d
-        part("추천 순위", f"상위 {100 - bp:.0f}%", d)
+        part("추천 순위", f"{ctx.get('buyrank') or max(1, round(101 - bp))}위 / 100", d)
 
     # 2) 기준집단(순위밴드 × 국면) — 100종목 전체를 모은 통계
     if pr:
@@ -515,7 +515,7 @@ def verdict(ctx, bull, bear, regime, base_win=None, meta=None):
 
     # 한 줄 결론
     if pr:
-        head = (f"추천 상위 {100 - bp:.0f}%" if bp is not None else "")
+        head = (f"추천 {ctx.get('buyrank') or max(1, round(101 - bp))}위" if bp is not None else "")
         line = (f"{head} · 이 구간(순위·국면) 과거 승률 {pr['win']}%"
                 f"({pr['edge_pp']:+.1f}%p) · 기대 {pr['ev']:+.2f}% · "
                 f"손절확률 {pr['p_stop']}% · 반대논리 {len(bear['risks'])}건 "
