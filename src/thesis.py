@@ -53,7 +53,19 @@ def wilson(p, n, z=1.96):
     return (max(0.0, c - m), min(1.0, c + m))
 
 
-def probability(rets, eff_n=None, base_win=None):
+def shrink(est, n, prior, k=30.0):
+    """
+    경험적 베이즈 축소 — 표본이 얇은 칸의 추정치를 전체 평균 쪽으로 당긴다.
+    독립표본 n개짜리 칸의 승률 61%를 그대로 믿으면 안 된다. 30일 수익은 대부분
+    시장이 결정하므로 칸별 차이는 대개 잡음이고, 극단 칸일수록 잡음이 크다.
+    n이 k와 같으면 절반만 인정, n≫k면 거의 그대로 인정한다.
+    """
+    if n is None or n <= 0:
+        return prior
+    return (n * est + k * prior) / (n + k)
+
+
+def probability(rets, eff_n=None, base_win=None, prior=None):
     """
     과거 유사국면 수익률 배열(list[float], 소수) → 확률 블록.
 
@@ -75,14 +87,20 @@ def probability(rets, eff_n=None, base_win=None):
 
     wins = [x for x in rs if x > 0]
     losses = [x for x in rs if x <= 0]
-    p_win = len(wins) / n
+    p_raw = len(wins) / n
+    # 표시·판단에 쓰는 승률은 축소한 값. prior가 없으면 기준선, 그것도 없으면 50%.
+    p_prior = (prior if prior is not None
+               else (base_win / 100 if base_win is not None else 0.5))
+    p_win = shrink(p_raw, eff_n, p_prior)
     lo, hi = wilson(p_win, eff_n)
 
     g = sum(wins) / len(wins) if wins else 0.0            # 이길 때 평균 상승폭
     l = abs(sum(losses) / len(losses)) if losses else 0.0  # 질 때 평균 하락폭
 
     ev_raw = sum(r) / n
-    ev = sum(rs) / n - ROUND_COST                          # 손절·비용 반영 기대수익
+    ev_obs = sum(rs) / n - ROUND_COST                      # 손절·비용 반영 관측 기대수익
+    # 기대수익도 같은 이유로 축소한다(전체 평균 쪽으로).
+    ev = shrink(ev_obs, eff_n, 0.0, k=15.0)
 
     payoff = (g / l) if l > 1e-9 else None                 # 손익비
 
@@ -96,7 +114,9 @@ def probability(rets, eff_n=None, base_win=None):
     #   3) 상한·하프켈리 — 캡 20%, 실제 권장은 그 절반.
     # 결과가 0%면 "이 표본으로는 비중을 키울 근거가 없다"는 뜻이다(음수 베팅은 안 한다).
     mu = ev
-    var = (sum((x - sum(rs) / n) ** 2 for x in rs) / (n - 1)) if n > 1 else 0.0
+    # 주의: 평균은 루프 밖에서 한 번만 구한다(안에서 구하면 O(n²) — 표본이 커지면 멈춘다)
+    mean_rs = sum(rs) / n
+    var = (sum((x - mean_rs) ** 2 for x in rs) / (n - 1)) if n > 1 else 0.0
     sd = math.sqrt(var) if var > 0 else 0.0
     se = sd / math.sqrt(eff_n) if eff_n > 0 else 0.0
     mu_lo = mu - se                                        # 추정오차 1σ 차감
@@ -107,7 +127,8 @@ def probability(rets, eff_n=None, base_win=None):
 
     return {
         "n": n, "eff_n": round(eff_n, 1),
-        "win": round(p_win * 100, 1),
+        "win": round(p_win * 100, 1), "win_raw": round(p_raw * 100, 1),
+        "ev_obs": round(ev_obs * 100, 2),
         "win_lo": round(lo * 100, 1), "win_hi": round(hi * 100, 1),
         "base_win": base_win,
         "edge_pp": round(p_win * 100 - base_win, 1) if base_win is not None else None,
@@ -270,32 +291,28 @@ def bear_case(ctx, meta=None):
         add("med", "하락장 취약",
             "시장이 내릴 때 더 많이 내리는 종목. 시장 리스크가 그대로 증폭된다.",
             f"하락베타 {ctx.get('down_beta')} (시장 -10%면 대략 {ctx['down_beta']*-10:.0f}%)")
-    # 10) 통계적 엣지 부재
+    # 10) 기준집단(순위밴드×국면) 기반 위험
+    #  ※ 예전에는 '그 종목의 유사 국면 승률'로 엣지 유무를 판정했으나,
+    #    verify_thesis.py 34,221건 검증에서 그 승률의 예측력이 0(상관 -0.003)으로
+    #    드러나 폐기했다. 지금은 100종목 전체를 모은 기준집단만 쓴다.
     pr = ctx.get("prob")
     if pr is None:
         add("high", "표본 부족",
-            "과거 유사 국면 표본이 부족해 확률을 말할 수 없다. 이 종목은 '모른다'가 정답.",
-            "유사사례 10회 미만")
+            "기준집단 통계를 만들 표본이 없다. 이 종목은 '모른다'가 정답.",
+            "기준집단 표본 부족")
     else:
         bwin = pr.get("base_win")
-        if pr.get("edge_pp") is not None and pr["edge_pp"] <= 0:
-            add("high", "엣지 없음",
-                "이 종목의 유사국면 승률이 '아무거나 산 경우'의 기준선보다 낮다. "
-                "점수가 높다고 승률까지 높은 건 아니다.",
-                f"승률 {pr['win']}% vs 기준선 {bwin}% ({pr['edge_pp']:+.1f}%p)")
-        elif not pr.get("proven"):
-            add("med", "승률 미확정",
-                "표본이 얇아 신뢰구간 하한이 기준선 아래다 — 우위가 있다고 통계적으로 "
-                "단정할 수는 없다(이 데이터로는 어느 종목도 대부분 단정 못 한다).",
-                f"승률 {pr['win']}% (95% 구간 {pr['win_lo']}~{pr['win_hi']}%, "
-                f"독립표본 {pr['eff_n']:.0f}회, 기준선 {bwin}%)")
+        if bwin is not None and pr["win"] <= bwin - 3:
+            add("med", "불리한 구간",
+                "이 순위·국면 조합은 과거 평균보다 승률이 낮았던 칸이다.",
+                f"이 칸 승률 {pr['win']}% vs 전체 {bwin}%")
         if pr["ev"] <= 0:
             add("high", "기대값 음수",
-                "비용·손절을 반영하면 기대수익이 0 이하. 반복하면 잃는 베팅이다.",
+                "비용·손절을 반영하면 이 칸의 기대수익이 0 이하. 반복하면 잃는 구간이다.",
                 f"기대 {pr['ev']:+.2f}% (비용 {pr['cost']}% 차감 후)")
-        if pr["p_stop"] >= 25:
+        if pr["p_stop"] >= 18:
             add("med", "손절 빈발",
-                "과거 유사 국면에서 30일 안에 -10%를 맞은 비율이 높다. 잦은 손절을 각오해야 한다.",
+                "이 구간은 과거 30일 안에 -10%를 맞은 비율이 높다. 잦은 손절을 각오해야 한다.",
                 f"손절 발동 {pr['p_stop']}%")
     # 11) 뉴스 악재
     for nw in (ctx.get("news_flags") or [])[:2]:
@@ -307,7 +324,10 @@ def bear_case(ctx, meta=None):
             ctx["sector_conc"])
 
     # 반대논리 강도 0~100
-    W = {"high": 22, "med": 11, "low": 5}
+    # 가중치를 낮춘 이유: 반대논리 항목들은 '확인할 거리'이지 검증된 예측인자가 아니다.
+    # 이게 무거우면 검증된 신호(순위·타이밍)를 덮어써 추천을 거꾸로 뒤집는다 —
+    # 실제로 첫 버전이 그랬고, 백테스트에서 A등급이 시장보다 못한 원인이었다.
+    W = {"high": 14, "med": 7, "low": 3}
     bear_score = min(100, sum(W[r["sev"]] for r in risks))
 
     # 무효화 조건 — '내가 틀렸다'고 인정할 선을 미리 못박는다.
@@ -391,28 +411,39 @@ def _clamp(x, lo, hi):
 
 # 확신도 구성요소 설명 (100종목 공통 → meta에 한 번만 실린다)
 VERDICT_NOTES = {
-    "초과 승률": "이 종목 유사국면 승률 − 전체 기준선(아무 종목이나 아무 날 샀을 때의 승률). "
-                 "기준선보다 높아야 비로소 엣지다.",
-    "기대수익": "손절(-10%)·왕복비용 0.3%를 반영한 30일 기대값.",
-    "표본 두께": "겹치는 표본 중 실제로 겹치지 않는 관측 횟수. 얇으면 숫자를 믿을 수 없다.",
-    "반대 논리": "자동 체크리스트에 걸린 하락 논리의 가중합(치명 22 · 주의 11점).",
-    "시장 국면": "지금 국면에서 상위10 전략의 과거 30일 승률.",
+    "추천 순위": "이 시스템이 실제로 추천하는 순서(BuyFit = 종합점수 + 진입타이밍)에서의 백분위. "
+                 "백테스트로 검증된 유일한 신호라 가장 큰 비중을 둔다.",
+    "구간 승률": "이 순위·국면 칸의 과거 30일 승률 − 전체 평균. "
+                 "100종목 전체를 모은 기준집단이라 한 종목의 과거보다 훨씬 안정적이다.",
+    "구간 기대": "이 칸의 30일 기대수익(손절·왕복비용 0.3% 반영).",
+    "반대 논리": "자동 체크리스트에 걸린 하락 논리의 가중합(치명 14 · 주의 7점). "
+                 "검증된 예측인자가 아니라 '확인할 거리'이므로 비중을 작게 둔다.",
 }
 
 
 def verdict(ctx, bull, bear, regime, base_win=None, meta=None):
     """
-    확률·반대논리·시장국면을 합쳐 0~100 확신도와 등급을 낸다.
+    0~100 확신도와 A~D 등급.
 
-    등급이 뜻하는 것 / 뜻하지 않는 것 (중요)
-      뜻함   : 같은 날 100종목을 같은 잣대로 줄 세웠을 때 근거가 두꺼운 쪽인가.
+    설계 원칙 (2차 개정 — verify_thesis.py 검증 결과 반영)
+      1차 버전은 '그 종목의 과거 유사국면 승률'을 확신도의 핵심으로 삼았다.
+      34,221건 백테스트 결과 그 승률은 예측력이 0이었고(상관 -0.003),
+      그 위에 세운 A등급은 **시장보다도 못했다**(연 +6.7% vs 시장 +14.8%).
+      원인은 명확했다: 검증된 신호(순위)를 버리고 노이즈로 종목을 다시 골랐기 때문.
+
+      그래서 확신도는 이제 **시스템의 추천 순위(BuyFit)를 뼈대로** 삼고,
+      기준집단 통계와 반대논리는 그 위에서 조금 깎고 더하는 역할만 한다.
+      등급이 추천을 뒤집지 못하게 하는 것이 핵심이다.
+
+    등급이 뜻하는 것 / 뜻하지 않는 것
+      뜻함   : 오늘 100종목 중 근거가 두꺼운 쪽인가 (상대 순위).
       뜻 안함: '통계적으로 오른다고 입증됐다'. 개별 종목 30일 승률은 이 데이터로
-               유의하게 입증되지 않는다(prob.proven 필드가 그 사실을 그대로 표시한다).
+               입증되지 않는다(proven 필드가 그 사실을 그대로 표시한다).
     """
     pr = ctx.get("prob")
     conf = 50.0
     parts = []
-    bw = base_win if base_win is not None else 55.0
+    bw = base_win if base_win is not None else 50.0
 
     if meta is not None:
         meta.setdefault("verdict_notes", VERDICT_NOTES)
@@ -423,22 +454,28 @@ def verdict(ctx, bull, bear, regime, base_win=None, meta=None):
             p["note"] = VERDICT_NOTES.get(k, "")
         parts.append(p)
 
+    # 1) 검증된 신호 — 시스템의 추천 순위. 지배적 항목이어야 한다.
+    bp = ctx.get("buyfit_pct")
+    if bp is not None:
+        d = _clamp((bp - 50) * 0.50, -25, 25)
+        conf += d
+        part("추천 순위", f"상위 {100 - bp:.0f}%", d)
+
+    # 2) 기준집단(순위밴드 × 국면) — 100종목 전체를 모은 통계
     if pr:
         edge = (pr.get("edge_pp") if pr.get("edge_pp") is not None else pr["win"] - bw)
-        d = _clamp(edge * 1.8, -22, 22)
+        d = _clamp(edge * 1.2, -12, 12)
         conf += d
-        part("초과 승률", f"{edge:+.1f}%p", d)
-        d = _clamp(pr["ev"] * 2.5, -15, 15)
+        part("구간 승률", f"{pr['win']:.1f}% ({edge:+.1f}%p)", d)
+        d = _clamp(pr["ev"] * 1.5, -8, 8)
         conf += d
-        part("기대수익", f"{pr['ev']:+.2f}%", d)
-        d = _clamp((pr["eff_n"] - 8) * 1.0, -12, 12)
-        conf += d
-        part("표본 두께", f"독립 {pr['eff_n']:.0f}회", d)
+        part("구간 기대", f"{pr['ev']:+.2f}%", d)
     else:
-        conf -= 22
-        part("표본 두께", "부족", -22.0)
+        conf -= 15
+        part("구간 승률", "표본 부족", -15.0)
 
-    d = -bear["bear_score"] * 0.32
+    # 3) 반대 논리 — 작은 비중으로만
+    d = -bear["bear_score"] * 0.30
     conf += d
     n_high = sum(1 for r in bear["risks"] if r["sev"] == "high")
     part("반대 논리", f"{len(bear['risks'])}건(치명 {n_high})", d)
@@ -447,10 +484,6 @@ def verdict(ctx, bull, bear, regime, base_win=None, meta=None):
     if regime:
         cur = regime.get("current", {}).get("name")
         rw = next((h.get("win") for h in regime.get("history", []) if h["name"] == cur), None)
-    if rw is not None:
-        d = _clamp((rw - 55) * 0.6, -8, 8)
-        conf += d
-        part("시장 국면", f"{regime['current']['name']} 승률 {rw:.0f}%", d)
 
     conf = _clamp(conf, 0, 100)
 
@@ -482,11 +515,13 @@ def verdict(ctx, bull, bear, regime, base_win=None, meta=None):
 
     # 한 줄 결론
     if pr:
-        line = (f"승률 {pr['win']}%(기준선 {bw}% 대비 {pr['edge_pp']:+.1f}%p) · "
-                f"기대 {pr['ev']:+.2f}% · 손절확률 {pr['p_stop']}% · "
-                f"반대논리 {len(bear['risks'])}건 → <b>{grade}등급</b>, {act}")
+        head = (f"추천 상위 {100 - bp:.0f}%" if bp is not None else "")
+        line = (f"{head} · 이 구간(순위·국면) 과거 승률 {pr['win']}%"
+                f"({pr['edge_pp']:+.1f}%p) · 기대 {pr['ev']:+.2f}% · "
+                f"손절확률 {pr['p_stop']}% · 반대논리 {len(bear['risks'])}건 "
+                f"→ <b>{grade}등급</b>, {act}")
     else:
-        line = f"확률을 계산할 표본이 없다 → <b>{grade}등급</b>, {act}"
+        line = f"기준집단 표본이 없다 → <b>{grade}등급</b>, {act}"
 
     return {"conf": round(conf), "grade": grade, "grade_text": gtxt,
             "action": act, "mode": mode, "line": line, "parts": parts,

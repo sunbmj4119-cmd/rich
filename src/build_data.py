@@ -21,6 +21,7 @@ import thesis
 
 SCORES="data/scores.csv"; SIGNALS="data/signals_today.csv"; WEIGHTS="config/weights.yaml"
 ACCOUNT="data/account.json"; REGIME="data/regime.json"; NEWS="data/news.csv"; JOURNAL="data/journal.csv"
+REFCLASS="data/refclass.json"; VERIFY="data/verify_thesis.json"
 OUT="docs/data.json"; HOLD=30
 NEWS_FRESH_DAYS=14      # 대시보드에 띄울 뉴스 기간
 NEWS_PER_STOCK=4
@@ -110,6 +111,30 @@ def main():
         except Exception: regime=None
     betas=(regime or {}).get("betas",{})
 
+    # ── 기준집단 (refclass.py) · 검증결과 (verify_thesis.py) ────
+    # 확률은 '그 종목의 과거'가 아니라 '순위밴드×국면' 칸에서 가져온다.
+    # 이유: verify_thesis가 종목별 유사국면 승률의 예측력을 0으로 판정했다.
+    refc=None
+    if os.path.exists(REFCLASS):
+        try: refc=json.load(open(REFCLASS,encoding="utf-8"))
+        except Exception: refc=None
+    verify=None
+    if os.path.exists(VERIFY):
+        try: verify=json.load(open(VERIFY,encoding="utf-8"))
+        except Exception: verify=None
+
+    def ref_cell(rk):
+        """종합순위 → 기준집단 통계 (국면칸 우선, 얇으면 밴드 전체로 폴백)"""
+        if not refc: return None,None
+        band=None
+        for b in refc.get("bands",[]):
+            lo,hi=(int(x) for x in b.split("-"))
+            if lo<=rk<=hi: band=b; break
+        if not band: return None,None
+        rg=(regime or {}).get("current",{}).get("name")
+        cell=refc.get("cells",{}).get(f"{band}|{rg}") if rg else None
+        return (cell or refc.get("by_band",{}).get(band)), band
+
     # ── 최신 뉴스 (news.py) ───────────────────────────────────
     news_map={}; market_news=[]
     if os.path.exists(NEWS):
@@ -164,6 +189,7 @@ def main():
     cur=cur.sort_values("종합점수",ascending=False).reset_index(drop=True)
     cur["순위"]=cur.index+1
     cur["buyrank"]=cur["buyfit"].rank(ascending=False).astype(int)
+    cur["buyfit_pct"]=cur["buyfit"].rank(pct=True)*100   # 100=가장 추천 (등급의 뼈대)
 
     sig=pd.read_csv(SIGNALS,dtype={"종목코드":str}) if os.path.exists(SIGNALS) else pd.DataFrame()
     def _s(v):  # 빈칸/NaN → "" (data.json이 유효 JSON이 되도록; NaN 금지)
@@ -299,8 +325,13 @@ def main():
              "beta":bt.get("beta"),"down_beta":bt.get("down"),
              "vol":bt.get("vol"),"vol_rank":bt.get("vol_rank"),
              "news_flags":nflags,"sector_conc":conc,"signal":sg.get("구분","")}
-        prob=thesis.probability(rets,eff_n,base_win) if rets else None
+        cell,band=ref_cell(int(r["순위"]))
+        prob=dict(cell) if cell else None      # 기준집단 = 판단에 쓰는 확률
+        if prob: prob["band"]=band
         ctx["prob"]=prob
+        ctx["buyfit_pct"]=float(r["buyfit_pct"])
+        # 종목별 유사사례 통계는 '참고'로만 남긴다 (예측력 검증 실패 — 아래 note)
+        analog_prob=thesis.probability(rets,eff_n,base_win) if rets else None
         bull=thesis.bull_case(ctx,meta)
         ctx["bull_first"]=bull["drivers"][0]["title"] if bull["drivers"] else None
         bear=thesis.bear_case(ctx,meta)
@@ -330,7 +361,8 @@ def main():
             "short_rank":short_map.get(code,{}).get("rank"),
             "short_asof":short_map.get(code,{}).get("asof"),
             # ── 판단 근거 블록 ──
-            "bull":bull,"bear":bear,"prob":prob,"mscen":mscen,"verdict":vd,
+            "bull":bull,"bear":bear,"prob":prob,"aprob":analog_prob,"mscen":mscen,"verdict":vd,
+            "buyfit_pct":round(float(r["buyfit_pct"]),0),
             "beta":bt.get("beta"),"down_beta":bt.get("down"),
             "vol":bt.get("vol"),"vol_rank":bt.get("vol_rank"),
             "news":news_map.get(code,[]),"journal":journal_map.get(code,[])})
@@ -430,7 +462,8 @@ def main():
         "hist_labels":[f"{b}" for b in np.arange(20,85,5)],
         "weights":weights,"buylist":buylist[:10],"news":market_news}
     # allow_nan=False → 유효 JSON 보장(trade.html의 JSON.parse 및 표준 준수). NaN 있으면 즉시 실패.
-    json.dump({"market":market,"items":items,"portfolio":portfolio,"regime":regime,"meta":meta},
+    json.dump({"market":market,"items":items,"portfolio":portfolio,"regime":regime,
+               "refclass":refc,"verify":verify,"meta":meta},
               open(OUT,"w",encoding="utf-8"),ensure_ascii=False,allow_nan=False)
     pf=(f" · 계좌 원금 {portfolio['invested']:,}→평가 {portfolio['value']:,} ({portfolio['upnl_pct']:+.1f}%)"
         if portfolio else " · 보유없음")

@@ -324,6 +324,40 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 <div class="warn">※ {pit_line}<br>이 표본은 <b>강세장 비중이 큰 2018~2026</b> 구간이니 <b>실전 기대는 더 보수적으로</b> 잡으세요. 상장폐지 {rb.get('delisted_n',0):,}종목은 애초에 데이터에 없습니다.</div></div>"""
     else:
         H+='<div class="card"><h2>🔬 전략 검증</h2><div class="note">보완 백테스트 미실행. Actions의 robust-backtest를 한 번 돌리면 생존편향·비용 보정 기대수익이 여기 표시됩니다.</div></div>'
+    # 🔍 이 숫자를 믿어도 되나 — 등급·확률을 과거 데이터로 실제 검증한 결과
+    vf=d.get("verify")
+    if vf:
+        NOW_CLS=' class="now"'
+        grows="".join(
+          f'<tr{NOW_CLS if g["grade"]=="A" else ""}><td>{g["grade"]}등급</td>'
+          f'<td>{g["win"]:.1f}%</td><td>{g["avg"]:+.2f}%</td><td>{g["p_stop"]:.1f}%</td>'
+          f'<td style="color:#bbb">{g["indep"]:,}</td></tr>' for g in vf.get("grades",[]))
+        srows=""
+        for r in vf.get("sims",[]):
+            hl=("background:#eef5ff;font-weight:700" if "대조군" in r["name"] else "")
+            c="#34c759" if r["ann"]>=20 else ("#ff9500" if r["ann"]>=10 else "#ff3b30")
+            srows+=(f'<tr style="{hl}"><td style="font-size:11px">{r["name"]}</td>'
+                    f'<td style="color:{c};font-weight:700">{r["ann"]:+.1f}%</td>'
+                    f'<td>{r["sharpe"]:.2f}</td><td>{r["worst"]:+.0f}%</td></tr>')
+        cal_ok=sum(1 for c in vf.get("calibration",[]) if c["ok"])
+        cal_n=len(vf.get("calibration",[]))
+        H+=f"""<div class="card" style="border:2px solid #5856d6"><h2>🔍 이 숫자를 믿어도 되나</h2>
+<div class="leg" style="margin-top:0">대시보드가 말하는 등급·확률을 <b>과거 시점 정보만으로 다시 계산해</b> 실제 결과와 대조했습니다.
+({vf['period'][0]}~{vf['period'][1]} · {vf['n_eval']:,}건 · 미래참조 차단)</div>
+<div class="note" style="background:#fff6f6;margin-top:8px">❌ <b>승률 예측은 실패했습니다.</b>
+예측 승률과 실제 결과의 상관은 <b>{vf['cal_corr']:+.4f}</b>(사실상 0), 캘리브레이션은 {cal_n}구간 중 <b>{cal_ok}개만</b> 맞았습니다.
+개별 종목의 30일 승률은 <b>이 데이터로 예측되지 않습니다</b> — 그래서 화면의 승률은 참고용 기록으로만 두세요.</div>
+<div class="note" style="background:#f2fbf4;margin-top:6px">✅ <b>기대수익 방향은 살아있습니다.</b>
+등급별 실제 30일 평균수익이 A {vf['grades'][0]['avg']:+.2f}% → D {vf['grades'][-1]['avg']:+.2f}%로 갈렸고,
+손절 발동률도 A {vf['grades'][0]['p_stop']:.0f}% vs D {vf['grades'][-1]['p_stop']:.0f}%로 차이가 납니다.</div>
+<div class="leg" style="margin-top:10px"><b>등급별 실제 결과</b></div>
+<div class="tw"><table class="stab"><tr><th>등급</th><th>승률</th><th>평균수익</th><th>손절률</th><th>독립표본</th></tr>{grows}</table></div>
+<div class="leg" style="margin-top:10px"><b>이 방법으로 투자했다면 (30일 리밸런싱·비용 0.3%)</b></div>
+<div class="tw"><table class="stab"><tr><th>전략</th><th>연율</th><th>Sharpe</th><th>최악</th></tr>{srows}</table></div>
+<div class="warn">파란 줄이 <b>대조군</b>입니다. 등급을 무시하고 BuyFit 상위5만 사도 결과가 같거나 더 낫습니다 →
+<b>등급은 추천을 요약할 뿐 추가 수익을 만들지 못합니다.</b> 등급은 "얼마나 확신할지"를 보는 용도로만 쓰세요.<br>
+리밸런싱 {vf['sims'][0]['n_rebal']}회는 통계적으로 적은 표본입니다. 연율 차이는 우연일 수 있습니다.</div></div>"""
+
     H+="""<div class="card"><h2>📚 방법론 · 이 추천의 근거</h2>
 <details><summary style="font-size:14px;color:#0071e3;cursor:pointer;font-weight:600">계산 방식 전체 보기 (전문가용)</summary>
 <div class="note" style="margin-top:8px;line-height:1.9">
@@ -526,13 +560,16 @@ function openD(code){
      ${invalList(be).map(x=>'· '+x).join('<br>')}</div>
    <div class="leg">사람은 산 종목의 좋은 점만 찾게 됩니다(확증편향). 이 목록은 <b>규칙이 자동으로 제시하는 반대 의견</b>이라 기분에 좌우되지 않습니다.</div></div>`;
 
- // 🎲 확률 계산
+ // 🎲 확률 계산 — 기준집단(순위밴드 × 국면)
  if(pr){
    const lo=Math.max(0,Math.min(100,pr.win_lo)), hi=Math.max(0,Math.min(100,pr.win_hi));
    const ec=pr.edge_pp>=0?'#34c759':'#ff3b30';
    const kc=pr.kelly_use>0?'#0071e3':'#c7c7cc';
+   const rgn=(DATA.regime&&DATA.regime.current)?DATA.regime.current.name:'';
    h+=`<div class="card"><h2>🎲 확률 계산</h2>
-   <div class="leg" style="margin-top:0">과거 <b>점수·타이밍이 비슷했던 ${pr.n}회</b> 중 서로 겹치지 않는 <b>${pr.eff_n.toFixed(0)}회</b>가 실질 관측치입니다.</div>
+   <div class="note" style="background:#f0f7ff;margin-top:0">기준집단: <b>종합 ${pr.band}위</b>${rgn?` · <b>${rgn}</b>`:''}
+   <div class="leg" style="margin-top:4px">이 종목의 과거가 아니라 <b>같은 순위·같은 국면이었던 100종목 전체 ${pr.n.toLocaleString()}건</b>(서로 겹치지 않는 기간 ${pr.eff_n.toFixed(0)}개)의 30일 후 결과입니다.
+   한 종목의 과거 15~25번은 그 시기 시장이 뭘 했는지를 잴 뿐이라 <b>검증에서 예측력이 0으로 나왔고</b>, 그래서 기준집단을 바꿨습니다.</div></div>
    <div class="ci">
      <div class="citrack"></div><div class="cirange" style="left:${lo}%;width:${hi-lo}%"></div>
      <div class="cidot" style="left:${pr.win}%"></div>
@@ -541,12 +578,15 @@ function openD(code){
      <div class="cilab" style="left:${pr.win}%;color:#0071e3;font-weight:700">${pr.win}%</div>
      <div class="cilab" style="left:${hi}%">${hi}%</div>
    </div>
-   <div class="leg">파란 점=승률 추정치, 파란 띠=95% 신뢰구간, <span style="color:#ff3b30">빨간 선</span>=기준선 ${pr.base_win}%(아무 종목이나 아무 날 샀을 때 30일 뒤 오를 확률). <b>띠가 빨간 선을 확실히 넘어야</b> 진짜 우위입니다.</div>
+   <div class="leg">파란 점=승률 추정치, 파란 띠=95% 신뢰구간, <span style="color:#ff3b30">빨간 선</span>=기준선 ${pr.base_win}%(아무 종목이나 아무 날 샀을 때 30일 뒤 오를 확률). <b>띠가 빨간 선을 확실히 넘어야</b> 진짜 우위인데, 실제로 넘는 칸은 거의 없습니다.<br>
+   표시 승률은 관측값 ${pr.win_raw}%를 표본 두께에 맞춰 전체 평균 쪽으로 당긴 값입니다(얇은 칸의 극단값을 그대로 믿지 않기 위해).</div>
    <div class="stat" style="margin-top:8px">
      <div><div class="v" style="color:${ec};font-size:19px">${pr.edge_pp>=0?'+':''}${pr.edge_pp}%p</div><div class="k">기준선 대비 초과승률</div></div>
      <div><div class="v" style="font-size:19px">${pr.ev>=0?'+':''}${pr.ev}%</div><div class="k">기대수익(비용·손절 반영)</div></div>
      <div><div class="v" style="font-size:19px">${pr.payoff||'-'}</div><div class="k">손익비(이익÷손실)</div></div>
    </div>
+   <div class="warn">⚠️ <b>승률은 어떤 방법으로도 신뢰성 있게 예측되지 않았습니다</b>(35,163건 검증, 예측-실제 상관 ≈0). 위 승률은 "이 구간이 과거에 이랬다"는 기록이지 예보가 아닙니다.<br>
+   그나마 의미가 남은 건 <b>구간별 평균수익 차이</b>(1-5위 +3.5% vs 51-100위 +1.7%)와 <b>손절 발동률</b>입니다. 승률 숫자는 <b>50% 근처로</b> 보세요.</div>
    <div class="leg" style="margin-top:6px"><b>30일 뒤 결과 분포</b></div>
    <div class="pbar">
      <div style="width:${pr.p_stop}%;background:#ff3b30">${pr.p_stop>=8?pr.p_stop+'%':''}</div>
