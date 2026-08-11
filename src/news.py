@@ -217,20 +217,37 @@ _DP = [(re.compile(k), v) for k, v in DART_POS.items()]
 
 
 def _collect_dart(targets, rows):
-    """최근 공시를 rows에 추가. 출처는 'DART'로 표시해 대시보드가 구분한다."""
+    """
+    최근 공시를 rows에 추가. 출처는 'DART'로 표시해 대시보드가 구분한다.
+
+    주의: kind를 지정하지 말 것.
+      kind="A"는 **정기공시(사업·분기보고서)** 만 준다. 우리가 보고 싶은
+      유상증자·자사주취득·공급계약은 주요사항보고(B)·거래소공시(I)라
+      A로 조회하면 30종목 전부 "013 조회된 데이타가 없습니다"가 돌아온다.
+      (첫 CI 실행에서 실제로 그렇게 나왔다.)
+      전체를 받아 제목 키워드로 거르는 편이 단순하고 빠뜨림도 없다.
+    """
+    import io
+    import contextlib
     import OpenDartReader
-    dart = OpenDartReader(os.environ["DART_API_KEY"])
+    with contextlib.redirect_stdout(io.StringIO()):     # 라이브러리가 찍는 오류 JSON 억제
+        dart = OpenDartReader(os.environ["DART_API_KEY"])
     since = (datetime.now(KST) - timedelta(days=KEEP_DAYS)).strftime("%Y-%m-%d")
     today = datetime.now(KST).strftime("%Y-%m-%d")
-    added = 0
+    added = hit = 0
     for code, name in targets.items():
         try:
-            lst = dart.list(code, start=since, end=today, kind="A")
+            with contextlib.redirect_stdout(io.StringIO()):
+                lst = dart.list(code, start=since, end=today)   # kind 미지정 = 전체
         except Exception:
             continue
         if lst is None or len(lst) == 0:
             continue
-        for _, r in lst.head(8).iterrows():
+        hit += 1
+        picked = 0
+        for _, r in lst.iterrows():
+            if picked >= 5:
+                break
             title = str(r.get("report_nm", "")).strip()
             if not title:
                 continue
@@ -247,7 +264,9 @@ def _collect_dart(targets, rows):
                          "발행일": str(r.get("rcept_dt", ""))[:10], "출처": "DART",
                          "감성": sc, "키워드": why})
             added += 1
+            picked += 1
         time.sleep(0.12)
+    print(f"  DART: {hit}/{len(targets)}종목 공시 조회 성공 · 방향성 있는 공시 {added}건")
     return added
 
 
