@@ -45,6 +45,7 @@ WARMUP = 260
 # ══════════════════════════════════════════════════════════════
 def simulate(px, rank, flow_ok, vol, p, d0, d1,
              reg=None, vol_parity=False, block=None, scale=None):
+    """tiers=[(고점수익, 트레일폭)] · parts=[(수익률, 익절비중)] 은 p 안에 넣는다."""
     """
     px[t,i]=종가, rank[t,i]=종합점수 순위(1=최고), flow_ok[t,i]=외국인 필터 통과,
     vol[t,i]=최근 20일 일간수익 표준편차.
@@ -66,11 +67,33 @@ def simulate(px, rank, flow_ok, vol, p, d0, d1,
                 continue
             q["peak"] = max(q["peak"], cur)
             ret = cur / q["entry_px"] - 1
+            peak_gain = q["peak"] / q["entry_px"] - 1
             held = t - q["entry_t"]
+            # 부분 익절 — 도달 시 일부만 현금화하고 나머지는 계속 굴린다
+            for k, (lvl, frac) in enumerate(p.get("parts") or []):
+                if k not in q["done"] and ret >= lvl:
+                    exp_ = px[t + 1, i]
+                    if np.isfinite(exp_):
+                        wsell = q["w0"] * frac
+                        rr = exp_ / q["entry_px"] - 1 - COST
+                        cash_eq *= (1 + rr * wsell)
+                        q["w"] -= wsell
+                        q["done"].add(k)
+                        trades.append({"t": t, "ret": rr, "why": "익절",
+                                       "held": held, "w": wsell})
+            if q["w"] <= 1e-9:
+                pos.pop(i)
+                continue
+            # 트레일 조임 — 많이 오를수록 좁게
+            tw = p["trail"]
+            for lvl, w_ in (p.get("tiers") or []):
+                if peak_gain >= lvl:
+                    tw = w_
+                    break
             why = None
             if ret <= -q["stop"]:
                 why = "손절"
-            elif p["trail"] and (cur / q["peak"] - 1) <= -p["trail"]:
+            elif tw and (cur / q["peak"] - 1) <= -tw:
                 why = "트레일"
             elif p["tp"] and ret >= q["tp"]:
                 why = "익절"
@@ -110,8 +133,8 @@ def simulate(px, rank, flow_ok, vol, p, d0, d1,
                 wgt = (float(np.clip(0.02 / max(v, 1e-4), 0.3, 2.0)) / top_n
                        if vol_parity else 1.0 / top_n)
                 pos[i] = {"entry_px": px[t + 1, i], "entry_t": t + 1,
-                          "peak": px[t + 1, i], "w": wgt * mult,
-                          "stop": stop, "tp": tp}
+                          "peak": px[t + 1, i], "w": wgt * mult, "w0": wgt * mult,
+                          "stop": stop, "tp": tp, "done": set()}
         # ── 3) 평가액 기록 ──────────────────────────────────────
         val = cash_eq
         for i, q in pos.items():
@@ -200,9 +223,11 @@ def main():
     print(f"구간: train {pd.Timestamp(dates[WARMUP]).date()}~{pd.Timestamp(dates[split-1]).date()}"
           f" · test {pd.Timestamp(dates[split]).date()}~{pd.Timestamp(dates[-1]).date()}")
 
+    # 기준선 = signal.py가 실제로 쓰는 규칙 (익절 사다리 포함)
     BASE = dict(top_n=10, entry_rank=10, exit_rank=20, min_hold=30,
                 stop_mode="fixed", stop=0.10, stop_k=5.0,
-                trail=0.08, tp=None, tp_mode="fixed", tp_k=8.0)
+                trail=0.08, tp=None, tp_mode="fixed", tp_k=8.0,
+                tiers=[(0.30, 0.03), (0.15, 0.05)], parts=[(0.25, 1 / 3)])
     RANK_BASE = rank_of(fac["종합점수"]).values
     out = {"split": SPLIT, "cost": COST,
            "train": [str(pd.Timestamp(dates[WARMUP]).date()), str(pd.Timestamp(dates[split-1]).date())],
@@ -225,7 +250,7 @@ def main():
     # ── 1) 현재 규칙 (기준선) ─────────────────────────────────
     print("\n■ 1. 현재 규칙 (기준선)")
     b_tr, b_te = run(BASE)
-    base_row = show("현재 (손절10 트레일8 익절없음)", b_tr, b_te)
+    base_row = show("현재 (손절10·트레일 8→5→3·익절25%×1/3)", b_tr, b_te)
     out["baseline"] = base_row
 
     # ── 2) 손절 방식 ──────────────────────────────────────────

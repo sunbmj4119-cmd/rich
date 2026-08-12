@@ -25,8 +25,10 @@ REFCLASS="data/refclass.json"; VERIFY="data/verify_thesis.json"; LAB="data/strat
 OUT="docs/data.json"; HOLD=30
 NEWS_FRESH_DAYS=14      # 대시보드에 띄울 뉴스 기간
 NEWS_PER_STOCK=4
-FACTORS=[("s_value","가치"),("s_profit","수익성"),("s_grow","성장"),("s_flow","수급"),("s_mom","모멘텀")]
-WKEY={"s_value":"value","s_profit":"profit","s_grow":"growth","s_flow":"flow","s_mom":"momentum"}
+FACTORS=[("s_value","가치"),("s_profit","수익성"),("s_grow","성장"),("s_flow","수급"),
+         ("s_rmom","위험조정모멘텀"),("s_mom","모멘텀")]
+WKEY={"s_value":"value","s_profit":"profit","s_grow":"growth","s_flow":"flow",
+      "s_rmom":"rmom","s_mom":"momentum"}
 
 # 팩터별 '왜 이것이 수익을 예측하는가' — 학술 근거 + 이 시스템의 검증치 (전문가 설명용)
 # evidence의 IC/Sharpe는 '이 저장소가 과거(주로 2024-25) 표본에서 추정한 값'이며 매일 재검증되지 않음.
@@ -43,9 +45,12 @@ FACTOR_META={
  "s_flow":{"why":"외국인이 최근 20일 순매수(시총 대비)한 종목 = 스마트머니 유입.",
             "academic":"외국인 정보우위 — 한국 대형주 방향 예측력 (Kim·Yi 등 2014).",
             "evidence":"과거 표본 추정 valid IC≈+0.055(모멘텀과 독립), 순매도 제외 시 Sharpe↑(2024-25 표본). 가중 0.20."},
+ "s_rmom":{"why":"같은 상승이라도 '덜 출렁이며' 오른 종목. 12-1개월 수익 ÷ 연변동성.",
+            "academic":"위험조정·잔차 모멘텀이 원본 모멘텀보다 낫다 — Blitz·Huij·Martens(2011) Residual Momentum.",
+            "evidence":"이 저장소 실측 IC +0.041 (9년 중 7년 양수). 원본 모멘텀은 IC -0.010(음수). 종합점수와 상관 0.23으로 새 정보. 가중 0.10."},
  "s_mom":{"why":"최근 1년(직전 1개월 제외) 상승 추세가 이어지는 경향.",
             "academic":"모멘텀 효과 — Jegadeesh·Titman(1993), Carhart(1997) UMD.",
-            "evidence":"대형주는 평균회귀가 강해 소액만 반영(가중 0.08)."},
+            "evidence":"실측 IC -0.010(음수). 위험조정판(위)에 자리를 내주고 소액만 유지(가중 0.07)."},
 }
 
 
