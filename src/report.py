@@ -497,7 +497,7 @@ test({lab['test'][0]}~{lab['test'][1]})로 확인</b>했습니다. train에서 �
 {bars}
 <div class="warn">👉 <b>고정 손절 -10%는 거의 작동하지 않습니다.</b> 매수 후 +2.2%만 올라도
 트레일링(고점 -8%)이 손절선을 넘어서기 때문입니다. 증권사 앱에 -10% 하나만 걸어두면
-이 전략을 실행하는 게 아니니, <b>주가가 오르면 스탑을 고점×0.92로 올리세요.</b></div>
+이 전략을 실행하는 게 아니니, <b>주가가 오르면 스탑을 고점 기준으로 올리세요</b> (고점×0.92 → 고점수익 +15%↑면 ×0.95 → +30%↑면 ×0.97).</div>
 <details style="margin-top:6px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">바꾸려다 되돌린 것들 (왜 안 바꿨나)</summary>
 <div class="leg" style="margin-top:8px;line-height:1.85">
 <b>· 팩터 가중치 — 그대로 둠</b><br>
@@ -862,8 +862,11 @@ function openD(code){
        <div class="leg" style="margin-top:5px;line-height:1.75">
        처음엔 <b>체결가 -10%</b>(지정가 체결 시 ${Math.round(i.buy_limit*0.9).toLocaleString()}원)로 겁니다.
        그런데 주가가 <b>${Math.round(i.buy_limit*1.022).toLocaleString()}원</b>(+2.2%)만 넘어도
-       <b>트레일링(고점 -8%)</b>이 그보다 높아집니다. 그때부터는 스탑을 <b>고점 × 0.92</b>로 계속 올리세요.<br>
-       전략 점검 결과 실제 청산의 <b>77%가 트레일링</b>이고 고정 손절은 7%뿐이었습니다.
+       <b>트레일링</b>이 그보다 높아집니다. 그때부터는 스탑을 <b>고점 기준</b>으로 올리세요.<br>
+       <b>익절 사다리</b> — 고점×0.92가 기본, 고점수익 <b>+15%</b> 넘으면 <b>×0.95</b>,
+       <b>+30%</b> 넘으면 <b>×0.97</b>로 조입니다. 수익 <b>+25%</b>에서는 보유의 <b>1/3</b>을 익절합니다
+       (${Math.round(i.buy_limit*1.25).toLocaleString()}원 근방).<br>
+       실측상 청산의 <b>77%가 트레일링</b>이고 고정 손절은 7%뿐입니다.
        고정 -10%만 걸어두면 이 전략을 실행하는 게 아닙니다.</div></div></div>`;
    // 손실예산 기반 수량 계산 (지정가 체결·손절 -10% → 잃는 돈 ≈ 매수금액의 10%)
    A+=`<div class="card"><h2>🎯 손실예산으로 수량 정하기</h2>
