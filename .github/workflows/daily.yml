@@ -13,7 +13,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: install
-        run: pip install pandas numpy pyyaml "pykrx>=1.2.8" finance-datareader
+        run: pip install pandas numpy pyyaml "pykrx>=1.2.8" finance-datareader OpenDartReader
 
       - name: 1) 주가 갱신
         run: python src/update_prices.py
@@ -37,7 +37,21 @@ jobs:
           python src/signal.py | tee -a $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
-      - name: 4) 상세 데이터 생성
+      - name: 3-2) 시장국면 · 베타 (강세/횡보/약세/급락 판정)
+        run: python src/regime.py || echo "국면 계산 실패(무시하고 계속)"
+
+      - name: 3-3) 기준집단 통계 (순위밴드 × 국면)
+        run: python src/refclass.py || echo "기준집단 계산 실패(무시하고 계속)"
+
+      - name: 3-4) 등급·확률 검증 (미래참조 차단 백테스트)
+        run: python src/verify_thesis.py || echo "검증 실패(무시하고 계속)"
+
+      - name: 3-5) 종목별 최신 뉴스 + DART 공시
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: python src/news.py || echo "뉴스 수집 실패(무시하고 계속)"
+
+      - name: 4) 상세 데이터 생성 (시나리오·확률 포함)
         run: python src/build_data.py
 
       - name: 5) HTML 리포트
