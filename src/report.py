@@ -214,6 +214,16 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
         +'<div class="leg">매수 후보는 <b>BuyFit 상위</b>에서 D등급을 뺀 것입니다. '
          'D등급은 검증에서 시장 수익률을 밑돌았습니다.</div></div>')
 
+    # 데이터가 낡았으면 조용히 넘어가지 않는다 — 사용자가 그 값으로 주문을 넣기 때문
+    st=m.get("stale")
+    if st:
+        H+=(f'<div class="card alert"><h2>⚠️ 데이터 지연 알림</h2>'
+            f'<div class="note" style="background:transparent;padding:0;line-height:1.8">'
+            f'<b>{st["file"]}</b>가 <b>{st["last"]}</b>에서 멈춰 있습니다({st["lag"]}거래일 지연).<br>'
+            f'그래서 {st["effect"]}. 낡은 저가로 엉뚱한 지정가를 제시하지 않기 위한 안전장치입니다.'
+            f'</div><div class="leg">주가·점수·수급은 정상 갱신 중이라 <b>순위와 판단은 유효</b>합니다. '
+            f'다만 <b>권장 지정가는 현재가 대비 -1%</b>로만 제안되니, 실제 주문가는 호가창을 보고 정하세요.</div></div>')
+
     # 신뢰도 범례 — 아래 모든 카드의 배지를 읽는 법 (한 번만)
     H+=('<div class="card"><h2>🏷 숫자 읽는 법</h2>'
         '<div class="leg" style="margin-top:0;line-height:2">'

@@ -64,13 +64,28 @@ def main():
     weights={k:yaml.safe_load(open(WEIGHTS,encoding="utf-8")).get("logic",{}).get(v,0) for k,v in WKEY.items()}
     s["dd_q"]=s.groupby("날짜")["dd"].transform(lambda x:pd.qcut(x.rank(method="first"),5,labels=False,duplicates="drop") if x.notna().sum()>=5 else np.nan)
     # 최근 5일 저가 (매수 지정가 제안용)
-    low5 = {}
+    #  ※ ohlcv.csv가 낡으면 '최근 5일 저가'가 사실은 2주 전 저가일 수 있다.
+    #    그 값으로 지정가를 계산하면 사용자가 엉뚱한 가격에 주문을 넣는다.
+    #    그래서 주가 데이터보다 뒤처진 정도를 재고, 많이 낡았으면 아예 쓰지 않는다.
+    #  '최근 5일'이 의미를 가지려면 창이 실제 최근과 겹쳐야 한다. 1거래일 지연까지만 허용.
+    LOW5_MAX_LAG = 1          # 거래일 기준 이보다 더 뒤처지면 폐기
+    low5 = {}; stale = None
     try:
         ox = pd.read_csv("data/ohlcv.csv", dtype={"종목코드": str})
         ox["날짜"] = pd.to_datetime(ox["날짜"])
-        for code, g2 in ox.sort_values("날짜").groupby("종목코드"):
-            tail = g2.tail(5)
-            low5[code] = int(tail["저가"].min())
+        ox_last = ox["날짜"].max()
+        px_last = s["날짜"].max()
+        # 두 날짜 사이에 실제로 몇 거래일이 있었나 (주말·휴장 제외)
+        lag = int((s["날짜"] > ox_last).sum() and
+                  len([d for d in sorted(s["날짜"].unique()) if ox_last < d <= px_last]))
+        if lag > LOW5_MAX_LAG:
+            stale = {"file": "ohlcv.csv", "last": ox_last.strftime("%Y-%m-%d"),
+                     "lag": lag, "effect": "매수 지정가를 현재가 기준으로만 계산합니다"}
+            print(f"⚠ ohlcv.csv가 {lag}거래일 뒤처짐({ox_last.date()}) → 5일저가 미사용")
+        else:
+            for code, g2 in ox.sort_values("날짜").groupby("종목코드"):
+                tail = g2.tail(5)
+                low5[code] = int(tail["저가"].min())
     except Exception:
         pass
 
@@ -264,8 +279,13 @@ def main():
         st,rets,eff_n=analog(code,r["종합점수"],r["dd_q"])
         # 매수 지정가 제안: 현재가와 최근5일 저가 사이 (평균회귀 — 약간 눌렀을 때 매수)
         px_now=int(r["종가"])
-        lo5=low5.get(code, px_now)
-        buy_limit=int(round((px_now*0.65 + lo5*0.35)))  # 현재가 쪽에 가중, 저가도 반영
+        lo5=low5.get(code)
+        if lo5 is None:
+            # 5일저가를 못 쓰면(데이터 낡음) 현재가에서 소폭만 눌러 제안 — 지어내지 않는다
+            lo5 = px_now
+            buy_limit = int(round(px_now * 0.99))
+        else:
+            buy_limit=int(round((px_now*0.65 + lo5*0.35)))  # 현재가 쪽에 가중, 저가도 반영
         buy_limit=min(buy_limit, px_now)  # 현재가 넘지 않게
         # 추천 투자금 기준 기대손익 (기본 100만원, 화면에서 조정)
         exp=None
@@ -460,7 +480,7 @@ def main():
         # 점수를 빈 범위로 clip → >85(최상위)·<20(최하위)도 양끝 빈에 집계되어 합계 100 유지
         "hist":[int(x) for x in np.histogram(cur["종합점수"].clip(20,84.9),bins=np.arange(20,90,5))[0]],
         "hist_labels":[f"{b}" for b in np.arange(20,85,5)],
-        "weights":weights,"buylist":buylist[:10],"news":market_news}
+        "weights":weights,"buylist":buylist[:10],"news":market_news,"stale":stale}
     # allow_nan=False → 유효 JSON 보장(trade.html의 JSON.parse 및 표준 준수). NaN 있으면 즉시 실패.
     json.dump({"market":market,"items":items,"portfolio":portfolio,"regime":regime,
                "refclass":refc,"verify":verify,"meta":meta},

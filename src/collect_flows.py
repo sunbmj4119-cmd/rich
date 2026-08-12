@@ -170,9 +170,20 @@ def collect_ohlcv_cap(codes, dates):
     for i, d in enumerate(dates):
         ds = d.strftime("%Y%m%d") if hasattr(d, "strftime") else str(d).replace("-", "")
         dstr = d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d)
+        # OHLCV와 시가총액을 따로 받는다.
+        #  전에는 한 try 안에 묶여 있어서 시가총액 한 번 실패하면 그날 OHLCV까지
+        #  통째로 버려졌다. 게다가 except가 원인을 삼켜 왜 멈췄는지 알 수 없었다
+        #  (실제로 ohlcv.csv가 8/07에 멈춘 걸 며칠 뒤에야 발견).
+        o = c = None
         try:
             o = stock.get_market_ohlcv_by_ticker(ds, market="ALL")
+        except Exception as ex:
+            print(f"    ⚠ OHLCV {ds} 실패: {type(ex).__name__} {str(ex)[:120]}")
+        try:
             c = stock.get_market_cap_by_ticker(ds, market="ALL")
+        except Exception as ex:
+            print(f"    ⚠ 시가총액 {ds} 실패: {type(ex).__name__} {str(ex)[:120]}")
+        try:
             if o is None or o.empty:
                 fails.append(ds)
                 continue
@@ -200,7 +211,8 @@ def collect_ohlcv_cap(codes, dates):
                         "시가총액": r.get("시가총액"),
                         "상장주식수": r.get("상장주식수"),
                     })
-        except Exception:
+        except Exception as ex:
+            print(f"    ⚠ OHLCV {ds} 파싱 실패: {type(ex).__name__} {str(ex)[:120]}")
             fails.append(ds)
         if (i + 1) % 20 == 0:
             print(f"    OHLCV {i+1}/{len(dates)} 일...")
