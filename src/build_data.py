@@ -21,7 +21,7 @@ import thesis
 
 SCORES="data/scores.csv"; SIGNALS="data/signals_today.csv"; WEIGHTS="config/weights.yaml"
 ACCOUNT="data/account.json"; REGIME="data/regime.json"; NEWS="data/news.csv"; JOURNAL="data/journal.csv"
-REFCLASS="data/refclass.json"; VERIFY="data/verify_thesis.json"
+REFCLASS="data/refclass.json"; VERIFY="data/verify_thesis.json"; LAB="data/strategy_lab.json"
 OUT="docs/data.json"; HOLD=30
 NEWS_FRESH_DAYS=14      # 대시보드에 띄울 뉴스 기간
 NEWS_PER_STOCK=4
@@ -137,6 +137,18 @@ def main():
     if os.path.exists(VERIFY):
         try: verify=json.load(open(VERIFY,encoding="utf-8"))
         except Exception: verify=None
+    # 전략 점검 결과 — 어떤 규칙이 실제로 청산을 일으키는지 등
+    lab=None
+    if os.path.exists(LAB):
+        try:
+            L=json.load(open(LAB,encoding="utf-8"))
+            b=L.get("baseline") or {}
+            tr=b.get("train") or {}
+            lab={"why":tr.get("why"),"n":tr.get("n_trades"),
+                 "train":L.get("train"),"test":L.get("test"),
+                 "ann_tr":tr.get("ann"),"ann_te":(b.get("test") or {}).get("ann"),
+                 "avg_hold":tr.get("avg_hold")}
+        except Exception: lab=None
 
     def ref_cell(rk):
         """종합순위 → 기준집단 통계 (국면칸 우선, 얇으면 밴드 전체로 폴백)"""
@@ -480,7 +492,7 @@ def main():
         # 점수를 빈 범위로 clip → >85(최상위)·<20(최하위)도 양끝 빈에 집계되어 합계 100 유지
         "hist":[int(x) for x in np.histogram(cur["종합점수"].clip(20,84.9),bins=np.arange(20,90,5))[0]],
         "hist_labels":[f"{b}" for b in np.arange(20,85,5)],
-        "weights":weights,"buylist":buylist[:10],"news":market_news,"stale":stale}
+        "weights":weights,"buylist":buylist[:10],"news":market_news,"stale":stale,"lab":lab}
     # allow_nan=False → 유효 JSON 보장(trade.html의 JSON.parse 및 표준 준수). NaN 있으면 즉시 실패.
     json.dump({"market":market,"items":items,"portfolio":portfolio,"regime":regime,
                "refclass":refc,"verify":verify,"meta":meta},

@@ -116,6 +116,12 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 .cpos{{background:#e8f8ec;color:#1a8b38}}.cneg{{background:#ffecec;color:#d70015}}.cneu{{background:#f0f0f3;color:#888}}
 .regbox{{display:flex;align-items:center;gap:12px;padding:4px 0 10px}}
 .regemo{{font-size:34px;line-height:1}}
+/* 한눈 요약 띠 — 스크롤 전에 핵심 3개를 먼저 */
+.strip{{display:flex;gap:8px;margin:12px 0 14px}}
+.sbox{{flex:1;background:#fff;border-radius:14px;padding:12px 6px;text-align:center;
+       box-shadow:0 1px 4px rgba(0,0,0,.06);min-width:0}}
+.sbig{{font-size:22px;font-weight:800;line-height:1.15;white-space:nowrap}}
+.ssub{{font-size:10.5px;color:#8e8e93;margin-top:4px;line-height:1.35}}
 /* 신뢰도 배지 — 이 숫자를 얼마나 믿을지 카드마다 한눈에 */
 .tb{{display:inline-block;font-size:10px;font-weight:800;border-radius:6px;padding:2px 6px;
      margin-left:6px;vertical-align:middle;white-space:nowrap}}
@@ -165,6 +171,27 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
                 f'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">{i["name"]}</div>'
                 f'<div style="font-size:11px;color:#999;margin-top:1px">{sub}</div></div>'
                 f'{p}<span class="sc">{i["score"]:.0f}</span><span class="chev">›</span></div>')
+
+    # ── 한눈 요약 띠 — 스크롤하기 전에 '시장 / 내 계좌 / 오늘 주문' 셋만 ──
+    rg0=d.get("regime") or {}
+    rc=(rg0.get("current") or {})
+    n_act=len(cuts)+len(sells)
+    n_buy=sum(1 for i in items if i["signal"]=="🟡매수")
+    if pf:
+        up=pf["upnl"]; ucol="#d70015" if up>=0 else "#0071e3"
+        acct=(f'<div class="sbig" style="color:{ucol}">{"+" if up>=0 else ""}{up:,}</div>'
+              f'<div class="ssub">평가손익 ({pf["upnl_pct"]:+.1f}%)<br>{pf["n"]}종목 보유</div>')
+    else:
+        acct='<div class="sbig" style="color:#c7c7cc">—</div><div class="ssub">보유 없음</div>'
+    acol="#ff3b30" if n_act else ("#34c759" if n_buy else "#8e8e93")
+    H+=f"""<div class="strip">
+  <div class="sbox"><div class="sbig" style="color:{rc.get('color','#8e8e93')};font-size:19px">
+    {rc.get('emoji','')} {rc.get('name','국면 미계산')}</div>
+    <div class="ssub">{rc.get('streak',0)}거래일째<br>breadth {rc.get('breadth',0):.0f}%</div></div>
+  <div class="sbox">{acct}</div>
+  <div class="sbox"><div class="sbig" style="color:{acol}">{n_act + min(n_buy,3)}</div>
+    <div class="ssub">오늘 검토할 주문<br>청산 {n_act} · 매수후보 {min(n_buy,3)}</div></div>
+</div>"""
 
     # ── 📋 오늘 할 일 — 화면 맨 위. 스크롤 없이 '무엇을 하면 되는가'만. ──
     todos=[]
@@ -386,6 +413,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 <div class="hist" id="mhist"></div>
 <div class="leg">100종목 점수 분포. 상위 추천권은 보통 65점+.</div></details></div>"""
 
+    T1X='<span class="tb t1">검증됨</span>'
     T2X='<span class="tb t2">참고</span>'
     if rb:
         scen_rows="".join(
@@ -446,6 +474,41 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 <div class="warn">파란 줄이 <b>대조군</b>입니다. 등급을 무시하고 BuyFit 상위5만 사도 결과가 같거나 더 낫습니다 →
 <b>등급은 추천을 요약할 뿐 추가 수익을 만들지 못합니다.</b> 등급은 "얼마나 확신할지"를 보는 용도로만 쓰세요.<br>
 리밸런싱 {vf['sims'][0]['n_rebal']}회는 통계적으로 적은 표본입니다. 연율 차이는 우연일 수 있습니다.</div></details></div>"""
+
+    # 🧪 전략 점검 — 규칙 하나하나가 값어치를 하는지 따로 잰 결과
+    lab=m.get("lab")
+    if lab and lab.get("why"):
+        w=lab["why"]; tot=max(1,sum(w.values()))
+        bars="".join(
+          f'<div class="bigbar-wrap"><span class="bl">{k}</span>'
+          f'<div class="bigbar"><div style="width:{w[k]/tot*100:.0f}%;background:{c}"></div></div>'
+          f'<span class="bv">{w[k]/tot*100:.0f}%</span></div>'
+          for k,c in [("트레일","#ff9500"),("순위이탈","#0071e3"),("손절","#ff3b30"),("익절","#c7c7cc")])
+        H+=f"""<div class="card"><h2>🧪 전략 점검{T1X}</h2>
+<div class="leg" style="margin-top:0">규칙을 하나씩 바꿔가며 <b>train({lab['train'][0]}~{lab['train'][1]})에서 고르고
+test({lab['test'][0]}~{lab['test'][1]})로 확인</b>했습니다. train에서 좋아도 test에서 나빠지면 채택하지 않았습니다.</div>
+<div class="leg" style="margin-top:10px"><b>실제로 무엇이 포지션을 끝냈나</b> (거래 {lab['n']}건 · 평균보유 {lab['avg_hold']:.0f}일)</div>
+{bars}
+<div class="warn">👉 <b>고정 손절 -10%는 거의 작동하지 않습니다.</b> 매수 후 +2.2%만 올라도
+트레일링(고점 -8%)이 손절선을 넘어서기 때문입니다. 증권사 앱에 -10% 하나만 걸어두면
+이 전략을 실행하는 게 아니니, <b>주가가 오르면 스탑을 고점×0.92로 올리세요.</b></div>
+<details style="margin-top:6px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">바꾸려다 되돌린 것들 (왜 안 바꿨나)</summary>
+<div class="leg" style="margin-top:8px;line-height:1.85">
+<b>· 팩터 가중치 — 그대로 둠</b><br>
+백테스트만 보면 "모멘텀만" 쓰는 게 최고(test 연 +84.8%)였지만, <b>연도별로 나눠보니 모멘텀의
+전체 IC는 −0.010으로 오히려 음수</b>였습니다(2018년 −0.121, 2021년 −0.129). 2024~25년에만 통한 것입니다.
+반면 <b>가치는 IC +0.029로 가장 강하고 9년 중 6년 양수</b> — 지금의 가중 0.32가 맞습니다.<br><br>
+<b>· 트레일링 폭 — 그대로 둠</b><br>
+-12%가 기본 설정에선 가장 좋았지만, 종목수·이탈순위·보유기간을 바꿔가며 7개 조합으로 교차하니
+<b>train·test 동시 1위는 7번 중 1번뿐</b>이었습니다. 차이가 표본오차 안입니다.
+다만 <b>트레일링을 아예 빼면 양쪽 모두 나빠져</b>, 있는 것 자체는 정당합니다.<br><br>
+<b>· 익절 — 넣지 않음</b><br>
++15%/+20%/+30%/+50%와 변동성 비례를 모두 시험했지만 train·test 양쪽에서 일관되게 나은 값이 없었습니다.
+익절을 걸면 큰 상승을 놓쳐 평균이 깎입니다. <b>이 전략의 수익은 소수의 큰 상승에서 나오므로</b>
+윗쪽을 자르지 않는 편이 낫습니다.<br><br>
+<b>· 변동성 역가중 — 기각</b> (train Sharpe 0.67→0.35). 이 종목군에선 잘 오른 게 변동성 큰 종목이었습니다.<br>
+<b>· 약세장 신규매수 중단 — 기각</b> (train은 개선되나 test 연 +61.8%→+46.2%). 약세장 뒤 반등을 놓칩니다.
+</div></details></div>"""
 
     H+="""<div class="card"><h2>📚 방법론 · 이 추천의 근거</h2>
 <details><summary style="font-size:14px;color:#0071e3;cursor:pointer;font-weight:600">계산 방식 전체 보기 (전문가용)</summary>
@@ -788,7 +851,14 @@ function openD(code){
        <div><div class="v">${(+i.price).toLocaleString()}</div><div class="k">현재가</div></div>
        <div><div class="v" style="color:#ff3b30">${Math.round(i.price*0.9).toLocaleString()}</div><div class="k">손절가(체결가 -10%)</div></div>
      </div>
-     <div class="leg">권장 지정가 = 현재가와 최근 5일 저가 사이(평균회귀 전략상 살짝 눌렀을 때 매수). 이 가격에 안 닿으면 미체결될 수 있으니, 확실히 사려면 현재가로.<br><b>손절가는 실제 체결가의 -10%</b>로 거세요 (표시값은 현재가 체결 기준). 지정가 ${(+i.buy_limit).toLocaleString()}원에 체결되면 손절가는 ${Math.round(i.buy_limit*0.9).toLocaleString()}원.</div></div>`;
+     <div class="leg">권장 지정가 = 현재가와 최근 5일 저가 사이(평균회귀 전략상 살짝 눌렀을 때 매수). 이 가격에 안 닿으면 미체결될 수 있으니, 확실히 사려면 현재가로.</div>
+     <div class="note" style="background:#fff8e1;margin-top:8px"><b>🔺 스탑은 고정이 아니라 올려야 합니다</b>
+       <div class="leg" style="margin-top:5px;line-height:1.75">
+       처음엔 <b>체결가 -10%</b>(지정가 체결 시 ${Math.round(i.buy_limit*0.9).toLocaleString()}원)로 겁니다.
+       그런데 주가가 <b>${Math.round(i.buy_limit*1.022).toLocaleString()}원</b>(+2.2%)만 넘어도
+       <b>트레일링(고점 -8%)</b>이 그보다 높아집니다. 그때부터는 스탑을 <b>고점 × 0.92</b>로 계속 올리세요.<br>
+       전략 점검 결과 실제 청산의 <b>77%가 트레일링</b>이고 고정 손절은 7%뿐이었습니다.
+       고정 -10%만 걸어두면 이 전략을 실행하는 게 아닙니다.</div></div></div>`;
    // 손실예산 기반 수량 계산 (지정가 체결·손절 -10% → 잃는 돈 ≈ 매수금액의 10%)
    A+=`<div class="card"><h2>🎯 손실예산으로 수량 정하기</h2>
      <div class="leg" style="margin-top:0">"이 종목에서 최대 얼마까지 잃어도 되나"를 고르면, 지정가 ${(+i.buy_limit).toLocaleString()}원·손절 -10% 기준 <b>살 수량과 매수금액</b>을 계산합니다.</div>
