@@ -305,7 +305,7 @@ def main():
             exp=dict(med=st["med"], avg=st["avg"], p25=st["p25"], p75=st["p75"], win=st["win"])
         sg=sigmap.get(code,{})
         held=int(sg.get("보유일",0) or 0)
-        is_held = sg.get("구분") in ("🟢유지","⏳보유")
+        is_held = sg.get("구분") in ("🟢유지","⏳보유","🟠부분익절")
         if is_held:
             remain=max(0,HOLD-held)
             sell_hint=(f"보유 {held}일 경과. "+(f"{remain}일 더 보유 후 20위 이탈 시 매도." if remain>0 else "최소보유 충족 — 20위 밖 이탈 시 매도.")+" 손절 -10% · 트레일 -8%.")
@@ -384,6 +384,8 @@ def main():
             "buy_limit":buy_limit,"low5":lo5,"exp":exp,
             "stop_price":sg.get("손절가",""),"guard_price":sg.get("감시가",""),"avg_price":sg.get("평단가",""),
             "invest":invest,"avgp":avgp,"shares":shares,"realized":realized_pos,"guard_gap":guard_gap,
+            "trail_w":_num(sg.get("트레일폭%")) if sg.get("트레일폭%") not in ("",None) else None,
+            "tp_price":_num(sg.get("익절가")),"tp_qty":sg.get("익절수량",""),
             "dmin_remain":remain,"dmin_date":dmin_date,
             "tgt_med":tgt_med,"tgt_lo":tgt_lo,"tgt_hi":tgt_hi,
             "stop_buy":stop_buy,"edge_weak":edge_weak,"basis":basis,
@@ -405,7 +407,7 @@ def main():
         try: realized_total=int(json.load(open(ACCOUNT,encoding="utf-8")).get("realized_total",0))
         except Exception: realized_total=0
     # 오늘 밤 실제 보유 = 유지/보유 + 내일 팔 예정(손절/매도)까지 포함 (아직 소유 중)
-    held_items=[i for i in items if i["signal"] in ("🟢유지","⏳보유","🔴손절","🔵매도") and i.get("shares") and i.get("invest")]
+    held_items=[i for i in items if i["signal"] in ("🟢유지","⏳보유","🟠부분익절","🔴손절","🔵매도") and i.get("shares") and i.get("invest")]
     portfolio=None
     if held_items:
         trading_dates=sorted(s["날짜"].unique())

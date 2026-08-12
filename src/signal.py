@@ -21,7 +21,30 @@ ENTRY_RANK = 10
 EXIT_RANK = 20
 MIN_HOLD = 30
 STOP_LOSS = -0.10
-TRAIL_STOP = 0.08   # 고점 대비 -8% 하락 시 청산 (백테스트: MDD -42%→-39%, 누적 +368%→+442%)
+
+# ── 익절 사다리 (strategy_lab.py 검증 결과 반영) ────────────────────
+# 문제: 트레일 -8% 고정이면 청산의 77%가 트레일인데 그 평균 실현수익이 본전(-0.07%)이었다.
+#       고점 평균 +10.6%까지 갔다가 9.5%p를 뱉고 나온다. 고점 +5% 이상 갔던 거래의
+#       29%가 손실로 끝났다. "올라도 못 팔고 손절만 한다"는 체감이 데이터로 확인된다.
+#
+# 해법 1) 트레일 조임 — 많이 오를수록 좁게 잡아 뱉는 폭을 줄인다.
+#   train Sharpe 0.67→0.76, test 1.58→1.84. 7개 설정 교차검증 중 5개에서 동시 개선.
+# 해법 2) 부분 익절 — +25%에서 1/3만 현금화하고 나머지는 계속 굴린다.
+#   승률 train 40→47% · test 45→53%, 뱉는 폭 10.4→7.8%p.
+#   대가는 test 연 +73.0%→+70.2% (약 3%p). Sharpe는 1.84→1.83으로 사실상 유지.
+#   ※ 전량 익절(+15~50% 고정)은 큰 상승을 잘라 오히려 손해였다(train 12.4→9.2%). 쓰지 않는다.
+TRAIL_BASE = 0.08          # 기본: 고점 대비 -8%
+TRAIL_TIERS = [(0.30, 0.03), (0.15, 0.05)]   # (고점수익 도달, 그때의 트레일폭) — 높은 것부터
+TP1_GAIN = 0.25            # 이 수익률에서
+TP1_FRACTION = 1 / 3       # 보유의 이 비율을 부분 익절
+
+
+def trail_width(peak_gain):
+    """고점수익률에 따른 트레일 폭. 오를수록 좁게 잡아 이익을 지킨다."""
+    for lvl, w in TRAIL_TIERS:
+        if peak_gain >= lvl:
+            return w
+    return TRAIL_BASE
 
 
 def _pnum(v):
@@ -84,7 +107,8 @@ def load_trades(name2code, price_lookup):
             else:
                 positions[code] = {"종목명": name, "진입일": d, "shares": sh,
                                    "평단가": cost / sh if sh else price,
-                                   "투자금액": cost, "realized": 0.0}
+                                   "투자금액": cost, "realized": 0.0,
+                                   "sold_any": False}
 
         elif action == "매도":
             if code not in positions:
@@ -103,6 +127,7 @@ def load_trades(name2code, price_lookup):
             realized_total += pnl
             p["realized"] += pnl
             p["shares"] -= sell_sh
+            p["sold_any"] = True               # 부분익절을 이미 했는지 (중복 권고 방지)
             p["투자금액"] = p["shares"] * avg   # 남은 원가
             if p["shares"] <= 1e-6:            # 전량 청산 → 포지션 종료
                 positions.pop(code, None)
@@ -172,10 +197,19 @@ def main():
                          (px_sorted["날짜"] <= last)]["종가"].max()
         peak = max(peak, p_now) if pd.notna(peak) else p_now
         trail_dd = (p_now / peak - 1) if peak else 0
+        # 익절 사다리: 고점수익이 커질수록 트레일을 좁혀 뱉는 폭을 줄인다
+        peak_gain = (peak / pos["평단가"] - 1) if pos["평단가"] else 0
+        tw = trail_width(peak_gain)
+        # 부분 익절: +25% 도달 & 아직 한 주도 판 적 없으면 1/3 현금화 권고
+        tp_due = (ret >= TP1_GAIN) and not pos.get("sold_any")
         if ret <= STOP_LOSS:
             action, reason = "🔴손절", f"{ret*100:.1f}% (손절선 {STOP_LOSS*100:.0f}%)"
-        elif trail_dd <= -TRAIL_STOP:
-            action, reason = "🔴손절", f"고점대비 {trail_dd*100:.1f}% (트레일 -{TRAIL_STOP*100:.0f}%)"
+        elif trail_dd <= -tw:
+            action, reason = "🔴손절", (f"고점대비 {trail_dd*100:.1f}% "
+                                      f"(트레일 -{tw*100:.0f}%, 고점 {peak_gain*100:+.0f}%)")
+        elif tp_due:
+            action, reason = "🟠부분익절", (f"{ret*100:+.1f}% — 보유의 1/3 익절, "
+                                        f"나머지는 트레일 -{tw*100:.0f}%로 계속 보유")
         elif (r is None or r > EXIT_RANK) and days >= MIN_HOLD:
             action, reason = "🔵매도", f"{r if r else '권외'}위 이탈+{days}일"
         elif (r is None or r > EXIT_RANK):
@@ -183,7 +217,7 @@ def main():
         else:
             action, reason = "🟢유지", f"{r}위 유지, {days}일"
         stop_price = int(round(pos["평단가"] * (1 + STOP_LOSS)))      # 평단 -10%
-        trail_price = int(round(peak * (1 - TRAIL_STOP))) if peak else stop_price  # 고점 -8%
+        trail_price = int(round(peak * (1 - tw))) if peak else stop_price   # 고점 대비 (조인 폭)
         # 실제 손절 발동가 = 둘 중 높은 쪽(먼저 닿는 쪽)
         guard_price = max(stop_price, trail_price)
         rows.append({"구분": action, "종목코드": code, "종목명": pos["종목명"],
@@ -191,6 +225,10 @@ def main():
                      "평단가": int(pos["평단가"]), "현재가": int(p_now),
                      "수익률%": round(ret*100, 1), "사유": reason,
                      "손절가": stop_price, "트레일가": trail_price, "감시가": guard_price,
+                     "트레일폭%": round(tw*100, 1),
+                     "익절가": int(round(pos["평단가"]*(1+TP1_GAIN))) if pos["평단가"] else "",
+                     "익절수량": (round(pos.get("shares", 0)*TP1_FRACTION, 4)
+                                if tp_due else ""),
                      "투자금액": int(pos.get("투자금액", 0) or 0),
                      "수량": round(pos.get("shares", 0), 4),
                      "실현손익": int(round(pos.get("realized", 0) or 0))})
@@ -225,7 +263,8 @@ def main():
 
     sig = pd.DataFrame(rows)
     if len(sig):
-        order = {"🔴손절": 0, "🔵매도": 1, "🟡매수": 2, "⚪보류": 3, "🟢유지": 4, "⏳보유": 5}
+        order = {"🔴손절": 0, "🟠부분익절": 1, "🔵매도": 2, "🟡매수": 3,
+                 "⚪보류": 4, "🟢유지": 5, "⏳보유": 6}
         sig["_o"] = sig["구분"].map(order).fillna(9)
         sig = sig.sort_values(["_o", "순위"]).drop(columns="_o")
         sig.to_csv(OUT, index=False)
@@ -237,7 +276,8 @@ def main():
     json.dump(acct, open("data/account.json", "w", encoding="utf-8"), ensure_ascii=False)
 
     print(f"\n{'='*54}")
-    print(f"  {last.date()} 매매 신호  (상위20/진입10/30일/손절-10%)")
+    print(f"  {last.date()} 매매 신호  (상위20/진입10/30일/손절-10%"
+          f"/트레일 8→5→3%/익절 +{TP1_GAIN*100:.0f}%×1/3)")
     print(f"{'='*54}")
     if warns:
         print("\n⚠️ 입력 확인 필요:")
@@ -260,6 +300,7 @@ def main():
                 extra = f"  → 매수 {int(r['현재가']):,}원 / 손절가 {int(sp):,}원 설정"
             print(f"   {r['종목명']}  {r['순위']}위{pnl}  {r['사유']}{extra}")
 
+    show("🟠부분익절", f"부분 익절 (+{TP1_GAIN*100:.0f}% 도달 → 1/3 현금화)")
     show("🔴손절", "손절 (즉시)")
     show("🔵매도", "매도")
     show("🟡매수", "매수 추천")

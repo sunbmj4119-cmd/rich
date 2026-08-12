@@ -22,7 +22,8 @@ def main():
     buylist=[bymap[c] for c in m["buylist"] if c in bymap]
     cuts=[i for i in items if i["signal"]=="🔴손절"]
     sells=[i for i in items if i["signal"]=="🔵매도"]
-    holds=[i for i in items if i["signal"] in ("🟢유지","⏳보유")]
+    holds=[i for i in items if i["signal"] in ("🟢유지","⏳보유","🟠부분익절")]
+    tps=[i for i in items if i["signal"]=="🟠부분익절"]
 
     H=f"""<!doctype html><html lang="ko"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
@@ -201,6 +202,11 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
     for i in sells:
         todos.append(("#0071e3", f'<b>{i["name"]}</b> 매도 — {i["reason"]}',
                       f'지정가 매도 {i["price"]:,}원'))
+    for i in tps:
+        q=i.get("tp_qty") or ""
+        todos.append(("#ff9500", f'<b>{i["name"]}</b> 부분 익절 — {i["pnl"]:+}%',
+                      f'보유의 <b>1/3</b>{f" (약 {q}주)" if q else ""} 지정가 매도 {i["price"]:,}원 · '
+                      f'나머지는 트레일 -{i.get("trail_w") or 8}%로 계속 보유'))
     # 매수 후보: 실제로 '지금 살 수 있는' 것만.
     #  · 이미 보유(🟢유지·⏳보유)나 청산 예정(🔴손절·🔵매도)은 매수 대상이 아니다
     #  · ⚪보류는 외국인 순매도라 시스템이 보류시킨 것
@@ -226,7 +232,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
             trisk=(f'<div class="warn" style="margin-top:8px">시장이 30일 안에 <b>-10%</b>면(과거 빈도 '
                    f'{s10["prob"]:.0f}%) 내 계좌는 <b>{s10["pnl"]:+,}원</b>, 손절 <b>{s10["stops"]}종목</b> 발동. '
                    f'감당 가능한지 먼저 보세요.</div>')
-    todo_codes=([i["code"] for i in cuts]+[i["code"] for i in sells]
+    todo_codes=([i["code"] for i in cuts]+[i["code"] for i in sells]+[i["code"] for i in tps]
                 +[i["code"] for i in cands]+[""]*3)
 
     def todo_row(n, item, code):
