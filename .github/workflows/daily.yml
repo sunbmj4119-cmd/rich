@@ -46,6 +46,9 @@ jobs:
       - name: 3-4) 등급·확률 검증 (미래참조 차단 백테스트)
         run: python src/verify_thesis.py || echo "검증 실패(무시하고 계속)"
 
+      - name: 3-4-2) 포지션 상태별 결과표 (익절·손절 확률)
+        run: python src/position_lab.py || echo "포지션 통계 실패(무시하고 계속)"
+
       - name: 3-5) 종목별 최신 뉴스 + DART 공시
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}

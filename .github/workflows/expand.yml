@@ -1,0 +1,44 @@
+name: expand-universe
+# 표본 늘리기 — 수동 실행 전용.
+#   alive    : universe.csv에 있는데 prices.csv에 없는 종목 (지금 살아있는 종목)
+#   delisted : 2018년 이후 상장폐지된 코스피 주권 (생존편향의 실체)
+# 종목당 3번의 KRX 조회 + 대기가 들어가 오래 걸린다. 이어받기를 지원하므로
+# 중간에 끊기면 다시 돌리면 된다.
+on:
+  workflow_dispatch:
+    inputs:
+      which:
+        description: "받을 대상"
+        required: true
+        default: "all"
+        type: choice
+        options: [all, alive, delisted]
+jobs:
+  expand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: install
+        run: pip install pandas numpy "pykrx>=1.2.8" finance-datareader
+
+      - name: 표본 확장
+        run: |
+          echo "## 📈 표본 확장 (${{ inputs.which }})" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          python src/expand_universe.py "${{ inputs.which }}" | tee -a $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: 커밋
+        # 확장은 원본 표본만 늘린다. 점수·신호 재계산은 daily가 맡는다 —
+        # 여기서 같이 돌리면 어느 쪽이 결과를 바꿨는지 구분이 안 된다.
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/
+          git commit -m "표본 확장 (${{ inputs.which }}) $(date +%Y-%m-%d)" || echo "no changes"
+          git pull --rebase
+          git push
