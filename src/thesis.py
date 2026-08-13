@@ -534,3 +534,272 @@ def verdict(ctx, bull, bear, regime, base_win=None, meta=None):
             "action": act, "mode": mode, "line": line, "parts": parts,
             "regime_win": rw, "base_win": bw,
             "proven": bool(pr and pr.get("proven"))}
+
+
+# ══════════════════════════════════════════════════════════════
+# 포지션 배분 — 매수 / 유지 / 매도를 몇 %로 볼 것인가
+# ══════════════════════════════════════════════════════════════
+"""
+왜 등급(A~D)만으로는 부족한가
+  등급은 '근거가 두꺼운가'를 말할 뿐 **무엇을 하라**를 말하지 않는다.
+  실제로 손에 쥔 질문은 늘 셋 중 하나다: 더 살까 / 그냥 둘까 / 팔까.
+  그래서 셋에 각각 퍼센트를 매기고, 그 퍼센트가 **어느 숫자에서 나왔는지**를
+  항목별로 남긴다. 합리적으로 뒤집어 보려면 근거가 보여야 하기 때문이다.
+
+퍼센트를 만드는 법
+  항목마다 세 행동에 점수를 주고(근거가 되는 실제 통계와 함께), 다 더한 뒤
+  100%로 환산한다. 소프트맥스 같은 걸 쓰지 않는 이유는 단순함 때문이다 —
+  "이 항목이 매도에 +18점을 줬다"가 바로 읽히는 편이 낫다.
+
+이 퍼센트가 아닌 것
+  '매도 62%'는 62% 확률로 떨어진다는 뜻이 **아니다**.
+  근거들을 합산했을 때 매도 쪽 무게가 62%라는 뜻이다.
+  실제 확률은 각 항목의 why 안에 원래 숫자 그대로 들어 있다.
+"""
+
+ACTION_NOTES = {
+    "split": "매수·유지·매도 세 행동에 항목별 점수를 주고 100%로 환산한 값. "
+             "'매도 60%'는 60% 확률로 하락한다는 뜻이 아니라 근거의 무게가 매도 쪽으로 60%라는 뜻이다. "
+             "실제 확률은 각 항목 설명 안의 숫자를 보라.",
+    "cell": "과거 같은 상태(현재 수익률 구간 × 고점 대비 구간)에 있던 모든 포지션-일을 "
+            "모아 그 뒤 30거래일에 실제로 무슨 일이 있었는지 센 값. "
+            "전략과 무관하게 가격 경로만으로 만들어 표본이 380만 건이다.",
+    "survivor": "표본은 지금까지 살아남은 100종목이다. 상장폐지·장기부진으로 사라진 종목이 빠져 "
+                "하락 꼬리가 실제보다 얇다. 특히 '많이 빠진 뒤 반등' 통계는 낙관 쪽으로 치우친다.",
+}
+
+
+def _pl_band(x, bins, labs):
+    """값을 position_lab의 구간 라벨로 바꾼다"""
+    for i, lab in enumerate(labs):
+        if bins[i] < x <= bins[i + 1]:
+            return lab
+    return labs[0] if x <= bins[0] else labs[-1]
+
+
+def pos_cell(plab, ret, dd):
+    """현재 수익률·고점대비에 해당하는 과거 통계 칸. 칸이 얇으면 한 단계씩 넓힌다."""
+    if not plab or ret is None:
+        return None, None
+    rb = _pl_band(ret, plab["ret_bins"], plab["ret_labels"])
+    db = _pl_band(dd if dd is not None else -0.01, plab["dd_bins"], plab["dd_labels"])
+    c = plab.get("cells", {}).get(f"{rb}|{db}")
+    if c:
+        return c, f"{rb} · {db}"
+    c = plab.get("by_ret", {}).get(rb)
+    if c:
+        return c, f"{rb} (고점대비 구간은 표본 부족)"
+    return plab.get("overall"), "전체 표본"
+
+
+def _rank_band(plab, buyrank):
+    """추천 순위가 속한 밴드의 과거 통계"""
+    if not plab or not buyrank:
+        return None, None
+    lab = "1-10" if buyrank <= 10 else ("11-20" if buyrank <= 20 else "21-100")
+    return plab.get("by_rank", {}).get(lab), lab
+
+
+def action_split(ctx, bear, vd, plab, meta=None):
+    """
+    매수 / 유지 / 매도 비중(%)과 항목별 근거.
+
+    반환
+      pct    : {"buy":.., "hold":.., "sell":..} — 합 100
+      labels : 보유 여부에 따라 달라지는 행동 이름
+      parts  : [{k, buy, hold, sell, why}] — 각 항목이 어디에 몇 점을 줬는지
+      head   : 한 줄 결론
+      cell   : 지금 상태에 해당하는 과거 통계 칸 (있으면)
+      levels : 손절가·트레일가·익절가와 각각에 닿을 과거 확률
+    """
+    if meta is not None:
+        meta.setdefault("action_notes", ACTION_NOTES)
+
+    sig = ctx.get("signal") or ""
+    ret = ctx.get("pos_ret")            # 진입가 대비 수익률 (소수) — 보유 중일 때만
+    dd = ctx.get("pos_dd")              # 진입 후 고점 대비 (소수)
+    held = ret is not None
+    ov = (plab or {}).get("overall") or {}
+    ov_up = ov.get("up", 49.4)
+
+    S = {"buy": 0.0, "hold": 0.0, "sell": 0.0}
+    parts = []
+
+    def add(k, b, h, s, why):
+        S["buy"] += b
+        S["hold"] += h
+        S["sell"] += s
+        parts.append({"k": k, "buy": round(b, 1), "hold": round(h, 1),
+                      "sell": round(s, 1), "why": why})
+
+    # ── 0) 출발점 ────────────────────────────────────────────
+    if held:
+        add("출발점", 8, 46, 46,
+            f"보유 중인 종목은 '두느냐 파느냐'가 기본 질문이라 반반에서 시작한다. "
+            f"과거 전체 표본에서 30거래일 뒤 오를 확률은 {ov_up}%로 동전던지기에 가깝다. "
+            f"추가매수는 이미 비중이 있는 상태라 낮게 둔다.")
+    else:
+        add("출발점", 26, 58, 16,
+            "안 들고 있는 종목의 기본값은 '관망'이다. "
+            "이 전략은 동시에 10종목만 들고, 자리는 한정돼 있다.")
+
+    # ── 1) 매매 규칙 — 등급보다 위다 ──────────────────────────
+    if "손절" in sig:
+        add("규칙: 손절선 이탈", -10, 0, 80,
+            f"진입가 대비 {ret * 100:+.1f}% — 규칙상 손절선 -10%를 넘겼다. "
+            f"손절 없는 버전은 백테스트에서 더 크게 무너졌다. "
+            f"참고로 과거 -10% 아래 구간의 30일 상승확률은 "
+            f"{(plab or {}).get('by_ret', {}).get('-10%↓', {}).get('up', '?')}%로 오히려 높지만, "
+            f"이 표본에는 **상장폐지된 종목이 빠져 있어** 반등 통계가 낙관 쪽으로 치우친다. "
+            f"규칙을 따르는 이유가 여기 있다.")
+    elif "부분익절" in sig:
+        add("규칙: 1차 익절 도달", 0, 42, 34,
+            f"진입가 대비 {ret * 100:+.1f}% — 1차 익절선 +25%에 닿았다. "
+            f"규칙은 1/3만 팔고 나머지는 조인 트레일로 계속 들고 가라고 말한다. "
+            f"'다 팔기'도 '하나도 안 팔기'도 아니라서 매도와 유지에 나눠 준다.")
+    elif "매도" in sig:
+        add("규칙: 순위 이탈", -8, 4, 62,
+            "최소보유일을 채웠고 종합 20위 밖으로 밀렸다. "
+            "이 규칙(진입 10위·이탈 20위)이 백테스트에서 가장 안정적이었다.")
+    elif "매수" in sig:
+        add("규칙: 매수 신호", 34, -12, -6,
+            f"종합 10위 안({ctx.get('rank')}위)이고 외국인 수급도 확인됐다 — "
+            f"이 전략이 실제로 사라고 말하는 자리다. "
+            f"진입·이탈 규칙(10위 진입 / 20위 이탈 / 최소 30일)은 백테스트에서 "
+            f"가장 안정적이었던 조합이다.")
+    elif "보류" in sig:
+        add("규칙: 수급 미확인", -22, 26, 0,
+            "외국인이 순매도 중이라 신규매수를 보류하는 자리다. 수급이 돌면 다시 본다.")
+    elif held:
+        add("규칙: 트리거 없음", 0, 22, 0,
+            "손절·트레일·익절·순위이탈 어디에도 걸리지 않았다. 규칙상으로는 '그대로 둔다'.")
+
+    # ── 2) 추천 순위 — 백테스트로 검증된 유일한 신호 ──────────
+    rbst, rlab = _rank_band(plab, ctx.get("buyrank"))
+    if rbst:
+        gap = rbst["up"] - ov_up
+        b = _clamp(gap * 7, -20, 26)
+        s = _clamp(-gap * 5, -18, 18)
+        add(f"추천 {ctx.get('buyrank')}위 (밴드 {rlab})", b, 0, s,
+            f"추천 {rlab}위 밴드에 있던 과거 {rbst['n']:,}건은 30일 뒤 상승 {rbst['up']}%"
+            f"(전체 {ov_up}%, {gap:+.1f}%p) · 기대 {rbst['ev']:+.2f}% · "
+            f"평균 최대상승 {rbst['gain']:+.2f}% / 최대하락 {rbst['give']:+.2f}%. "
+            f"순위는 이 시스템에서 예측력이 확인된 유일한 신호다.")
+
+    # ── 3) 지금 이 자리의 과거 통계 (보유 중일 때만) ──────────
+    cell, clab = (pos_cell(plab, ret, dd) if held else (None, None))
+    if cell:
+        gap = cell["up"] - ov_up
+        h = _clamp(cell["ev"] * 4 + gap * 2.5, -16, 22)
+        s = _clamp((cell["give5"] - cell["gain5"]) * 1.6 - cell["ev"] * 2, -14, 24)
+        why = (f"현재 {ret * 100:+.1f}%, 고점 대비 {(dd or 0) * 100:+.1f}% — "
+               f"과거 같은 자리 {cell['n']:,}건(독립 {cell['indep']}묶음)에서 30일 뒤: "
+               f"상승 {cell['up']}% · 기대 {cell['ev']:+.2f}% · 중앙값 {cell['med']:+.2f}%. "
+               f"여기서 5% 더 밀린 경우가 {cell['give5']}%, 5% 더 오른 경우가 {cell['gain5']}%. "
+               f"평균적으로 최저 {cell['give']:+.2f}%까지 밀렸다가 최고 {cell['gain']:+.2f}%까지 갔다.")
+        # 깊은 손실 칸은 생존편향이 가장 심하다 — 여기서 반등한 종목만 표본에 남았고
+        # 끝내 못 버틴 종목은 상장폐지로 빠져나갔다. 그래서 '버티라'는 힘을 절반으로 깎는다.
+        if ret <= STOP and h > 0:
+            h *= 0.5
+            why += (" ※ 이 칸은 '많이 빠진 자리'라 생존편향이 가장 크다 — "
+                    "끝내 회복 못 하고 사라진 종목은 표본에 없다. 그래서 반등 통계를 절반만 반영했다.")
+        add("지금 이 자리", 0, h, s, why)
+
+    # ── 4) 기준집단(순위 × 국면) ─────────────────────────────
+    pr = ctx.get("prob")
+    if pr:
+        edge = pr.get("edge_pp")
+        if edge is None:
+            edge = pr["win"] - (vd.get("base_win") or 50.0)
+        b = _clamp(edge * 1.6, -14, 16)
+        s = _clamp(-edge * 1.2 + max(0.0, pr.get("p_stop", 0) - 20) * 0.4, -10, 16)
+        add("이 순위·국면 구간", b, 0, s,
+            f"{pr.get('band', '')} 구간의 과거 30일 승률 {pr['win']}%({edge:+.1f}%p) · "
+            f"기대 {pr['ev']:+.2f}% · 손절확률 {pr.get('p_stop', '?')}%. "
+            f"표본 {pr.get('n', '?')}건" +
+            (f" (독립 {pr['indep']}묶음)" if pr.get("indep") else "") +
+            ("" if pr.get("proven") else " — 표본이 얇아 통계적으로 입증된 수준은 아니다."))
+
+    # ── 5) 반대 논리 ─────────────────────────────────────────
+    if bear and bear.get("risks"):
+        n_high = sum(1 for r in bear["risks"] if r["sev"] == "high")
+        s = _clamp(bear["bear_score"] * 0.55, 0, 22)
+        titles = ", ".join(r["tag"] for r in bear["risks"][:3])
+        add("반대 논리", -s * 0.4, 0, s,
+            f"체크리스트 {len(bear['risks'])}건(치명 {n_high}건): {titles}"
+            f"{' 외' if len(bear['risks']) > 3 else ''}. "
+            f"검증된 예측인자가 아니라 '사기 전에 확인할 거리'라 비중은 작게 둔다.")
+
+    # ── 6) 근거의 두께(등급) — 마지막에 조금만 ────────────────
+    d = (vd["conf"] - 50) * 0.30
+    add(f"근거 두께 {vd['grade']}등급", _clamp(d, -12, 12), 0, _clamp(-d * 0.7, -8, 10),
+        f"확신도 {vd['conf']}점 — {vd['grade_text']}. "
+        f"등급은 행동을 정하지 않고 무게만 조금 옮긴다.")
+
+    # ── 합산 → 100% 환산 ────────────────────────────────────
+    FLOOR = 3.0                       # 어떤 행동도 0%로 지우지 않는다
+    raw = {k: max(FLOOR, v) for k, v in S.items()}
+    tot = sum(raw.values())
+    pct = {k: v / tot * 100 for k, v in raw.items()}
+    # 반올림 오차는 가장 큰 항목이 흡수한다 (합이 정확히 100이 되도록)
+    out = {k: int(round(v)) for k, v in pct.items()}
+    top = max(out, key=lambda k: pct[k])
+    out[top] += 100 - sum(out.values())
+
+    labels = ({"buy": "추가매수", "hold": "계속보유", "sell": "매도"} if held
+              else {"buy": "신규매수", "hold": "관망", "sell": "회피"})
+    order = sorted(out, key=lambda k: -out[k])
+    head = " · ".join(f"{labels[k]} {out[k]}%" for k in order)
+
+    # ── 익절·손절 자리와 각각에 닿을 확률 ─────────────────────
+    levels = []
+    if held and cell:
+        px = ctx.get("price")
+        guard = ctx.get("guard_price")
+        # 감시가까지의 실제 거리로 확률을 잡는다 — 5%·10% 두 점 사이를 이어서 읽는다
+        gapp = pgap = None
+        if guard and px:
+            gapp = (guard / px - 1) * 100
+            t = _clamp((abs(gapp) - 5) / 5, 0.0, 1.0)
+            pgap = round(cell["give5"] + (cell["give10"] - cell["give5"]) * t, 1)
+        levels.append({"k": "손절선 -10%", "v": ctx.get("stop_price"),
+                       "p": cell["hit_stop"],
+                       "why": f"지금 자리에서 앞으로 30거래일 안에 진입가 -10%를 밟은 비율 "
+                              f"{cell['hit_stop']}%. 밟으면 규칙상 무조건 청산한다."})
+        if pgap is not None:
+            near = abs(gapp) < 5
+            levels.append({"k": "트레일 감시가", "v": guard, "p": pgap,
+                           "why": f"지금 가격에서 {gapp:.1f}% 아래다. 과거 같은 자리에서 "
+                                  f"5% 이상 더 밀린 경우가 {cell['give5']}%, 10% 이상이 "
+                                  f"{cell['give10']}%였다. " +
+                                  (f"감시가는 5%보다 가까우니 실제로 닿을 확률은 "
+                                   f"{cell['give5']}%보다 조금 더 높다."
+                                   if near else
+                                   f"이 거리({abs(gapp):.1f}%)면 두 값 사이라 대략 {pgap}%다.") +
+                                  " 실제 매도의 대부분은 손절선이 아니라 이 트레일에서 났다."})
+        levels.append({"k": "1차 익절 +25%", "v": ctx.get("tp_price"),
+                       "p": cell["hit_tp"],
+                       "why": f"30거래일 안에 진입가 +25%를 밟은 비율 {cell['hit_tp']}%. "
+                              f"닿으면 1/3을 팔고 나머지는 조인 트레일로 끌고 간다."})
+    elif not held:
+        # 갓 산 자리(0~+5%)를 이 종목의 추천 순위 밴드로 좁혀 본다
+        rb = ((plab or {}).get("rank_cells", {}).get(f"{rlab}|0~+5%")
+              or (plab or {}).get("by_ret", {}).get("0~+5%"))
+        where = f"추천 {rlab}위 밴드에서 " if rlab and (plab or {}).get("rank_cells") else ""
+        if rb:
+            odds = rb["hit_stop"] / rb["hit_tp"] if rb["hit_tp"] else None
+            levels.append({"k": "매수 직후 손절선 -10%", "v": ctx.get("stop_buy"),
+                           "p": rb["hit_stop"],
+                           "why": f"{where}막 산 자리(0~+5%)에 있던 {rb['n']:,}건 중 "
+                                  f"30거래일 안에 -10%를 밟은 비율 {rb['hit_stop']}%. "
+                                  f"{100 / rb['hit_stop']:.1f}번 사면 한 번은 손절이라는 뜻이다."})
+            levels.append({"k": "1차 익절 +25%", "v": ctx.get("tp_buy"),
+                           "p": rb["hit_tp"],
+                           "why": f"같은 자리에서 +25%를 밟은 비율 {rb['hit_tp']}%." +
+                                  (f" 손절이 익절보다 {odds:.1f}배 자주 온다 — "
+                                   f"그래서 한 번 익절할 때의 크기가 승부를 가른다."
+                                   if odds and odds > 1.2 else "")})
+
+    return {"pct": out, "labels": labels, "parts": parts, "head": head,
+            "cell": cell, "cell_label": clab, "levels": levels,
+            "top": top, "top_label": labels[top]}

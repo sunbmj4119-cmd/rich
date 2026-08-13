@@ -22,6 +22,7 @@ import thesis
 SCORES="data/scores.csv"; SIGNALS="data/signals_today.csv"; WEIGHTS="config/weights.yaml"
 ACCOUNT="data/account.json"; REGIME="data/regime.json"; NEWS="data/news.csv"; JOURNAL="data/journal.csv"
 REFCLASS="data/refclass.json"; VERIFY="data/verify_thesis.json"; LAB="data/strategy_lab.json"
+POSLAB="data/position_lab.json"
 OUT="docs/data.json"; HOLD=30
 NEWS_FRESH_DAYS=14      # 대시보드에 띄울 뉴스 기간
 NEWS_PER_STOCK=4
@@ -154,6 +155,11 @@ def main():
                  "ann_tr":tr.get("ann"),"ann_te":(b.get("test") or {}).get("ann"),
                  "avg_hold":tr.get("avg_hold")}
         except Exception: lab=None
+    # 포지션 상태별 결과표 (position_lab.py) — "지금 이 자리에서 과거엔 무슨 일이 있었나"
+    plab=None
+    if os.path.exists(POSLAB):
+        try: plab=json.load(open(POSLAB,encoding="utf-8"))
+        except Exception: plab=None
 
     def ref_cell(rk):
         """종합순위 → 기준집단 통계 (국면칸 우선, 얇으면 밴드 전체로 폴백)"""
@@ -226,13 +232,20 @@ def main():
     sig=pd.read_csv(SIGNALS,dtype={"종목코드":str}) if os.path.exists(SIGNALS) else pd.DataFrame()
     def _s(v):  # 빈칸/NaN → "" (data.json이 유효 JSON이 되도록; NaN 금지)
         return "" if (v is None or (isinstance(v,float) and pd.isna(v))) else v
-    sigmap={r["종목코드"]:dict(구분=r["구분"],사유=r["사유"],보유일=_s(r.get("보유일",0)),수익률=_s(r.get("수익률%")),손절가=_s(r.get("손절가")),감시가=_s(r.get("감시가")),평단가=_s(r.get("평단가")),투자금액=_s(r.get("투자금액")),수량=_s(r.get("수량")),실현손익=_s(r.get("실현손익"))) for _,r in sig.iterrows()} if len(sig) else {}
+    sigmap={r["종목코드"]:dict(구분=r["구분"],사유=r["사유"],보유일=_s(r.get("보유일",0)),수익률=_s(r.get("수익률%")),손절가=_s(r.get("손절가")),감시가=_s(r.get("감시가")),평단가=_s(r.get("평단가")),투자금액=_s(r.get("투자금액")),수량=_s(r.get("수량")),실현손익=_s(r.get("실현손익")),트레일가=_s(r.get("트레일가")),트레일폭=_s(r.get("트레일폭%")),익절가=_s(r.get("익절가")),익절수량=_s(r.get("익절수량"))) for _,r in sig.iterrows()} if len(sig) else {}
 
     def _num(v):
         """빈칸/NaN 안전 정수 변환 (없으면 None)"""
         s=str(v).strip()
         if s in ("","nan","None"): return None
         try: return int(round(float(s)))
+        except Exception: return None
+
+    def _fnum(v):
+        """빈칸/NaN 안전 실수 변환 (없으면 None) — 수익률·트레일폭처럼 소수가 의미 있는 값"""
+        s=str(v).strip()
+        if s in ("","nan","None"): return None
+        try: return float(s)
         except Exception: return None
 
     # 거래일 → 일련번호 (표본 겹침 보정용)
@@ -367,6 +380,15 @@ def main():
         if prob: prob["band"]=band
         ctx["prob"]=prob
         ctx["buyfit_pct"]=float(r["buyfit_pct"]); ctx["buyrank"]=int(r["buyrank"])
+        # ── 지금 포지션이 서 있는 자리 (보유 중일 때만) ──────────
+        # 진입 후 고점은 트레일가에서 되짚는다: 트레일가 = 고점 × (1 - 트레일폭)
+        _pr=_fnum(sg.get("수익률"))
+        ctx["pos_ret"]=_pr/100 if _pr is not None else None
+        _tp_px, _tw = _num(sg.get("트레일가")), _fnum(sg.get("트레일폭"))
+        _peak=(_tp_px/(1-_tw/100)) if (_tp_px and _tw not in (None,100)) else None
+        ctx["pos_dd"]=round(px_now/_peak-1,4) if (_peak and px_now) else None
+        ctx["stop_price"]=_num(sg.get("손절가")); ctx["guard_price"]=guard
+        ctx["tp_price"]=_num(sg.get("익절가")); ctx["tp_buy"]=int(round(px_now*1.25))
         # 종목별 유사사례 통계는 '참고'로만 남긴다 (예측력 검증 실패 — 아래 note)
         analog_prob=thesis.probability(rets,eff_n,base_win) if rets else None
         bull=thesis.bull_case(ctx,meta)
@@ -374,6 +396,7 @@ def main():
         bear=thesis.bear_case(ctx,meta)
         mscen=thesis.market_scenarios(ctx,regime,meta)
         vd=thesis.verdict(ctx,bull,bear,regime,base_win,meta)
+        asplit=thesis.action_split(ctx,bear,vd,plab,meta)
 
         items.append({
             "code":code,"name":r["종목명"],"rank":int(r["순위"]),
@@ -401,6 +424,7 @@ def main():
             "short_asof":short_map.get(code,{}).get("asof"),
             # ── 판단 근거 블록 ──
             "bull":bull,"bear":bear,"prob":prob,"aprob":analog_prob,"mscen":mscen,"verdict":vd,
+            "split":asplit,"tp_price":_num(sg.get("익절가")),"tp_qty":_s(sg.get("익절수량")),
             "buyfit_pct":round(float(r["buyfit_pct"]),0),
             "beta":bt.get("beta"),"down_beta":bt.get("down"),
             "vol":bt.get("vol"),"vol_rank":bt.get("vol_rank"),
@@ -499,7 +523,14 @@ def main():
         # 점수를 빈 범위로 clip → >85(최상위)·<20(최하위)도 양끝 빈에 집계되어 합계 100 유지
         "hist":[int(x) for x in np.histogram(cur["종합점수"].clip(20,84.9),bins=np.arange(20,90,5))[0]],
         "hist_labels":[f"{b}" for b in np.arange(20,85,5)],
-        "weights":weights,"buylist":buylist[:10],"news":market_news,"stale":stale,"lab":lab}
+        "weights":weights,"buylist":buylist[:10],"news":market_news,"stale":stale,"lab":lab,
+        # 익절·손절 확률표 — 화면에 띄울 부분만 (원본은 380만 건이라 통째로 싣지 않는다)
+        "poslab":({"overall":plab["overall"],"by_ret":plab["by_ret"],"by_dd":plab["by_dd"],
+                   "by_rank":plab["by_rank"],"ret_labels":plab["ret_labels"],
+                   "dd_labels":plab["dd_labels"],
+                   "new":{k:plab["rank_cells"][f"{k}|0~+5%"] for k in ("1-10","11-20","21-100")
+                          if f"{k}|0~+5%" in plab.get("rank_cells",{})}}
+                  if plab else None)}
     # allow_nan=False → 유효 JSON 보장(trade.html의 JSON.parse 및 표준 준수). NaN 있으면 즉시 실패.
     json.dump({"market":market,"items":items,"portfolio":portfolio,"regime":regime,
                "refclass":refc,"verify":verify,"meta":meta},

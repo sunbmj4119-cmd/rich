@@ -195,18 +195,29 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 </div>"""
 
     # ── 📋 오늘 할 일 — 화면 맨 위. 스크롤 없이 '무엇을 하면 되는가'만. ──
+    SPC={"buy":"#0071e3","hold":"#34c759","sell":"#ff3b30"}
+
+    def sp_line(i):
+        """근거를 합산한 포지션 배분 한 줄 — 반대편이 몇 %인지도 같이 보여준다"""
+        sp=i.get("split")
+        if not sp: return ""
+        return ('<div style="margin-top:3px;font-size:11px">'
+                +' · '.join(f'<b style="color:{SPC[k]}">{sp["labels"][k]} {sp["pct"][k]}%</b>'
+                            for k in sorted(sp["pct"],key=lambda k:-sp["pct"][k]))
+                +'</div>')
+
     todos=[]
     for i in cuts:
         todos.append(("#ff3b30", f'<b>{i["name"]}</b> 손절 — {i["reason"]}',
-                      f'지정가 매도 {i["price"]:,}원 · 규칙이 정한 것이니 논리와 무관하게 실행'))
+                      f'지정가 매도 {i["price"]:,}원 · 규칙이 정한 것이니 논리와 무관하게 실행'+sp_line(i)))
     for i in sells:
         todos.append(("#0071e3", f'<b>{i["name"]}</b> 매도 — {i["reason"]}',
-                      f'지정가 매도 {i["price"]:,}원'))
+                      f'지정가 매도 {i["price"]:,}원'+sp_line(i)))
     for i in tps:
         q=i.get("tp_qty") or ""
         todos.append(("#ff9500", f'<b>{i["name"]}</b> 부분 익절 — {i["pnl"]:+}%',
                       f'보유의 <b>1/3</b>{f" (약 {q}주)" if q else ""} 지정가 매도 {i["price"]:,}원 · '
-                      f'나머지는 트레일 -{i.get("trail_w") or 8}%로 계속 보유'))
+                      f'나머지는 트레일 -{i.get("trail_w") or 8}%로 계속 보유'+sp_line(i)))
     # 매수 후보: 실제로 '지금 살 수 있는' 것만.
     #  · 이미 보유(🟢유지·⏳보유)나 청산 예정(🔴손절·🔵매도)은 매수 대상이 아니다
     #  · ⚪보류는 외국인 순매도라 시스템이 보류시킨 것
@@ -222,7 +233,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
         todos.append(("#34c759",
             f'<b>{i["name"]}</b> 매수 검토 <span class="gr g{i["verdict"]["grade"]}">{i["verdict"]["grade"]}</span>',
             f'지정가 {i["buy_limit"]:,}원 · 손절 {int(i["buy_limit"]*0.9):,}원<br>'
-            f'{amt} · 이 구간 손절확률 {pr.get("p_stop","-")}%'))
+            f'{amt} · 이 구간 손절확률 {pr.get("p_stop","-")}%'+sp_line(i)))
     if not todos:
         todos.append(("#8e8e93","오늘은 실행할 주문이 없습니다","보유 종목의 감시가만 확인하세요"))
     trisk=""
@@ -481,6 +492,54 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 <b>등급은 추천을 요약할 뿐 추가 수익을 만들지 못합니다.</b> 등급은 "얼마나 확신할지"를 보는 용도로만 쓰세요.<br>
 리밸런싱 {vf['sims'][0]['n_rebal']}회는 통계적으로 적은 표본입니다. 연율 차이는 우연일 수 있습니다.</div></details></div>"""
 
+    # 🎯 익절·손절이 실제로 얼마나 자주 오는가 — 380만 건 전수 조사
+    # 사용자가 "익절을 못 해서 손절만 한다"고 한 문제를 숫자로 확인하고 답하는 카드
+    pl=m.get("poslab")
+    if pl:
+        nb=pl.get("new",{}).get("1-10") or pl.get("new",{}).get("21-100")
+        rows=""
+        for lab_ in pl["ret_labels"]:
+            st=pl["by_ret"].get(lab_)
+            if not st: continue
+            # 지금 가격에서 5% 더 밀릴 확률 vs 5% 더 오를 확률 — 들고 갈지 팔지의 핵심
+            w=st["give5"]+st["gain5"]
+            gw=st["gain5"]/w*100 if w else 50
+            hot=lab_ in ("+25~40%","+40%↑")
+            rows+=(f'<div class="bigbar-wrap"><span class="bl"{" style=font-weight:800" if hot else ""}>{lab_}</span>'
+                   f'<div class="bigbar" style="background:#ffd9d6"><div style="width:{gw:.0f}%;background:#34c759"></div></div>'
+                   f'<span class="bv" style="font-size:11px">{st["gain5"]:.0f}/{st["give5"]:.0f}</span></div>')
+        ov=pl["overall"]
+        tip=""
+        if nb:
+            odds=nb["hit_stop"]/nb["hit_tp"] if nb["hit_tp"] else 0
+            tip=(f'<div class="warn">👉 갓 산 자리에서 <b>30거래일 안에 -10% 손절선을 밟을 확률 '
+                 f'{nb["hit_stop"]}%</b>, <b>+25% 익절선을 밟을 확률 {nb["hit_tp"]}%</b>. '
+                 f'손절이 익절보다 <b>{odds:.1f}배</b> 자주 옵니다. '
+                 f'“오를 땐 못 팔고 손절만 한다”는 느낌은 착각이 아니라 <b>구조</b>입니다.<br>'
+                 f'그래서 규칙은 두 가지로 답합니다 — ① <b>+25%에서 1/3 익절</b>로 이긴 거래를 확정하고, '
+                 f'② <b>고점수익 +15%↑면 트레일을 -5%, +30%↑면 -3%로 조여</b> 남은 이익을 지킵니다. '
+                 f'손절 횟수는 못 줄여도, <b>한 번 이길 때 손에 남는 크기</b>는 늘릴 수 있습니다.</div>')
+        H+=f"""<div class="card" style="border:2px solid #ff9500"><h2>🎯 익절과 손절, 실제 확률{T1X}</h2>
+<div class="leg" style="margin-top:0">2018년 이후 모든 (종목 × 진입일 × 보유일) <b>{ov['n']:,}건</b>을 전부 세어
+“지금 이 수익률 자리에서 앞으로 30거래일에 무슨 일이 있었나”를 만든 표입니다. 전략과 무관하게 가격만 씁니다.</div>
+{tip}
+<div class="leg" style="margin-top:10px"><b>지금 수익률별 — 여기서 5% 더 오를 확률 vs 5% 더 밀릴 확률</b></div>
+{rows}
+<div class="leg">초록=더 오름 / 빨강=더 밀림. 숫자는 <b>오름/밀림</b>(%). 둘 다 일어난 경우가 많아 합이 100을 넘습니다.</div>
+<div class="warn" style="background:#fff8e1;color:#946200">많이 오를수록 <b>양쪽이 같이 커집니다</b>.
++40% 이상에서는 5% 더 밀릴 확률이 {pl['by_ret'].get('+40%↑',{}).get('give5','-')}%까지 올라갑니다.
+큰 수익을 들고 있다면 “더 갈까”가 아니라 <b>“얼마를 지킬까”</b>가 맞는 질문입니다.</div>
+<details style="margin-top:6px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">이 표의 한계</summary>
+<div class="leg" style="margin-top:8px;line-height:1.85">
+· 표본은 <b>지금까지 살아남은 100종목</b>입니다. 상장폐지·장기부진으로 사라진 종목이 빠져
+<b>하락 꼬리가 실제보다 얇습니다</b>. 특히 “-10% 아래에서 오히려 상승확률이 높다”({pl['by_ret'].get('-10%↓',{}).get('up','-')}%)는
+숫자는 이 편향의 영향을 가장 크게 받습니다 — 그래서 손절 규칙을 이 숫자로 뒤집지 않습니다.<br>
+· 관측이 겹칩니다(하루씩 밀며 세므로 30일 창이 29/30 동일). 겹치지 않는 날짜 묶음은 최대 {ov['indep']}개뿐이라
+표본 수 {ov['n']:,}건은 <b>독립 표본이 아닙니다</b>.<br>
+· 전략이 실제로 고른 종목이 아니라 <b>모든 종목</b>이 대상입니다. 순위 보정은 따로 붙였습니다
+(추천 1-10위 밴드 상승확률 {pl['by_rank'].get('1-10',{}).get('up','-')}% vs 전체 {ov['up']}%).
+</div></details></div>"""
+
     # 🧪 전략 점검 — 규칙 하나하나가 값어치를 하는지 따로 잰 결과
     lab=m.get("lab")
     if lab and lab.get("why"):
@@ -508,10 +567,10 @@ test({lab['test'][0]}~{lab['test'][1]})로 확인</b>했습니다. train에서 �
 -12%가 기본 설정에선 가장 좋았지만, 종목수·이탈순위·보유기간을 바꿔가며 7개 조합으로 교차하니
 <b>train·test 동시 1위는 7번 중 1번뿐</b>이었습니다. 차이가 표본오차 안입니다.
 다만 <b>트레일링을 아예 빼면 양쪽 모두 나빠져</b>, 있는 것 자체는 정당합니다.<br><br>
-<b>· 익절 — 넣지 않음</b><br>
-+15%/+20%/+30%/+50%와 변동성 비례를 모두 시험했지만 train·test 양쪽에서 일관되게 나은 값이 없었습니다.
-익절을 걸면 큰 상승을 놓쳐 평균이 깎입니다. <b>이 전략의 수익은 소수의 큰 상승에서 나오므로</b>
-윗쪽을 자르지 않는 편이 낫습니다.<br><br>
+<b>· 전량 익절 — 여전히 안 씀 (부분 익절만 채택)</b><br>
++15%/+20%/+30%/+50%에서 <b>다 파는</b> 방식은 train·test 어디서도 나아지지 않았습니다.
+수익이 소수의 큰 상승에서 나오는데 윗쪽을 잘라버리기 때문입니다.
+그래서 <b>+25%에서 1/3만 팔고 나머지는 조인 트레일로 끌고 가는</b> 방식만 넣었습니다.<br><br>
 <b>· 변동성 역가중 — 기각</b> (train Sharpe 0.67→0.35). 이 종목군에선 잘 오른 게 변동성 큰 종목이었습니다.<br>
 <b>· 약세장 신규매수 중단 — 기각</b> (train은 개선되나 test 연 +61.8%→+46.2%). 약세장 뒤 반등을 놓칩니다.
 </div></details></div>"""
@@ -537,7 +596,7 @@ const META=DATA.meta||{};
 // data.json은 100종목이 공유하는 설명문을 meta에 한 번만 담는다 → 여기서 되돌려 붙인다
 const catOf=t=>(META.catalysts||{})[t]||{};
 const riskTxt=r=>r.text||(META.risks||{})[r.tag]||'';
-const noteOf=k=>(META.verdict_notes||{})[k]||'';
+const noteOf=k=>(META.verdict_notes||{})[k]||(META.action_notes||{})[k]||'';
 const factMeta=k=>(META.factors||{})[k]||{};
 function invalList(b){
   const tpl=META.invalidation||[], iv=b.invalidation;
@@ -636,6 +695,57 @@ function openD(code){
    <div class="date">점수 ${i.score.toFixed(0)} (전체 ${i.rank}위) · 매수적합 ${i.buyrank}위 · ${i.price.toLocaleString()}원${pnl}${i.industry?' · '+i.industry:''}</div></div>
    <button class="x" onclick="closeD()">✕</button></div>`;
  if(i.signal)h+=`<div class="note"><b>${i.signal}</b> · ${i.reason}</div>`;
+
+ // 🧭 포지션 배분 — 이 화면에서 제일 먼저 봐야 할 것
+ // "매수/유지/매도 각각 몇 %이고, 그 퍼센트가 어느 숫자에서 나왔나"
+ const sp=i.split;
+ if(sp){
+   const SC={buy:'#0071e3',hold:'#34c759',sell:'#ff3b30'};
+   const ord=['buy','hold','sell'].sort((a,b)=>sp.pct[b]-sp.pct[a]);
+   // 가로 막대 하나에 셋을 붙여 비율이 한눈에 보이게
+   let bar='';
+   ['sell','hold','buy'].forEach(k=>{
+     if(sp.pct[k]<=0)return;
+     const lb=sp.pct[k]>=30?`${sp.labels[k]} ${sp.pct[k]}%`:(sp.pct[k]>=12?sp.pct[k]+'%':'');
+     bar+=`<div style="width:${sp.pct[k]}%;background:${SC[k]};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden">${lb}</div>`;
+   });
+   let chips='';
+   ord.forEach(k=>{
+     const on=k===sp.top;
+     chips+=`<div style="flex:1;text-align:center;padding:7px 2px;border-radius:11px;background:${on?SC[k]:'#f2f2f7'};color:${on?'#fff':'#555'}">
+       <div style="font-size:20px;font-weight:800;line-height:1.1">${sp.pct[k]}%</div>
+       <div style="font-size:11px;font-weight:700">${sp.labels[k]}</div></div>`;
+   });
+   // 항목별 기여 — 어느 근거가 어느 쪽으로 밀었나
+   let rows='';
+   sp.parts.forEach(p=>{
+     const dir=Math.abs(p.sell)>=Math.abs(p.buy)&&Math.abs(p.sell)>=Math.abs(p.hold)?'sell':
+               (Math.abs(p.buy)>=Math.abs(p.hold)?'buy':'hold');
+     const tag=[['buy',p.buy],['hold',p.hold],['sell',p.sell]]
+       .filter(x=>Math.abs(x[1])>=0.5)
+       .map(x=>`<span style="color:${SC[x[0]]};font-weight:800">${sp.labels[x[0]]} ${x[1]>0?'+':''}${x[1]}</span>`).join(' · ');
+     rows+=`<div class="rk2" style="align-items:flex-start"><span class="sev" style="background:${SC[dir]};flex:none">${p.k.startsWith('규칙')?'규칙':(p.k.startsWith('출발')?'기본':'근거')}</span>
+       <div class="rtx"><b>${p.k}</b><div style="font-size:11px;margin:2px 0">${tag||'영향 없음'}</div>
+       <div class="rev">${p.why}</div></div></div>`;
+   });
+   // 익절·손절 자리 — 사용자가 가장 중요하다고 한 부분이라 접지 않고 펼쳐 둔다
+   let lv='';
+   (sp.levels||[]).forEach(L=>{
+     const c=L.k.includes('익절')?'#34c759':'#ff3b30';
+     lv+=`<div class="rk2"><span class="sev" style="background:${c}">${L.p}%</span>
+       <div class="rtx"><b>${L.k}</b>${L.v?` · <b style="color:${c}">${L.v.toLocaleString()}원</b>`:''}
+       <div class="rev">${L.why}</div></div></div>`;
+   });
+   A+=`<div class="card" style="border:2px solid ${SC[sp.top]}"><h2>🧭 지금 뭘 할까<span class="tb t2">근거 합산</span></h2>
+     <div style="display:flex;gap:6px;margin:4px 0 8px">${chips}</div>
+     <div style="display:flex;height:22px;border-radius:7px;overflow:hidden;margin-bottom:6px">${bar}</div>
+     <div class="leg" style="margin-top:0">${noteOf('split')||''}</div>
+     ${lv?`<div style="margin-top:10px"><div style="font-size:13px;font-weight:800;margin-bottom:4px">🎯 익절 · 손절 자리와 닿을 확률</div>${lv}</div>`:''}
+     <details style="margin-top:8px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">이 퍼센트는 이렇게 나왔습니다 (항목별 근거)</summary>
+       <div style="margin-top:4px">${rows}</div>
+       ${sp.cell_label?`<div class="leg">지금 자리 = <b>${sp.cell_label}</b>. ${noteOf('cell')||''}</div>`:''}
+       <div class="leg">${noteOf('survivor')||''}</div></details></div>`;
+ }
 
  // ⚖️ 판단 요약 — 등급 · 확신도 · 지금 할 행동
  const v=i.verdict, pr=i.prob;
