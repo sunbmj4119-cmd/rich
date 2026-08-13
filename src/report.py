@@ -746,6 +746,7 @@ function openD(code){
        <div class="rev">${L.why}</div></div></div>`;
    });
    A+=`<div class="card" style="border:2px solid ${SC[sp.top]}"><h2>🧭 지금 뭘 할까<span class="tb t2">근거 합산</span></h2>
+     ${sp.act?`<div class="note" style="background:${SC[sp.top]}12;border-left:3px solid ${SC[sp.top]};font-weight:700;margin:0 0 8px">👉 ${sp.act}</div>`:''}
      <div style="display:flex;gap:6px;margin:4px 0 8px">${chips}</div>
      <div style="display:flex;height:22px;border-radius:7px;overflow:hidden;margin-bottom:6px">${bar}</div>
      <div class="leg" style="margin-top:0">${noteOf('split')||''}</div>

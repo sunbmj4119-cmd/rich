@@ -680,11 +680,19 @@ def action_split(ctx, bear, vd, plab, meta=None):
         gap = rbst["up"] - ov_up
         b = _clamp(gap * 7, -20, 26)
         s = _clamp(-gap * 5, -18, 18)
-        add(f"추천 {ctx.get('buyrank')}위 (밴드 {rlab})", b, 0, s,
-            f"추천 {rlab}위 밴드에 있던 과거 {rbst['n']:,}건은 30일 뒤 상승 {rbst['up']}%"
-            f"(전체 {ov_up}%, {gap:+.1f}%p) · 기대 {rbst['ev']:+.2f}% · "
-            f"평균 최대상승 {rbst['gain']:+.2f}% / 최대하락 {rbst['give']:+.2f}%. "
-            f"순위는 이 시스템에서 예측력이 확인된 유일한 신호다.")
+        why = (f"추천 {rlab}위 밴드에 있던 과거 {rbst['n']:,}건은 30일 뒤 상승 {rbst['up']}%"
+               f"(전체 {ov_up}%, {gap:+.1f}%p) · 기대 {rbst['ev']:+.2f}% · "
+               f"평균 최대상승 {rbst['gain']:+.2f}% / 최대하락 {rbst['give']:+.2f}%. "
+               f"순위는 이 시스템에서 예측력이 확인된 유일한 신호다.")
+        # 밴드는 21~100위를 한 칸으로 뭉친다. 이 전략은 상위 10위만 사고 20위에서 내보내므로
+        # 25위와 88위를 같게 볼 수는 없다. 문턱에서 멀어진 만큼 매수 쪽을 더 깎는다.
+        br = ctx.get("buyrank")
+        if br and br > 20:
+            pen = _clamp((br - 20) * 0.42, 0, 26)
+            b -= pen
+            why += (f" 다만 밴드는 21~100위를 한 칸으로 묶은 것이라 순위 자체로 한 번 더 깎는다 — "
+                    f"이 전략은 10위 안에서 사고 20위에서 내보내는데 지금 {br}위다(-{pen:.0f}점).")
+        add(f"추천 {ctx.get('buyrank')}위 (밴드 {rlab})", b, 0, s, why)
 
     # ── 3) 지금 이 자리의 과거 통계 (보유 중일 때만) ──────────
     cell, clab = (pos_cell(plab, ret, dd) if held else (None, None))
@@ -800,6 +808,9 @@ def action_split(ctx, bear, vd, plab, meta=None):
                                    f"그래서 한 번 익절할 때의 크기가 승부를 가른다."
                                    if odds and odds > 1.2 else "")})
 
+    # 퍼센트만 보면 오해가 생기는 경우가 있다. 부분익절이 그렇다 —
+    # '1/3 팔고 2/3 보유'라 유지 쪽이 이기는데, 그러면 "팔지 말라"로 읽힌다.
+    # 그래서 규칙이 정한 구체적 행동을 한 줄로 같이 내보낸다.
     return {"pct": out, "labels": labels, "parts": parts, "head": head,
-            "cell": cell, "cell_label": clab, "levels": levels,
-            "top": top, "top_label": labels[top]}
+            "act": vd.get("action"), "cell": cell, "cell_label": clab,
+            "levels": levels, "top": top, "top_label": labels[top]}
