@@ -509,6 +509,17 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
                    f'<div class="bigbar" style="background:#ffd9d6"><div style="width:{gw:.0f}%;background:#34c759"></div></div>'
                    f'<span class="bv" style="font-size:11px">{st["gain5"]:.0f}/{st["give5"]:.0f}</span></div>')
         ov=pl["overall"]
+        # 생존편향을 얼마나 메웠는지는 사실대로 적는다 — 상장폐지 표본이 들어왔나 아닌가
+        dn=pl.get("n_dead") or 0
+        rev=pl['by_ret'].get('-10%↓',{}).get('up','-')
+        if dn:
+            surv=(f'· 표본에 <b>상장폐지된 {dn}종목</b>을 넣었습니다(마지막 체결가까지 반영). '
+                  f'그만큼 하락 꼬리가 두꺼워졌지만, 코스피 주권만이고 거래정지 중 방치된 구간은 '
+                  f'가격이 없어 빠집니다. <b>여전히 실제보다는 얇습니다.</b>')
+        else:
+            surv=(f'· 표본은 <b>지금까지 살아남은 {pl.get("n_live") or 100}종목</b>입니다. 사라진 종목이 빠져 '
+                  f'<b>하락 꼬리가 실제보다 얇습니다</b>. 특히 “-10% 아래에서 오히려 상승확률이 높다”({rev}%)는 '
+                  f'숫자가 이 편향을 가장 크게 받습니다 — 그래서 손절 규칙을 이 숫자로 뒤집지 않습니다.')
         tip=""
         if nb:
             odds=nb["hit_stop"]/nb["hit_tp"] if nb["hit_tp"] else 0
@@ -531,9 +542,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 큰 수익을 들고 있다면 “더 갈까”가 아니라 <b>“얼마를 지킬까”</b>가 맞는 질문입니다.</div>
 <details style="margin-top:6px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">이 표의 한계</summary>
 <div class="leg" style="margin-top:8px;line-height:1.85">
-· 표본은 <b>지금까지 살아남은 100종목</b>입니다. 상장폐지·장기부진으로 사라진 종목이 빠져
-<b>하락 꼬리가 실제보다 얇습니다</b>. 특히 “-10% 아래에서 오히려 상승확률이 높다”({pl['by_ret'].get('-10%↓',{}).get('up','-')}%)는
-숫자는 이 편향의 영향을 가장 크게 받습니다 — 그래서 손절 규칙을 이 숫자로 뒤집지 않습니다.<br>
+{surv}<br>
 · 관측이 겹칩니다(하루씩 밀며 세므로 30일 창이 29/30 동일). 겹치지 않는 날짜 묶음은 최대 {ov['indep']}개뿐이라
 표본 수 {ov['n']:,}건은 <b>독립 표본이 아닙니다</b>.<br>
 · 전략이 실제로 고른 종목이 아니라 <b>모든 종목</b>이 대상입니다. 순위 보정은 따로 붙였습니다

@@ -525,7 +525,8 @@ def main():
         "hist_labels":[f"{b}" for b in np.arange(20,85,5)],
         "weights":weights,"buylist":buylist[:10],"news":market_news,"stale":stale,"lab":lab,
         # 익절·손절 확률표 — 화면에 띄울 부분만 (원본은 380만 건이라 통째로 싣지 않는다)
-        "poslab":({"overall":plab["overall"],"by_ret":plab["by_ret"],"by_dd":plab["by_dd"],
+        "poslab":({"n_live":plab.get("n_live"),"n_dead":plab.get("n_dead",0),
+                   "overall":plab["overall"],"by_ret":plab["by_ret"],"by_dd":plab["by_dd"],
                    "by_rank":plab["by_rank"],"ret_labels":plab["ret_labels"],
                    "dd_labels":plab["dd_labels"],
                    "new":{k:plab["rank_cells"][f"{k}|0~+5%"] for k in ("1-10","11-20","21-100")

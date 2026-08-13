@@ -22,9 +22,20 @@
   가격 경로만으로 만들면 수백만 건이 되어 칸마다 통계가 안정적이다.
   대신 '이 전략이 고른 종목'이라는 조건은 빠지므로, 순위밴드를 따로 붙여 보정한다.
 
+사라진 종목도 넣는다
+  data/prices_delisted.csv가 있으면 상장폐지 종목의 가격 경로도 표본에 넣는다.
+  이게 없으면 "많이 빠진 뒤 반등확률이 높다"는 통계가 낙관 쪽으로 치우친다 —
+  끝내 회복 못 한 종목은 살아있는 표본에 남아있지 않기 때문이다.
+
+  주의할 함정: 상장폐지 뒤에는 가격이 없어서 그냥 두면 **마지막 30일이 NaN으로
+  빠져버린다**. 생존편향을 고치려고 받은 데이터가 정작 가장 중요한 구간에서
+  사라지는 것이다. 그래서 마지막 체결가를 30거래일까지 끌고 간다 —
+  정리매매까지의 급락은 데이터에 들어 있고, 그 뒤는 '마지막 가격에 팔았다'로 본다.
+
 한계
   · 겹치는 관측이라 독립표본은 훨씬 적다 → 날짜 묶음 수로 따로 센다.
-  · 생존 종목만 있는 표본이다(상장폐지 미포함). 하락 꼬리가 실제보다 얇다.
+  · 상장폐지 종목을 넣어도 코스피 주권만이고, 거래정지 중 장기 방치된 구간은
+    가격이 없어 반영되지 않는다. 하락 꼬리는 여전히 실제보다 얇다.
 """
 import os
 import json
@@ -33,6 +44,8 @@ import numpy as np
 import pandas as pd
 
 SCORES = "data/scores.csv"
+PRICES = "data/prices.csv"
+DPRICES = "data/prices_delisted.csv"
 OUT = "data/position_lab.json"
 
 FWD = 30            # 앞으로 볼 거래일
@@ -50,16 +63,49 @@ DD_BINS = [-1.0, -0.10, -0.05, -0.02, 0.0]
 DD_LABS = ["고점-10%↓", "고점-10~-5%", "고점-5~-2%", "고점근처(-2~0%)"]
 
 
-def main():
+def load_matrix():
+    """가격 행렬과 순위 행렬. 상장폐지 종목이 있으면 가격에만 합친다.
+
+    순위는 scores.csv에만 있으므로 사라진 종목은 순위밴드 표에서 자동으로 빠진다.
+    가격 경로 통계(수익률·고점대비 칸)에는 들어간다 — 그게 넣는 이유다.
+    """
     s = pd.read_csv(SCORES, dtype={"종목코드": str}, usecols=["날짜", "종목코드", "종가", "종합점수"])
     s["종목코드"] = s["종목코드"].str.zfill(6)
     s["날짜"] = pd.to_datetime(s["날짜"])
-    dates = np.array(sorted(s["날짜"].unique()))
-    px = s.pivot_table(index="날짜", columns="종목코드", values="종가").reindex(dates).values
-    rank = (s.pivot_table(index="날짜", columns="종목코드", values="종합점수")
-              .reindex(dates).rank(axis=1, ascending=False, method="first").values)
+    live = s.pivot_table(index="날짜", columns="종목코드", values="종가")
+    rk = (s.pivot_table(index="날짜", columns="종목코드", values="종합점수")
+            .rank(axis=1, ascending=False, method="first"))
+
+    dead = None
+    if os.path.exists(DPRICES):
+        d = pd.read_csv(DPRICES, dtype={"종목코드": str}, usecols=["날짜", "종목코드", "종가"])
+        d["종목코드"] = d["종목코드"].str.zfill(6)
+        d["날짜"] = pd.to_datetime(d["날짜"])
+        d = d[~d["종목코드"].isin(live.columns)]        # 살아있는 쪽이 우선
+        if len(d):
+            dead = d.pivot_table(index="날짜", columns="종목코드", values="종가")
+
+    if dead is None:
+        px = live
+        print(f"가격 {len(px)}일 × {px.shape[1]}종목 (생존 종목만) — 포지션 상태 전수 조사")
+    else:
+        px = live.join(dead, how="outer").sort_index()
+        # 상장폐지 뒤 30거래일까지 마지막 체결가를 끌고 간다.
+        # 안 그러면 사라진 종목의 마지막 30일이 NaN이 되어 통째로 빠진다 —
+        # 하필 가장 크게 빠진 구간이 빠지므로 편향을 고치려다 되레 키우게 된다.
+        px[dead.columns] = px[dead.columns].ffill(limit=FWD)
+        px = px.loc[live.index.min():]                 # 점수 기간 밖은 버린다
+        print(f"가격 {len(px)}일 × {px.shape[1]}종목 "
+              f"(생존 {live.shape[1]} + 상장폐지 {dead.shape[1]}) — 포지션 상태 전수 조사")
+
+    rk = rk.reindex(index=px.index, columns=px.columns)
+    n_dead = 0 if dead is None else dead.shape[1]
+    return px.index.values, px.values, rk.values, live.shape[1], n_dead
+
+
+def main():
+    dates, px, rank, n_live, n_dead = load_matrix()
     nD, nS = px.shape
-    print(f"가격 {nD}일 × {nS}종목 — 포지션 상태 전수 조사")
 
     # 앞으로 30일 동안의 최저가·최고가를 미리 굴려둔다 (경로로 손절/익절 체결을 판정하려고)
     fmin = np.full_like(px, np.nan)
@@ -172,6 +218,7 @@ def main():
     overall = stats(d)
 
     out = {"fwd": FWD, "stop": STOP, "tp": TP, "max_hold": MAX_HOLD,
+           "n_live": n_live, "n_dead": n_dead,
            "ret_labels": RET_LABS, "dd_labels": DD_LABS,
            "ret_bins": RET_BINS, "dd_bins": DD_BINS,
            "overall": overall, "cells": cells, "rank_cells": rcells,
