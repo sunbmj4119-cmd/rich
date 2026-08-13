@@ -20,6 +20,7 @@ import numpy as np
 
 PRICES = "data/prices.csv"
 FIN = "data/financials.csv"
+MCAP = "data/marketcap.csv"   # 이 시스템이 실제로 관리 중인 유니버스
 OUT = "data/scores.csv"
 WEIGHTS = "config/weights.yaml"
 
@@ -53,6 +54,40 @@ def xs_rank(s):
     return s.rank(pct=True) * 100
 
 
+def limit_universe(df):
+    """점수를 매길 종목을 '데이터가 갖춰진 것'으로 제한한다.
+
+    왜 필요한가
+      점수는 그날 종목 간 백분위다. 그래서 **표본에 누가 들어있느냐가 모든 종목의
+      점수를 바꾼다**. 재무가 없는 종목을 끼워넣으면 그 종목은 가치·수익성·성장에서
+      일괄 중립 50점을 받고(가중 합계 65%), 동시에 나머지 종목의 백분위를 희석시킨다.
+      모멘텀 하나만으로 상위 10위에 올라 매수 신호까지 날 수 있다.
+
+      prices.csv는 position_lab 같은 '가격 경로 통계'용으로 종목을 넓혀 받는다.
+      그 확장이 매매 신호를 조용히 바꾸지 않도록 여기서 문을 따로 잠근다.
+
+    기준
+      시총 데이터가 있는 종목만. 시총은 collect_flows가 매일 유지하는 파일이라
+      '이 시스템이 실제로 관리 중인 유니버스'와 같은 뜻이다.
+      유니버스를 넓히려면 그 종목들의 재무·시총부터 모은 뒤 이 필터가 자동으로 열린다.
+    """
+    if not os.path.exists(MCAP):
+        return df
+    try:
+        mc = pd.read_csv(MCAP, dtype={"종목코드": str}, usecols=["종목코드"])
+    except Exception:
+        return df
+    ok = set(mc["종목코드"].str.zfill(6))
+    if not ok:
+        return df
+    have = set(df["종목코드"].unique())
+    drop = have - ok
+    if drop:
+        print(f"유니버스 제한: {len(have)}종목 중 시총·재무가 갖춰진 {len(have & ok)}종목만 채점 "
+              f"({len(drop)}종목 제외 — 가격만 있어 백분위를 왜곡시킴)")
+    return df[df["종목코드"].isin(ok)].reset_index(drop=True)
+
+
 def main():
     w = load_weights()
     lw, ew = w["logic_weight"], w["emotion_weight"]
@@ -62,6 +97,7 @@ def main():
     df["종목코드"] = df["종목코드"].str.zfill(6)
     df["날짜"] = pd.to_datetime(df["날짜"])
     df = df.sort_values(["종목코드", "날짜"]).reset_index(drop=True)
+    df = limit_universe(df)
 
     parts = []
     for code, g in df.groupby("종목코드"):
@@ -134,7 +170,6 @@ def main():
     # 2-c) 외국인 수급 (검증된 신규 팩터: valid IC +0.055, 모멘텀과 독립)
     #     외국인이 최근 20일 순매수한 종목 = 향후 강세. 시총 대비 정규화.
     FLOWS = "data/flows.csv"
-    MCAP = "data/marketcap.csv"
     if os.path.exists(FLOWS):
         fldf = pd.read_csv(FLOWS, dtype={"종목코드": str})
         fldf["종목코드"] = fldf["종목코드"].str.zfill(6)
