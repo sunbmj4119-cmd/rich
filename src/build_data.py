@@ -528,7 +528,7 @@ def main():
         "poslab":({"n_live":plab.get("n_live"),"n_dead":plab.get("n_dead",0),
                    "overall":plab["overall"],"by_ret":plab["by_ret"],"by_dd":plab["by_dd"],
                    "by_rank":plab["by_rank"],"ret_labels":plab["ret_labels"],
-                   "dd_labels":plab["dd_labels"],
+                   "dd_labels":plab["dd_labels"],"dead":plab.get("dead"),
                    "new":{k:plab["rank_cells"][f"{k}|0~+5%"] for k in ("1-10","11-20","21-100")
                           if f"{k}|0~+5%" in plab.get("rank_cells",{})}}
                   if plab else None)}

@@ -510,16 +510,31 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
                    f'<span class="bv" style="font-size:11px">{st["gain5"]:.0f}/{st["give5"]:.0f}</span></div>')
         ov=pl["overall"]
         # 생존편향을 얼마나 메웠는지는 사실대로 적는다 — 상장폐지 표본이 들어왔나 아닌가
-        dn=pl.get("n_dead") or 0
+        dd_=pl.get("dead")
         rev=pl['by_ret'].get('-10%↓',{}).get('up','-')
-        if dn:
-            surv=(f'· 표본에 <b>상장폐지된 {dn}종목</b>을 넣었습니다(마지막 체결가까지 반영). '
-                  f'그만큼 하락 꼬리가 두꺼워졌지만, 코스피 주권만이고 거래정지 중 방치된 구간은 '
-                  f'가격이 없어 빠집니다. <b>여전히 실제보다는 얇습니다.</b>')
+        if dd_:
+            rd=dd_["by_ret"].get('-10%↓',{}).get('up')
+            surv=(f'· 위 표는 <b>살아남은 {pl.get("n_live") or 100}종목</b> 기준입니다. '
+                  f'2018년 이후 <b>상장폐지된 {dd_["n_stocks"]}종목</b>을 따로 재보니 '
+                  f'상승확률 <b>{dd_["overall"]["up"]}%</b>로 {abs(dd_["up_gap"]):.1f}%p 낮았습니다 — '
+                  f'<b>이 차이가 곧 생존편향의 크기</b>입니다. '
+                  f'둘을 섞지 않은 이유는 사라진 종목이 대부분 소형주·우선주라, '
+                  f'표본 수대로 합치면 대형주 판단에 소형주 부도율을 밀어넣는 꼴이 되기 때문입니다. '
+                  f'<b>실제 값은 두 숫자 사이 어딘가입니다.</b>')
         else:
             surv=(f'· 표본은 <b>지금까지 살아남은 {pl.get("n_live") or 100}종목</b>입니다. 사라진 종목이 빠져 '
-                  f'<b>하락 꼬리가 실제보다 얇습니다</b>. 특히 “-10% 아래에서 오히려 상승확률이 높다”({rev}%)는 '
-                  f'숫자가 이 편향을 가장 크게 받습니다 — 그래서 손절 규칙을 이 숫자로 뒤집지 않습니다.')
+                  f'<b>하락 꼬리가 실제보다 얇습니다</b>.')
+        # 생존편향을 숨기지 않는다 — 특히 '많이 빠진 뒤 반등' 칸이 이 편향을 가장 크게 받는다
+        deadbox=""
+        if dd_ and dd_["by_ret"].get('-10%↓'):
+            rd=dd_["by_ret"]['-10%↓']['up']
+            deadbox=(f'<div class="warn" style="background:#f4f0ff;color:#4b3f8f">'
+                     f'⚠ <b>이 표가 낙관적인 만큼은 알고 보세요.</b> 위 표에서 “-10% 아래”의 상승확률이 '
+                     f'<b>{rev}%</b>로 가장 높게 나오지만, 2018년 이후 <b>상장폐지된 {dd_["n_stocks"]}종목</b>의 '
+                     f'같은 칸은 <b>{rd}%</b>였습니다({rd - pl["by_ret"]["-10%↓"]["up"]:+.1f}%p). '
+                     f'끝내 회복 못 한 종목은 살아있는 표본에 남아있지 않기 때문입니다.<br>'
+                     f'👉 그래서 <b>“많이 빠졌으니 곧 오른다”로 손절을 미루지 마세요.</b> '
+                     f'종목 판단에서도 이 칸의 “버텨라” 무게를 절반만 반영합니다.</div>')
         tip=""
         if nb:
             odds=nb["hit_stop"]/nb["hit_tp"] if nb["hit_tp"] else 0
@@ -540,6 +555,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 <div class="warn" style="background:#fff8e1;color:#946200">많이 오를수록 <b>양쪽이 같이 커집니다</b>.
 +40% 이상에서는 5% 더 밀릴 확률이 {pl['by_ret'].get('+40%↑',{}).get('give5','-')}%까지 올라갑니다.
 큰 수익을 들고 있다면 “더 갈까”가 아니라 <b>“얼마를 지킬까”</b>가 맞는 질문입니다.</div>
+{deadbox}
 <details style="margin-top:6px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">이 표의 한계</summary>
 <div class="leg" style="margin-top:8px;line-height:1.85">
 {surv}<br>

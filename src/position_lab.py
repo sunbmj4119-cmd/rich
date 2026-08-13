@@ -32,6 +32,12 @@
   사라지는 것이다. 그래서 마지막 체결가를 30거래일까지 끌고 간다 —
   정리매매까지의 급락은 데이터에 들어 있고, 그 뒤는 '마지막 가격에 팔았다'로 본다.
 
+  **다만 섞지는 않는다.** 사라진 76종목은 대부분 소형주와 우선주라, 표본 수대로
+  합치면 대형주 판단에 소형주의 부도율을 밀어넣는 꼴이 된다. 편향 하나를
+  다른 편향으로 바꾸는 것뿐이다. 그래서 본표는 생존 종목으로 내고,
+  사라진 종목은 **따로 재서 그 차이를 화면에 그대로 보여준다**.
+  실제 값은 둘 사이 어딘가다 — 어느 쪽 하나를 진실이라고 우기지 않는다.
+
 한계
   · 겹치는 관측이라 독립표본은 훨씬 적다 → 날짜 묶음 수로 따로 센다.
   · 상장폐지 종목을 넣어도 코스피 주권만이고, 거래정지 중 장기 방치된 구간은
@@ -118,7 +124,9 @@ def main():
             fmin[t] = np.nanmin(w, axis=0)
             fmax[t] = np.nanmax(w, axis=0)
 
-    cols = ["ret", "dd", "fwd", "lo", "hi", "day", "rank", "hold"]
+    # 순위가 통째로 비어 있는 열 = 상장폐지 종목 (scores.csv에 없으므로)
+    dead_col = np.isnan(rank).all(axis=0)
+    cols = ["ret", "dd", "fwd", "lo", "hi", "day", "rank", "hold", "dead"]
     recs = {k: [] for k in cols}
     for e in range(0, nD - FWD - 5, ENTRY_STEP):
         ent = px[e]                                   # 진입가
@@ -144,20 +152,25 @@ def main():
             recs["rank"].append(rank[e + h][idx].astype(np.float32))
             recs["day"].append(np.full(idx.size, e + h, np.int32))
             recs["hold"].append(np.full(idx.size, h, np.int16))
-    d = pd.DataFrame({k: np.concatenate(v) for k, v in recs.items()})
-    print(f"  포지션-일 표본 {len(d):,}건")
-
-    d["rb"] = pd.cut(d["ret"], RET_BINS, labels=RET_LABS)
-    d["db"] = pd.cut(d["dd"], DD_BINS, labels=DD_LABS)
+            recs["dead"].append(dead_col[idx])
+    full = pd.DataFrame({k: np.concatenate(v) for k, v in recs.items()})
+    full["rb"] = pd.cut(full["ret"], RET_BINS, labels=RET_LABS)
+    full["db"] = pd.cut(full["dd"], DD_BINS, labels=DD_LABS)
     # 경로로 판정한다 — 손절도 익절도 도중에 닿기만 하면 체결된다
-    d["hit_stop"] = d["lo"] <= STOP
-    d["hit_tp"] = d["hi"] >= TP
+    full["hit_stop"] = full["lo"] <= STOP
+    full["hit_tp"] = full["hi"] >= TP
     # 지금 팔았을 때 대비 — 더 밀리면 얼마까지, 더 오르면 얼마까지
-    d["give"] = (1 + d["lo"]) / (1 + d["ret"]) - 1
-    d["gain"] = (1 + d["hi"]) / (1 + d["ret"]) - 1
+    full["give"] = (1 + full["lo"]) / (1 + full["ret"]) - 1
+    full["gain"] = (1 + full["hi"]) / (1 + full["ret"]) - 1
     # 진입가가 아니라 '지금 가격' 기준 — 팔지 말지는 지금 가격에서 갈린다
-    d["give5"], d["give10"] = d["give"] <= -0.05, d["give"] <= -0.10
-    d["gain5"], d["gain10"] = d["gain"] >= 0.05, d["gain"] >= 0.10
+    full["give5"], full["give10"] = full["give"] <= -0.05, full["give"] <= -0.10
+    full["gain5"], full["gain10"] = full["gain"] >= 0.05, full["gain"] >= 0.10
+
+    # 본표는 생존 종목만. 사라진 종목은 따로 재서 차이를 보여준다 (이유는 문서 앞부분에)
+    d = full[~full["dead"]].reset_index(drop=True)
+    dead = full[full["dead"]].reset_index(drop=True)
+    print(f"  포지션-일 표본 {len(d):,}건 (생존)"
+          + (f" · {len(dead):,}건 (상장폐지, 별도 집계)" if len(dead) else ""))
 
     def indep(days):
         """겹치지 않는 날짜 묶음 수 — 신뢰구간용"""
@@ -189,9 +202,9 @@ def main():
             "gain10": round(float(g["gain10"].mean() * 100), 1),
         }
 
-    def table(key):
+    def table(key, src=None):
         out = {}
-        for k, g in d.groupby(key, observed=True):
+        for k, g in (d if src is None else src).groupby(key, observed=True):
             st = stats(g)
             if st:
                 out[str(k)] = st
@@ -216,13 +229,23 @@ def main():
     d["hb"] = pd.cut(d["hold"], [0, 10, 20, 40, 60], labels=["1-10일", "11-20일", "21-40일", "41-60일"])
     by_hold = table("hb")
     overall = stats(d)
+    # 사라진 종목 — 본표에는 안 섞고, 얼마나 다른지만 잰다.
+    # 이 차이가 곧 '생존편향의 크기'다.
+    dead_block = None
+    if len(dead) >= MIN_CELL:
+        do = stats(dead)
+        dead_block = {"overall": do, "by_ret": table("rb", dead),
+                      "n_stocks": n_dead,
+                      "up_gap": round(do["up"] - overall["up"], 1),
+                      "ev_gap": round(do["ev"] - overall["ev"], 2)}
 
     out = {"fwd": FWD, "stop": STOP, "tp": TP, "max_hold": MAX_HOLD,
            "n_live": n_live, "n_dead": n_dead,
            "ret_labels": RET_LABS, "dd_labels": DD_LABS,
            "ret_bins": RET_BINS, "dd_bins": DD_BINS,
            "overall": overall, "cells": cells, "rank_cells": rcells,
-           "by_ret": by_ret, "by_dd": by_dd, "by_rank": by_rank, "by_hold": by_hold}
+           "by_ret": by_ret, "by_dd": by_dd, "by_rank": by_rank,
+           "by_hold": by_hold, "dead": dead_block}
     os.makedirs("data", exist_ok=True)
     json.dump(out, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, allow_nan=False)
 
@@ -247,6 +270,18 @@ def main():
         if st:
             print(f"{'추천 ' + rk + '위':<16}{st['up']:5.1f}%{st['ev']:+7.2f}%"
                   f"{st['hit_stop']:9.1f}%{st['hit_tp']:9.1f}%{st['n']:10,}")
+    if dead_block:
+        do = dead_block["overall"]
+        print(f"\n■ 생존편향의 크기 — 사라진 {n_dead}종목만 따로 (본표에는 섞지 않음)")
+        print(f"  전체:   생존 상승 {overall['up']}% / 상폐 {do['up']}% "
+              f"({dead_block['up_gap']:+.1f}%p) · "
+              f"기대 {overall['ev']:+.2f}% / {do['ev']:+.2f}% ({dead_block['ev_gap']:+.2f}%p)")
+        print(f"  {'구간':<12}{'생존 상승':>10}{'상폐 상승':>10}{'차이':>8}{'상폐 표본':>11}")
+        for lab in RET_LABS:
+            a, b = by_ret.get(lab), dead_block["by_ret"].get(lab)
+            if a and b:
+                print(f"  {lab:<12}{a['up']:9.1f}%{b['up']:9.1f}%"
+                      f"{b['up'] - a['up']:+7.1f}%p{b['n']:11,}")
     print(f"\n칸(수익률×고점대비) {len(cells)}개 · 저장 {OUT}")
 
 
