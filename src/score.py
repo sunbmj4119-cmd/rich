@@ -112,6 +112,17 @@ def main():
         # (Blitz·Huij·Martens 2011). 종합점수와의 상관 +0.23으로 새 정보를 담는다.
         g["_vol60d"] = g["종가"].pct_change().rolling(60, min_periods=30).std()
         g["rmom"] = g["mom12_1"] / (g["_vol60d"] * np.sqrt(252) + 1e-9)
+        # 이격률 — 이동평균에서 얼마나 벌어졌나. 부호를 뒤집어 '아래일수록 높은 점수'.
+        # factor_lab 검증: 20/60/120일 모두 IC 양수(+0.025~0.028)이고
+        # 종합점수와의 상관이 -0.02~-0.11로 거의 독립 — 즉 새 정보를 담는다.
+        # 종목마다 평소 벌어지는 폭이 달라(변동성 큰 종목은 늘 ±10%) 원시값 대신
+        # '그 종목의 1년 기준으로 지금 유별난가'를 z로 재서 쓴다.
+        for n in (20, 60, 120):
+            ma = g["종가"].rolling(n, min_periods=max(10, n // 2)).mean()
+            dsp = g["종가"] / ma - 1
+            g[f"disp{n}"] = dsp
+            g[f"dispz{n}"] = -((dsp - dsp.rolling(252, min_periods=120).mean())
+                               / (dsp.rolling(252, min_periods=120).std() + 1e-9))
         g["volatility"] = g["종가"].pct_change().rolling(20).std()
         # 거래대금 추세: 60일 평균 거래대금 / 120일 평균 거래대금 (장기 관심 증가)
         g["거래대금"] = g["종가"] * g["거래량"]
@@ -243,6 +254,14 @@ def main():
     df["s_value"] = s_per * 0.5 + s_pbr * 0.5
 
     # 거래대금 추세 (신규 논리 팩터)
+    # 이격률 — 세 기간을 평균한다. 하나만 고르면 표본에 맞춘 선택이 되기 쉽고,
+    # 셋의 IC가 비슷했으므로(0.025~0.028) 평균이 더 안전하다.
+    df["s_disp"] = ((g["dispz20"].transform(xs_rank).fillna(50)
+                     + g["dispz60"].transform(xs_rank).fillna(50)
+                     + g["dispz120"].transform(xs_rank).fillna(50)) / 3)
+    # 화면에 그대로 보여줄 '지금 20일선 대비 몇 %' (판단용이 아니라 설명용)
+    df["이격도20"] = df["disp20"] * 100
+    df["이격도60"] = df["disp60"] * 100
     df["s_vtrend"] = g["vtrend"].transform(xs_rank).fillna(50)
 
     # 외국인 수급 (검증된 신규 팩터: 외국인 매수강도 높을수록 高점수)
@@ -266,7 +285,8 @@ def main():
                   + df["s_grow"] * L["growth"]
                   + df["s_vtrend"] * L.get("vtrend", 0.0)
                   + df["s_flow"] * L.get("flow", 0.0)
-                  + df["s_short"] * L.get("short", 0.0))
+                  + df["s_short"] * L.get("short", 0.0)
+                  + df["s_disp"] * L.get("disp", 0.0))
     df["감성점수"] = df["s_vol"] * E["volume"] + df["s_volat"] * E["volatility"]
     df["종합점수"] = df["논리점수"] * lw + df["감성점수"] * ew
 
@@ -275,7 +295,7 @@ def main():
     cols = ["날짜", "종목코드", "종목명", "종가",
             "논리점수", "감성점수", "종합점수",
             "s_mom", "s_rmom", "s_value", "s_profit", "s_stab", "s_grow", "s_vtrend",
-            "s_flow", "s_short", "s_vol", "s_volat"]
+            "s_flow", "s_short", "s_vol", "s_volat", "s_disp", "이격도20", "이격도60"]
     out = out[cols]
     out["날짜"] = out["날짜"].dt.strftime("%Y-%m-%d")
     for c in cols[4:]:

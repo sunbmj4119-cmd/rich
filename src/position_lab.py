@@ -50,6 +50,9 @@ import numpy as np
 import pandas as pd
 
 SCORES = "data/scores.csv"
+# 이격률 구간 — "20일선에서 얼마나 벌어졌나". 되밀릴 확률을 가르는 힘이 확인된 값이다.
+DSP_BINS = [-99, -5, -2, 2, 5, 10, 99]
+DSP_LABS = ["20일선 -5%↓", "-5~-2%", "-2~+2%", "+2~+5%", "+5~+10%", "+10%↑"]
 PRICES = "data/prices.csv"
 DPRICES = "data/prices_delisted.csv"
 OUT = "data/position_lab.json"
@@ -75,12 +78,16 @@ def load_matrix():
     순위는 scores.csv에만 있으므로 사라진 종목은 순위밴드 표에서 자동으로 빠진다.
     가격 경로 통계(수익률·고점대비 칸)에는 들어간다 — 그게 넣는 이유다.
     """
-    s = pd.read_csv(SCORES, dtype={"종목코드": str}, usecols=["날짜", "종목코드", "종가", "종합점수"])
+    want = ["날짜", "종목코드", "종가", "종합점수", "이격도20"]
+    head = pd.read_csv(SCORES, nrows=0).columns
+    s = pd.read_csv(SCORES, dtype={"종목코드": str}, usecols=[c for c in want if c in head])
     s["종목코드"] = s["종목코드"].str.zfill(6)
     s["날짜"] = pd.to_datetime(s["날짜"])
     live = s.pivot_table(index="날짜", columns="종목코드", values="종가")
     rk = (s.pivot_table(index="날짜", columns="종목코드", values="종합점수")
             .rank(axis=1, ascending=False, method="first"))
+    dsp = (s.pivot_table(index="날짜", columns="종목코드", values="이격도20")
+           if "이격도20" in s.columns else None)
 
     dead = None
     if os.path.exists(DPRICES):
@@ -105,12 +112,14 @@ def load_matrix():
               f"(생존 {live.shape[1]} + 상장폐지 {dead.shape[1]}) — 포지션 상태 전수 조사")
 
     rk = rk.reindex(index=px.index, columns=px.columns)
+    dsp = (dsp.reindex(index=px.index, columns=px.columns).values
+           if dsp is not None else np.full(px.shape, np.nan))
     n_dead = 0 if dead is None else dead.shape[1]
-    return px.index.values, px.values, rk.values, live.shape[1], n_dead
+    return px.index.values, px.values, rk.values, dsp, live.shape[1], n_dead
 
 
 def main():
-    dates, px, rank, n_live, n_dead = load_matrix()
+    dates, px, rank, dspm, n_live, n_dead = load_matrix()
     nD, nS = px.shape
 
     # 앞으로 30일 동안의 최저가·최고가를 미리 굴려둔다 (경로로 손절/익절 체결을 판정하려고)
@@ -126,7 +135,7 @@ def main():
 
     # 순위가 통째로 비어 있는 열 = 상장폐지 종목 (scores.csv에 없으므로)
     dead_col = np.isnan(rank).all(axis=0)
-    cols = ["ret", "dd", "fwd", "lo", "hi", "day", "rank", "hold", "dead"]
+    cols = ["ret", "dd", "fwd", "lo", "hi", "day", "rank", "hold", "dead", "dsp"]
     recs = {k: [] for k in cols}
     for e in range(0, nD - FWD - 5, ENTRY_STEP):
         ent = px[e]                                   # 진입가
@@ -153,6 +162,7 @@ def main():
             recs["day"].append(np.full(idx.size, e + h, np.int32))
             recs["hold"].append(np.full(idx.size, h, np.int16))
             recs["dead"].append(dead_col[idx])
+            recs["dsp"].append(dspm[e + h][idx].astype(np.float32))
     full = pd.DataFrame({k: np.concatenate(v) for k, v in recs.items()})
     full["rb"] = pd.cut(full["ret"], RET_BINS, labels=RET_LABS)
     full["db"] = pd.cut(full["dd"], DD_BINS, labels=DD_LABS)
@@ -163,6 +173,7 @@ def main():
     full["give"] = (1 + full["lo"]) / (1 + full["ret"]) - 1
     full["gain"] = (1 + full["hi"]) / (1 + full["ret"]) - 1
     # 진입가가 아니라 '지금 가격' 기준 — 팔지 말지는 지금 가격에서 갈린다
+    full["sb"] = pd.cut(full["dsp"], DSP_BINS, labels=DSP_LABS)
     full["give5"], full["give10"] = full["give"] <= -0.05, full["give"] <= -0.10
     full["gain5"], full["gain10"] = full["gain"] >= 0.05, full["gain"] >= 0.10
 
@@ -228,6 +239,8 @@ def main():
     # 보유기간 — '얼마나 들고 있었나'가 결과를 바꾸는지
     d["hb"] = pd.cut(d["hold"], [0, 10, 20, 40, 60], labels=["1-10일", "11-20일", "21-40일", "41-60일"])
     by_hold = table("hb")
+    # 이격률 — 종목 선택에는 값어치가 없었지만(strategy_lab 6-b) '지금 되밀릴 확률'은 가른다
+    by_disp = table("sb")
     overall = stats(d)
     # 사라진 종목 — 본표에는 안 섞고, 얼마나 다른지만 잰다.
     # 이 차이가 곧 '생존편향의 크기'다.
@@ -245,7 +258,8 @@ def main():
            "ret_bins": RET_BINS, "dd_bins": DD_BINS,
            "overall": overall, "cells": cells, "rank_cells": rcells,
            "by_ret": by_ret, "by_dd": by_dd, "by_rank": by_rank,
-           "by_hold": by_hold, "dead": dead_block}
+           "by_hold": by_hold, "by_disp": by_disp,
+           "dsp_labels": DSP_LABS, "dsp_bins": DSP_BINS, "dead": dead_block}
     os.makedirs("data", exist_ok=True)
     json.dump(out, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, allow_nan=False)
 
@@ -264,6 +278,7 @@ def main():
     dump("고점 대비", by_dd, DD_LABS)
     dump("종합순위", by_rank)
     dump("보유기간", by_hold)
+    dump("20일선 이격률", by_disp, DSP_LABS)
     print(f"\n{'갓 산 자리(0~+5%)':<16}{'상승':>6}{'기대':>8}{'손절밟음':>10}{'익절밟음':>10}{'표본':>10}")
     for rk in ("1-10", "11-20", "21-100"):
         st = rcells.get(f"{rk}|0~+5%")

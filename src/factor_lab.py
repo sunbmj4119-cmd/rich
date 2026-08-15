@@ -58,6 +58,21 @@ def build_candidates(dates, px, fin_wide, flow, inst, indiv, cap, amt):
     F["가속모멘텀"] = px.pct_change(60) - px.pct_change(120)   # 추세가 빨라지는가
     F["최대낙폭회복"] = px / px.rolling(60, min_periods=30).max()
 
+    # ── 이격률 (이동평균에서 얼마나 벌어졌나) ─────────────────
+    # 한국에서 오래 쓰이는 지표다. 가설은 평균회귀 — 이평선 위로 많이 뜬 종목은
+    # 되돌아오고, 아래로 처진 종목은 붙으러 올라온다. 그래서 부호를 뒤집어
+    # '이평선 아래일수록 높은 점수'로 넣고, IC 부호로 가설이 맞는지 본다.
+    # (부호가 음수로 나오면 평균회귀가 아니라 추세추종이 맞다는 뜻이다.)
+    for n in (20, 60, 120):
+        ma = px.rolling(n, min_periods=max(10, n // 2)).mean()
+        disp = px / ma - 1
+        F[f"이격도{n}역"] = -disp
+        # 종목마다 평소 벌어지는 폭이 다르다. 변동성 큰 종목은 늘 ±10%씩 벌어지고
+        # 우량주는 ±3%도 크다. 그래서 '그 종목 기준으로 지금 유별난가'를 따로 본다.
+        z = (disp - disp.rolling(252, min_periods=120).mean()) \
+            / (disp.rolling(252, min_periods=120).std() + 1e-9)
+        F[f"이격도{n}역Z"] = -z
+
     # ── 수급 계열 (기관·개인은 지금 아예 안 쓰고 있다) ─────────
     if flow is not None and cap is not None:
         F["기관수급20"] = flow_norm(inst, cap, 20)

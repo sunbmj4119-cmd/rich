@@ -44,7 +44,7 @@ WARMUP = 260
 # 시뮬레이터
 # ══════════════════════════════════════════════════════════════
 def simulate(px, rank, flow_ok, vol, p, d0, d1,
-             reg=None, vol_parity=False, block=None, scale=None):
+             reg=None, vol_parity=False, block=None, scale=None, disp=None):
     """tiers=[(고점수익, 트레일폭)] · parts=[(수익률, 익절비중)] 은 p 안에 넣는다."""
     """
     px[t,i]=종가, rank[t,i]=종합점수 순위(1=최고), flow_ok[t,i]=외국인 필터 통과,
@@ -90,6 +90,11 @@ def simulate(px, rank, flow_ok, vol, p, d0, d1,
                 if peak_gain >= lvl:
                     tw = w_
                     break
+            # 이격률 조임 — 20일선 위로 많이 떠 있으면 되밀릴 확률이 뛴다.
+            # 실측: 이격도 +10% 이상에서 '5% 더 밀림' 66.5% vs 평상시 53.5%.
+            dcut = p.get("disp_cut")
+            if dcut and disp is not None and np.isfinite(disp[t, i]) and disp[t, i] >= dcut:
+                tw = min(tw, p.get("disp_trail", tw))
             why = None
             if ret <= -q["stop"]:
                 why = "손절"
@@ -183,7 +188,8 @@ def load():
     codes = list(px.columns)
 
     fac = {}
-    for k in ["s_value", "s_profit", "s_grow", "s_flow", "s_mom", "종합점수"]:
+    for k in ["s_value", "s_profit", "s_grow", "s_flow", "s_mom", "s_rmom",
+              "s_disp", "이격도20", "종합점수"]:
         if k in s.columns:
             fac[k] = s.pivot_table(index="날짜", columns="종목코드", values=k).reindex(dates)
 
@@ -233,10 +239,13 @@ def main():
            "train": [str(pd.Timestamp(dates[WARMUP]).date()), str(pd.Timestamp(dates[split-1]).date())],
            "test": [str(pd.Timestamp(dates[split]).date()), str(pd.Timestamp(dates[-1]).date())]}
 
+    DISP = (fac["이격도20"].reindex(index=px.index, columns=px.columns).values
+            if "이격도20" in fac else None)
+
     def run(p, rk=None):
         rk = RANK_BASE if rk is None else rk
-        tr = simulate(PX, rk, FOK, VOL, p, WARMUP, split)
-        te = simulate(PX, rk, FOK, VOL, p, split, nD)
+        tr = simulate(PX, rk, FOK, VOL, p, WARMUP, split, disp=DISP)
+        te = simulate(PX, rk, FOK, VOL, p, split, nD, disp=DISP)
         return tr, te
 
     def show(name, tr, te, note=""):
@@ -316,11 +325,76 @@ def main():
     out["hold"] = rows
 
     # ── 7) 팩터 가중치 ────────────────────────────────────────
+    # ── 6-b) 이격률 트레일 조임 ───────────────────────────────
+    #  이격률은 종목 선택(점수)에서는 값어치가 없었다. 하지만 '지금 이 자리에서
+    #  되밀릴 확률'은 확실히 가른다 — 20일선 위 +10% 이상이면 5% 더 밀릴 확률이
+    #  53.5% → 66.5%로 뛴다. 그렇다면 선택이 아니라 '지킬 때' 쓰는 게 맞다.
+    print("\n■ 6-b. 이격률로 트레일 조이기 (20일선 위로 뜬 만큼 좁게)")
+    disp_rows = []
+    if DISP is not None:
+        for cut, dtw in [(6, .03), (8, .03), (10, .03), (12, .03), (15, .03),
+                         (10, .02), (10, .04), (10, .05), (8, .02), (12, .02)]:
+            pp = dict(BASE, disp_cut=cut, disp_trail=dtw)
+            r = show(f"이격도 +{cut}% 이상 → 트레일 -{dtw*100:.0f}%", *run(pp))
+            if r:
+                r["cut"], r["trail"] = cut, dtw
+                disp_rows.append(r)
+
+        # 기본설정 하나에서만 좋은 건 아닌지 — 설정을 바꿔가며 같은 규칙을 다시 건다.
+        # 트레일 폭을 정할 때 썼던 것과 같은 검사다(그때 12%가 여기서 떨어졌다).
+        print("\n  교차 확인 — 다른 설정에서도 통하나 (이격도 +10% → 트레일 -3%)")
+        XC = [("기본", {}), ("5종목", dict(top_n=5, entry_rank=5)),
+              ("15종목", dict(top_n=15, entry_rank=15)), ("이탈30위", dict(exit_rank=30)),
+              ("최소보유10일", dict(min_hold=10)), ("최소보유60일", dict(min_hold=60)),
+              ("트레일12%", dict(trail=0.12))]
+        w = {"tr": 0, "te": 0, "mtr": 0, "mte": 0, "n": 0}
+        for nm, ov in XC:
+            a_ = run(dict(BASE, **ov))
+            b_ = run(dict(BASE, **ov, disp_cut=10, disp_trail=0.03))
+            if not (a_[0] and a_[1] and b_[0] and b_[1]):
+                continue
+            w["n"] += 1
+            w["tr"] += b_[0]["ann"] > a_[0]["ann"]
+            w["te"] += b_[1]["ann"] > a_[1]["ann"]
+            w["mtr"] += b_[0]["mdd"] > a_[0]["mdd"]      # mdd는 음수 → 큰 쪽이 개선
+            w["mte"] += b_[1]["mdd"] > a_[1]["mdd"]
+            print(f"    {nm:<12} train {a_[0]['ann']:+6.1f}%→{b_[0]['ann']:+6.1f}%"
+                  f"  test {a_[1]['ann']:+6.1f}%→{b_[1]['ann']:+6.1f}%"
+                  f"  testMDD {a_[1]['mdd']:6.1f}%→{b_[1]['mdd']:6.1f}%")
+        n = max(1, w["n"])
+        print(f"\n  {n}개 설정 중 — train수익 {w['tr']}/{n} · test수익 {w['te']}/{n} · "
+              f"trainMDD {w['mtr']}/{n} · testMDD {w['mte']}/{n} 개선")
+        print("  판정: test 쪽은 거의 일관되게 좋아지지만 train은 반반이다.")
+        print("        트레일 12%를 기각했던 기준(train·test 동시 개선)을 그대로 적용해")
+        print("        **매매 규칙으로는 채택하지 않는다**. 다만 '지금 되밀릴 확률'을")
+        print("        가르는 힘은 분명하므로(이격도 +10%↑에서 5% 더 밀릴 확률 66.5% vs 53.5%)")
+        print("        판단 화면의 위험 신호로만 쓴다.")
+        out["disp_xcheck"] = {"n": w["n"], "train_win": w["tr"], "test_win": w["te"],
+                              "train_mdd_win": w["mtr"], "test_mdd_win": w["mte"],
+                              "verdict": "규칙 미채택 · 판단 신호로만 사용"}
+    out["disp_trail"] = disp_rows
+
     print("\n■ 7. 팩터 가중치 — 지금 배분이 맞나")
     FK = ["s_value", "s_profit", "s_grow", "s_flow", "s_mom"]
-    CUR = dict(s_value=.32, s_profit=.22, s_flow=.20, s_grow=.18, s_mom=.08)
+    # 지금 weights.yaml이 실제로 쓰는 값 (v6: 위험조정모멘텀 편입 후)
+    CUR = dict(s_value=.29, s_profit=.20, s_flow=.18, s_grow=.16, s_mom=.07, s_rmom=.10)
+    # 이격률을 얼마나 넣을지 — IC는 통과했지만 상위10 포트폴리오에서도 좋은지는 별개다.
+    # 저변동성이 IC 1위였는데 포트폴리오는 나빠졌던 전례가 있어 여기서 다시 확인한다.
+    def mix(d):
+        """CUR에서 이격률 비중만큼 나머지를 비례 축소 — 합은 항상 1"""
+        w = dict(CUR)
+        for k in w:
+            w[k] *= (1 - d)
+        w["s_disp"] = d
+        return w
     WSET = [
-        ("현재 (가치0.32 모멘텀0.08)", CUR),
+        ("현재 (이격률 없음)", CUR),
+        ("+ 이격률 0.05", mix(.05)),
+        ("+ 이격률 0.10", mix(.10)),
+        ("+ 이격률 0.15", mix(.15)),
+        ("+ 이격률 0.20", mix(.20)),
+        ("+ 이격률 0.30", mix(.30)),
+        ("이격률만", dict(s_disp=1.)),
         ("동일가중", {k: .2 for k in FK}),
         ("가치만", dict(s_value=1.)),
         ("수익성만", dict(s_profit=1.)),

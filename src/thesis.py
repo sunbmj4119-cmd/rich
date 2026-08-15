@@ -720,6 +720,28 @@ def action_split(ctx, bear, vd, plab, meta=None):
             why += "그래서 반등 통계를 절반만 반영했다."
         add("지금 이 자리", 0, h, s, why)
 
+    # ── 3-b) 이격률 — 20일선에서 얼마나 벌어졌나 ──────────────
+    # 이 값은 종목 선택에는 쓰지 않는다(strategy_lab 6-b에서 매매 규칙으로는 기각).
+    # 하지만 '지금 되밀릴 확률'은 분명히 가른다. 그래서 판단에만 쓴다.
+    dsp = ctx.get("disp20")
+    dtab = (plab or {}).get("by_disp") or {}
+    if dsp is not None and dtab:
+        dlab = _pl_band(dsp, (plab or {}).get("dsp_bins") or [], (plab or {}).get("dsp_labels") or [])
+        dst = dtab.get(dlab)
+        if dst:
+            base = dtab.get("-2~+2%") or ov
+            gap5 = dst["give5"] - (base.get("give5") or dst["give5"])
+            s = _clamp(gap5 * 1.1, -8, 14)
+            h = _clamp(-gap5 * 0.6, -8, 6)
+            add("이격률(20일선 대비)", 0, h, s,
+                f"지금 20일 이동평균보다 {dsp:+.1f}% 떨어져 있다({dlab} 구간). "
+                f"과거 같은 구간 {dst['n']:,}건에서 30일 안에 5% 더 밀린 경우가 "
+                f"{dst['give5']}%였다 — 평상시(20일선 ±2%) {base.get('give5', '?')}%와 견주면 "
+                f"{gap5:+.1f}%p다. 5% 더 오른 경우는 {dst['gain5']}%. "
+                f"많이 떠 있을수록 위아래 폭이 같이 커지므로, "
+                f"이 값은 '살까'가 아니라 '얼마를 지킬까'에 쓴다. "
+                f"매매 규칙으로 넣는 것은 검증에서 기각했다(train 개선 3/7).")
+
     # ── 4) 기준집단(순위 × 국면) ─────────────────────────────
     pr = ctx.get("prob")
     if pr:

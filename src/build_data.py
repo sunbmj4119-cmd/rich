@@ -374,7 +374,9 @@ def main():
              "short_rank":short_map.get(code,{}).get("rank"),
              "beta":bt.get("beta"),"down_beta":bt.get("down"),
              "vol":bt.get("vol"),"vol_rank":bt.get("vol_rank"),
-             "news_flags":nflags,"sector_conc":conc,"signal":sg.get("구분","")}
+             "news_flags":nflags,"sector_conc":conc,"signal":sg.get("구분",""),
+             "disp20":(round(float(r["이격도20"]),1) if "이격도20" in r and pd.notna(r["이격도20"]) else None),
+             "disp60":(round(float(r["이격도60"]),1) if "이격도60" in r and pd.notna(r["이격도60"]) else None)}
         cell,band=ref_cell(int(r["순위"]))
         prob=dict(cell) if cell else None      # 기준집단 = 판단에 쓰는 확률
         if prob: prob["band"]=band
@@ -425,6 +427,7 @@ def main():
             # ── 판단 근거 블록 ──
             "bull":bull,"bear":bear,"prob":prob,"aprob":analog_prob,"mscen":mscen,"verdict":vd,
             "split":asplit,"tp_price":_num(sg.get("익절가")),"tp_qty":_s(sg.get("익절수량")),
+            "disp20":ctx.get("disp20"),"disp60":ctx.get("disp60"),
             "buyfit_pct":round(float(r["buyfit_pct"]),0),
             "beta":bt.get("beta"),"down_beta":bt.get("down"),
             "vol":bt.get("vol"),"vol_rank":bt.get("vol_rank"),
@@ -526,6 +529,8 @@ def main():
         "weights":weights,"buylist":buylist[:10],"news":market_news,"stale":stale,"lab":lab,
         # 익절·손절 확률표 — 화면에 띄울 부분만 (원본은 380만 건이라 통째로 싣지 않는다)
         "poslab":({"n_live":plab.get("n_live"),"n_dead":plab.get("n_dead",0),
+                   "by_disp":plab.get("by_disp"),"dsp_labels":plab.get("dsp_labels"),
+                   "dsp_bins":plab.get("dsp_bins"),
                    "overall":plab["overall"],"by_ret":plab["by_ret"],"by_dd":plab["by_dd"],
                    "by_rank":plab["by_rank"],"ret_labels":plab["ret_labels"],
                    "dd_labels":plab["dd_labels"],"dead":plab.get("dead"),

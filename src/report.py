@@ -142,13 +142,32 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
        display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}}
 .ttx{{flex:1;min-width:0;font-size:14px;line-height:1.6}}
 .tsub{{font-size:12px;color:#888;margin-top:3px;line-height:1.55}}
+/* 쉽게 보기 — 초보자에겐 카드 17개가 곧 '판단 불가'다. 기본은 핵심만 보여준다. */
+body.simple .adv{{display:none}}
+body:not(.simple) .simponly{{display:none}}
+.lvbar{{display:flex;gap:6px;background:#e9e9ee;border-radius:12px;padding:4px;margin:12px 0}}
+.lvbar button{{flex:1;border:0;border-radius:9px;padding:9px 4px;font-size:14px;font-weight:800;
+  background:transparent;color:#666;cursor:pointer;font-family:inherit}}
+.lvbar button.on{{background:#fff;color:#0071e3;box-shadow:0 1px 3px rgba(0,0,0,.12)}}
+.advtag{{display:inline-block;background:#f2f2f7;color:#8e8e93;border-radius:6px;
+  padding:1px 6px;font-size:10px;font-weight:700;vertical-align:middle;margin-left:5px}}
+/* 3줄 요약 — 스크롤 전에 결론부터 */
+.tl{{background:#fff;border-radius:16px;padding:15px 16px;margin-bottom:12px;
+  box-shadow:0 1px 3px rgba(0,0,0,.07)}}
+.tl b{{font-size:15px}}
+.tl .ln{{display:flex;gap:9px;align-items:flex-start;margin-top:9px;font-size:14px;line-height:1.5}}
+.tl .no{{flex:none;width:21px;height:21px;border-radius:50%;background:#0071e3;color:#fff;
+  font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px}}
 </style></head><body>
 <h1>🎯 매수적합도 분석</h1>
-<div class="date">기준일 {m['date']} · <b>BuyFit</b> = 종합점수 + 진입타이밍(평균회귀)을 합친 '지금 사기 좋은 순서'<br>종목을 터치하면 상승·하락 시나리오와 확률을 봅니다</div>
+<div class="date simponly">기준일 {m['date']} · 코스피 100종목을 <b>지금 사기 좋은 순서</b>로 줄 세웠습니다.<br>종목을 누르면 <b>사라·들고 있어라·팔아라</b>를 퍼센트와 이유로 알려줍니다.</div>
+<div class="date adv">기준일 {m['date']} · <b>BuyFit</b> = 종합점수 + 진입타이밍(평균회귀)을 합친 '지금 사기 좋은 순서'<br>종목을 터치하면 상승·하락 시나리오와 확률을 봅니다</div>
 <div style="display:flex;gap:8px;margin:14px 0">
   <a href="trade.html" class="btn" style="flex:1;margin:0">📝 매매 기록</a>
   <a href="journal.html" class="btn" style="flex:1;margin:0;background:#5856d6">📓 투자논리</a>
 </div>
+<div class="lvbar"><button id="lv0" class="on" onclick="setLv(1)">🟢 쉽게 보기</button>
+  <button id="lv1" onclick="setLv(0)">🔬 자세히 보기</button></div>
 """
 
     def small_row(i,pnl=False):
@@ -193,6 +212,35 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
   <div class="sbox"><div class="sbig" style="color:{acol}">{n_act + min(n_buy,3)}</div>
     <div class="ssub">오늘 검토할 주문<br>청산 {n_act} · 매수후보 {min(n_buy,3)}</div></div>
 </div>"""
+
+    # ── 세 줄 요약 — 스크롤하기 전에 결론부터 ────────────────
+    # 초보자가 가장 먼저 막히는 건 '숫자가 없어서'가 아니라 '어디부터 봐야 할지 몰라서'다.
+    # 그래서 오늘 할 일 위에 결론 세 줄을 먼저 놓는다.
+    tl=[]
+    if cuts or sells:
+        nm=", ".join(i["name"] for i in (cuts+sells)[:2])
+        tl.append(f'<b>먼저 팔 것이 있습니다</b> — {nm}{" 외" if len(cuts+sells)>2 else ""}. '
+                  f'규칙이 정한 것이니 고민하지 말고 실행하세요.')
+    elif tps:
+        tl.append(f'<b>{tps[0]["name"]}이(가) 1차 익절선에 닿았습니다</b> — 3분의 1만 팔고 나머지는 그대로 둡니다.')
+    else:
+        tl.append('<b>오늘 꼭 팔아야 할 것은 없습니다.</b> 보유 종목의 손절가만 확인하세요.')
+    if n_buy:
+        top=next((i for i in buylist if i["signal"]=="🟡매수"), None)
+        tl.append(f'<b>살 만한 것은 {n_buy}개</b>' +
+                  (f' — 1순위는 {top["name"]}, 지정가 {top["buy_limit"]:,}원입니다.' if top else '.'))
+    else:
+        tl.append('<b>오늘은 새로 살 종목이 없습니다.</b> 안 사는 것도 결정입니다.')
+    nb=((m.get("poslab") or {}).get("new") or {}).get("1-10")
+    if nb:
+        tl.append(f'<b>사면 5번 중 1번은 손절입니다</b>(손절 {nb["hit_stop"]}% vs 익절 {nb["hit_tp"]}%). '
+                  f'그래서 <b>한 종목에 크게 걸지 않는 것</b>이 이 전략의 핵심입니다.')
+    else:
+        tl.append('<b>한 종목에 크게 걸지 마세요.</b> 손절은 익절보다 자주 옵니다.')
+    H+=('<div class="tl"><b>📌 오늘 이것만 알면 됩니다</b>'
+        +"".join(f'<div class="ln"><div class="no">{k+1}</div><div>{t}</div></div>'
+                 for k,t in enumerate(tl))
+        +'<div class="leg" style="margin-top:10px">더 깊이 보려면 위의 <b>🔬 자세히 보기</b>를 누르세요.</div></div>')
 
     # ── 📋 오늘 할 일 — 화면 맨 위. 스크롤 없이 '무엇을 하면 되는가'만. ──
     SPC={"buy":"#0071e3","hold":"#34c759","sell":"#ff3b30"}
@@ -269,7 +317,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
             f'다만 <b>권장 지정가는 현재가 대비 -1%</b>로만 제안되니, 실제 주문가는 호가창을 보고 정하세요.</div></div>')
 
     # 신뢰도 범례 — 아래 모든 카드의 배지를 읽는 법 (한 번만)
-    H+=('<div class="card"><h2>🏷 숫자 읽는 법</h2>'
+    H+=('<div class="card adv"><h2>🏷 숫자 읽는 법<span class="advtag">자세히</span></h2>'
         '<div class="leg" style="margin-top:0;line-height:2">'
         '<span class="tb t1">검증됨</span> 과거 데이터로 실제 맞았는지 확인함 → <b>판단 근거로 쓰세요</b><br>'
         '<span class="tb t2">참고</span> 논리적 근거는 있으나 이 저장소가 검증하지 않음 → <b>확인할 거리</b><br>'
@@ -363,7 +411,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
                 f'<div class="leg">각 종목의 <b>베타</b>(시장 1% 움직일 때 이 종목이 몇 % 움직였나, 최근 250일)로 추정. '
                 f'내릴 때는 <b>하락베타</b>를 씁니다. 확률은 현재 국면에서 30일 뒤 그 구간이 나온 과거 빈도.<br>'
                 f'※ 베타는 과거 평균일 뿐 급락장에서는 상관이 1에 수렴해 <b>더 나쁘게</b> 나오는 경향이 있습니다.</div></div>')
-        H+=f"""<div class="card"><h2>💼 내 계좌</h2>
+        H+=f"""<div class="card adv"><h2>💼 내 계좌<span class="advtag">자세히</span></h2>
 <div class="stat">
   <div><div class="v" style="color:{upcol}">{'+' if up>=0 else ''}{up:,}</div><div class="k">평가손익 ({'+' if upc>=0 else ''}{upc}%)</div></div>
   <div><div class="v">{pf['value']:,}</div><div class="k">평가액(원)</div></div>
@@ -413,7 +461,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
             nrows+=(f'<a class="nw" href="{a["link"]}" target="_blank" rel="noopener">'
                     f'<div class="nwt"><span class="chip {cc}">{lbl}</span>{a["title"]}</div>'
                     f'<div class="nws">{a["src"]} · {a["pub"]}</div></a>')
-        H+=(f'<div class="card"><h2>📰 시장 뉴스<span class="tb t2">참고</span></h2>{nrows}'
+        H+=(f'<div class="card adv"><h2>📰 시장 뉴스<span class="tb t2">참고</span></h2>{nrows}'
             f'<div class="leg">호재/악재 표시는 <b>제목의 키워드만</b> 본 자동 분류입니다. 점수에는 반영하지 않으며, '
             f'"내 판단을 뒤집을 사건이 있나" 확인용입니다.</div></div>')
 
@@ -425,7 +473,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 <div id="sortBtns" style="display:flex;gap:6px;margin-bottom:6px"></div>
 <div id="stockList"></div></div>'''
 
-    H+=f"""<div class="card"><details><summary style="font-size:17px;font-weight:700;cursor:pointer">📊 시장 점수 분포</summary>
+    H+=f"""<div class="card adv"><details><summary style="font-size:17px;font-weight:700;cursor:pointer">📊 시장 점수 분포</summary>
 <div class="date" style="margin-top:8px">평균 {m['avg']} · 중앙값 {m['median']} · 최고 {m['max']}</div>
 <div class="hist" id="mhist"></div>
 <div class="leg">100종목 점수 분포. 상위 추천권은 보통 65점+.</div></details></div>"""
@@ -447,7 +495,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
                          f'<b>{surv["n_kospi"]}건</b>(연 {surv["rate"]:.1f}건) 상장폐지됐지만 백테스트엔 <b>없습니다</b>. '
                          f'가정(상폐 평균 -60%) 반영 시 추가 <b>-{surv["haircut"]:.1f}%p/년</b> → <b style="color:#d70015">초보수 기대 연 {surv["ann_after"]:+.0f}%</b>. '
                          f'<span style="color:#999">(haircut은 가정에 따른 근사치)</span></div>')
-        H+=f"""<div class="card"><h2>🔬 현실적 기대수익{T2X}</h2>
+        H+=f"""<div class="card adv"><h2>🔬 현실적 기대수익{T2X}</h2>
 <div class="note" style="background:#f0f7ff">백테스트 숫자를 그대로 믿지 않기 위해 <b>거래비용을 현실화하고 생존편향을 일부</b> 보정한 결과:<br><br>
 이상적 가정 연 <b>{rb['base_ann']:+.0f}%</b> → 보수적 가정 연 <b style="color:#0071e3">{rb['concl_ann']:+.0f}%</b> (비용·편향으로 <b>{rb['erosion']:.0f}%p</b> 증발)</div>
 <details style="margin-top:6px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">가정별 연율 수익 자세히</summary>
@@ -456,7 +504,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
 {surv_html}</details>
 <div class="warn">※ {pit_line}<br>이 표본은 <b>강세장 비중이 큰 2018~2026</b> 구간이니 <b>실전 기대는 더 보수적으로</b> 잡으세요. 상장폐지 {rb.get('delisted_n',0):,}종목은 애초에 데이터에 없습니다.</div></div>"""
     else:
-        H+='<div class="card"><h2>🔬 전략 검증</h2><div class="note">보완 백테스트 미실행. Actions의 robust-backtest를 한 번 돌리면 생존편향·비용 보정 기대수익이 여기 표시됩니다.</div></div>'
+        H+='<div class="card adv"><h2>🔬 전략 검증</h2><div class="note">보완 백테스트 미실행. Actions의 robust-backtest를 한 번 돌리면 생존편향·비용 보정 기대수익이 여기 표시됩니다.</div></div>'
     # 🔍 이 숫자를 믿어도 되나 — 등급·확률을 과거 데이터로 실제 검증한 결과
     vf=d.get("verify")
     if vf:
@@ -474,7 +522,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
                     f'<td>{r["sharpe"]:.2f}</td><td>{r["worst"]:+.0f}%</td></tr>')
         cal_ok=sum(1 for c in vf.get("calibration",[]) if c["ok"])
         cal_n=len(vf.get("calibration",[]))
-        H+=f"""<div class="card" style="border:2px solid #5856d6"><h2>🔍 이 숫자를 믿어도 되나<span class="tb t1">검증됨</span></h2>
+        H+=f"""<div class="card adv" style="border:2px solid #5856d6"><h2>🔍 이 숫자를 믿어도 되나<span class="tb t1">검증됨</span></h2>
 <div class="leg" style="margin-top:0">대시보드가 말하는 등급·확률을 <b>과거 시점 정보만으로 다시 계산해</b> 실제 결과와 대조했습니다.
 ({vf['period'][0]}~{vf['period'][1]} · {vf['n_eval']:,}건 · 미래참조 차단)</div>
 <div class="note" style="background:#fff6f6;margin-top:8px">❌ <b>승률 예측은 실패했습니다.</b>
@@ -574,7 +622,7 @@ svg{{display:block;background:#fafafa;border-radius:8px}}
           f'<div class="bigbar"><div style="width:{w[k]/tot*100:.0f}%;background:{c}"></div></div>'
           f'<span class="bv">{w[k]/tot*100:.0f}%</span></div>'
           for k,c in [("트레일","#ff9500"),("순위이탈","#0071e3"),("손절","#ff3b30"),("익절","#c7c7cc")])
-        H+=f"""<div class="card"><h2>🧪 전략 점검{T1X}</h2>
+        H+=f"""<div class="card adv"><h2>🧪 전략 점검{T1X}</h2>
 <div class="leg" style="margin-top:0">규칙을 하나씩 바꿔가며 <b>train({lab['train'][0]}~{lab['train'][1]})에서 고르고
 test({lab['test'][0]}~{lab['test'][1]})로 확인</b>했습니다. train에서 좋아도 test에서 나빠지면 채택하지 않았습니다.</div>
 <div class="leg" style="margin-top:10px"><b>실제로 무엇이 포지션을 끝냈나</b> (거래 {lab['n']}건 · 평균보유 {lab['avg_hold']:.0f}일)</div>
@@ -600,7 +648,7 @@ test({lab['test'][0]}~{lab['test'][1]})로 확인</b>했습니다. train에서 �
 <b>· 약세장 신규매수 중단 — 기각</b> (train은 개선되나 test 연 +61.8%→+46.2%). 약세장 뒤 반등을 놓칩니다.
 </div></details></div>"""
 
-    H+="""<div class="card"><h2>📚 방법론 · 이 추천의 근거</h2>
+    H+="""<div class="card adv"><h2>📚 방법론 · 이 추천의 근거</h2>
 <details><summary style="font-size:14px;color:#0071e3;cursor:pointer;font-weight:600">계산 방식 전체 보기 (전문가용)</summary>
 <div class="note" style="margin-top:8px;line-height:1.9">
 <b>1) 미래참조 차단</b> — 재무는 공시 '사용가능일' 기준 as-of(backward) 조인으로 결합해, 그 시점에 알 수 없는 정보로 과거를 채점하지 않습니다. 신호는 t일 종가로 만들어 <b>t+1일 체결</b>을 가정(실전과 동일).<br><br>
@@ -622,6 +670,14 @@ const META=DATA.meta||{};
 const catOf=t=>(META.catalysts||{})[t]||{};
 const riskTxt=r=>r.text||(META.risks||{})[r.tag]||'';
 const noteOf=k=>(META.verdict_notes||{})[k]||(META.action_notes||{})[k]||'';
+// 이격률 구간별 과거 통계 — 모달에서 '지금 이 구간은 어땠나'를 데이터로 말하려고
+const POSD=((DATA.market||{}).poslab||{}).by_disp||null;
+const DSPB=((DATA.market||{}).poslab||{}).dsp_bins||[-99,-5,-2,2,5,10,99];
+const DSPL=((DATA.market||{}).poslab||{}).dsp_labels||[];
+function bandOf(v){
+  for(let k=0;k<DSPL.length;k++){ if(v>DSPB[k]&&v<=DSPB[k+1]) return DSPL[k]; }
+  return DSPL[v<=DSPB[0]?0:DSPL.length-1];
+}
 const factMeta=k=>(META.factors||{})[k]||{};
 function invalList(b){
   const tpl=META.invalidation||[], iv=b.invalidation;
@@ -761,12 +817,31 @@ function openD(code){
        <div class="rtx"><b>${L.k}</b>${L.v?` · <b style="color:${c}">${L.v.toLocaleString()}원</b>`:''}
        <div class="rev">${L.why}</div></div></div>`;
    });
+   // 이격률 — "평균가격에서 얼마나 벌어졌나". 문구를 임의로 정하지 않고
+   // 판단 엔진이 실제로 쓴 숫자(과거 같은 구간의 '5% 더 밀릴 확률')로 말한다.
+   let dsp='';
+   if(i.disp20!=null){
+     const dp=(sp.parts||[]).find(x=>x.k.indexOf('이격률')>=0);
+     const v=i.disp20;
+     // 이 항목이 매도 쪽에 몇 점을 줬는지가 곧 위험 신호의 세기다
+     const push=dp?dp.sell:0;
+     const c=push>=6?'#ff3b30':(push>=2.5?'#ff9500':'#8e8e93');
+     const pb=(POSD||{})[bandOf(v)], base=(POSD||{})['-2~+2%'];
+     let say;
+     if(pb&&base) say=`과거 이 구간에서 <b>5% 더 밀린 경우 ${pb.give5}%</b>`
+                     +` (평균 근처였을 땐 ${base.give5}%)`
+                     +(push>=2.5?' — <b>지킬 준비를 하세요</b>':' — 특별한 신호 없음');
+     else say=(v>=5?'평소보다 떠 있습니다':(v<=-5?'평소보다 눌려 있습니다':'평균 근처입니다'));
+     dsp=`<div class="rk2"><span class="sev" style="background:${c}">${v>=0?'+':''}${v}%</span>
+       <div class="rtx"><b>20일 평균가격 대비</b><div class="rev">${say}</div></div></div>`;
+   }
    A+=`<div class="card" style="border:2px solid ${SC[sp.top]}"><h2>🧭 지금 뭘 할까<span class="tb t2">근거 합산</span></h2>
      ${sp.act?`<div class="note" style="background:${SC[sp.top]}12;border-left:3px solid ${SC[sp.top]};font-weight:700;margin:0 0 8px">👉 ${sp.act}</div>`:''}
      <div style="display:flex;gap:6px;margin:4px 0 8px">${chips}</div>
      <div style="display:flex;height:22px;border-radius:7px;overflow:hidden;margin-bottom:6px">${bar}</div>
      <div class="leg" style="margin-top:0">${noteOf('split')||''}</div>
      ${lv?`<div style="margin-top:10px"><div style="font-size:13px;font-weight:800;margin-bottom:4px">🎯 익절 · 손절 자리와 닿을 확률</div>${lv}</div>`:''}
+     ${dsp?`<div style="margin-top:8px">${dsp}</div>`:''}
      <details style="margin-top:8px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">이 퍼센트는 이렇게 나왔습니다 (항목별 근거)</summary>
        <div style="margin-top:4px">${rows}</div>
        ${sp.cell_label?`<div class="leg">지금 자리 = <b>${sp.cell_label}</b>. ${noteOf('cell')||''}</div>`:''}
@@ -784,7 +859,7 @@ function openD(code){
    vparts+=`<div class="rk2"><span class="sev" style="background:${c}">${p.d>=0?'+':''}${p.d}</span>`+
      `<div class="rtx"><b>${p.k}</b> · ${p.v}<div class="rev">${noteOf(p.k)}</div></div></div>`;
  });
- A+=`<div class="card" style="border:2px solid ${md[0]}"><h2>⚖️ 판단 요약<span class="tb t2">참고</span></h2>
+ A+=`<div class="card adv" style="border:2px solid ${md[0]}"><h2>⚖️ 판단 요약<span class="advtag">자세히</span><span class="tb t2">참고</span></h2>
    <div style="display:flex;align-items:center;gap:12px;margin:6px 0 10px">
      <div class="gr g${v.grade}" style="width:46px;height:46px;border-radius:13px;font-size:24px">${v.grade}</div>
      <div style="flex:1;min-width:0">
@@ -798,7 +873,7 @@ function openD(code){
 
  // BuyFit 요약 카드
  const tcol=i.timing>=66?'#34c759':(i.timing>=33?'#ff9500':'#ff3b30');
- A+=`<div class="card"><h2>🎯 지금 매수 적합도<span class="tb t1">검증됨</span></h2><div class="stat">
+ A+=`<div class="card adv"><h2>🎯 지금 매수 적합도<span class="advtag">자세히</span><span class="tb t1">검증됨</span></h2><div class="stat">
    <div><div class="v" style="color:#34c759">${i.buyfit.toFixed(0)}</div><div class="k">BuyFit(0~100)</div></div>
    <div><div class="v" style="color:${tcol}">${i.timing.toFixed(0)}</div><div class="k">진입타이밍</div></div>
    <div><div class="v">${i.dd!=null?i.dd:'-'}%</div><div class="k">60일고점대비</div></div></div>
@@ -1013,7 +1088,7 @@ function openD(code){
    // 기대손익 계산기
    if(i.exp){
      const e=i.exp;
-     A+=`<div class="card"><h2>💰 이 금액으로 사면? (과거 통계 기반)</h2>
+     A+=`<div class="card adv"><h2>💰 이 금액으로 사면? (과거 통계 기반)<span class="advtag">자세히</span></h2>
        <div class="leg" style="margin-top:0">투자금 선택 → 30일 뒤 예상 손익 (점수·타이밍 유사했던 과거 사례 분포)</div>
        <div id="invBtns" style="display:flex;gap:6px;margin:8px 0"></div>
        <div id="expOut"></div>
@@ -1153,6 +1228,17 @@ function tabD(k){
  sh.scrollTop=0;
 }
 function closeD(){document.getElementById('modal').classList.remove('on');document.body.style.overflow='';}
+
+// ── 쉽게 보기 / 자세히 보기 ──────────────────────────────
+// 카드가 17개면 초보자는 '어디부터 봐야 하나'에서 멈춘다. 기본은 핵심만 띄우고,
+// 숨긴 것들은 지우는 게 아니라 한 번의 터치로 되돌린다.
+function setLv(simple){
+  document.body.classList.toggle('simple', !!simple);
+  document.getElementById('lv0').className = simple?'on':'';
+  document.getElementById('lv1').className = simple?'':'on';
+  try{ localStorage.setItem('rich_lv', simple?'1':'0'); }catch(e){}
+}
+setLv((()=>{ try{ return localStorage.getItem('rich_lv')!=='0'; }catch(e){ return true; } })());
 </script></body></html>"""
     open(OUT,"w",encoding="utf-8").write(H)
     print(f"리포트: {OUT} · BuyFit추천 {len(buylist)} · 보유 {len(holds)}")
