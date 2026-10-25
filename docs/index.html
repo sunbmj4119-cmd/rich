@@ -85,6 +85,13 @@
         <p class="mut" id="auto-note" style="font-size:13.5px"></p>
       </a>
 
+      <!-- 단기 모의투자 -->
+      <a class="card" href="short.html" id="short" style="color:inherit" hidden>
+        <header><span class="eyebrow">단기 모의투자 · 매일 모델 선택</span><span class="chev" aria-hidden="true"></span></header>
+        <div class="row" style="align-items:baseline;gap:8px;flex-wrap:wrap"><span class="mid-num" id="short-eq">—</span><span class="mut" id="short-ret"></span></div>
+        <p class="mut" id="short-note" style="font-size:13.5px"></p>
+      </a>
+
       <!-- 종목 순위 -->
       <section class="card" id="rank">
         <header><h2>종목 순위</h2><span class="mut small" id="rank-sub"></span></header>
@@ -235,6 +242,16 @@ U.nav("index.html");
       `<div class="mini"><b class="${k === "매수" && c[k] ? "up" : k === "매도" && c[k] ? "down" : ""}">${c[k] || 0}</b><span>${k}</span></div>`).join("");
     U.$("#auto-note").textContent = A.gate && !A.gate.open ? `관심 ${decs.length}종목 모두 관망 — ${A.gate.need}을 기다립니다.` : `관심 ${decs.length}종목을 매일 판단합니다.`;
   } else U.$("#auto").hidden = true;
+
+  // ── 단기 모의투자 ──
+  try {
+    const Sh = await U.j("short.json"), sa = Sh.account;
+    U.$("#short").hidden = false;
+    U.$("#short-eq").textContent = U.won(sa.equity);
+    U.$("#short-ret").innerHTML = `<span class="${U.cls(sa.ret)}">${U.pct(sa.ret * 100, 2)}</span> · 지수 ETF ${U.pct(sa.bench_ret * 100, 2)} · ${U.esc(Sh.start)}부터`;
+    const no = (Sh.plan?.orders || []).length;
+    U.$("#short-note").textContent = `${Sh.model.desc} · 내일 주문 ${no}건${no ? "" : (sa.positions.length ? " (보유 유지)" : " (현금 대기)")}`;
+  } catch { /* 아직 첫 실행 전 */ }
 
   // ── 종목 순위 ──
   const sorted = items.slice().sort((a, b) => a.rank - b.rank);

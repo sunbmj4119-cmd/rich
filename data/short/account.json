@@ -1,0 +1,10 @@
+{
+ "start": "2026-10-23",
+ "cash": 10000000.0,
+ "initial_cash": 10000000.0,
+ "positions": {},
+ "etf": {},
+ "last_date": "2026-10-23",
+ "model": "S:REV3_LV:5:H5:crash",
+ "selected_at": "2026-10-23"
+}

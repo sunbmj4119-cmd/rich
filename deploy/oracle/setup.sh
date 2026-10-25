@@ -10,6 +10,7 @@
 #          bash setup.sh --keys     증권사 키 입력 (붙여넣기만, 화면에 안 보임 — 휴대폰에서 편집기 없이)
 #          bash setup.sh --token    GitHub 쓰기 권한을 토큰으로 (휴대폰처럼 화면 글자를 복사하기 어려울 때)
 #          bash setup.sh --probe    토스 연결 점검: 공식 명세 요약 + 토큰 발급 + 계좌 목록(조회만) → 결과를 GitHub 에 올림
+#          bash setup.sh --collect  토스 시세·수급 이력 수집 시작 (조회만 · 처음 1시간 안팎 되채우기 · 평일 18:50 자동 등록)
 #          bash setup.sh --cron     평일 08:40 자동 실행 등록 (증권사 연결이 끝난 뒤에만)
 #
 #   이 스크립트는 비밀 값을 화면에 출력하지 않는다. 키는 ~/.rich/secrets.env 에만 저장한다.
@@ -159,6 +160,8 @@ check() {
   gh=$(gh_ok && echo "가능" || echo "아직 (배포 키 등록 필요)")
   names=$(filled)
   cronl=$({ crontab -l 2>/dev/null || true; } | grep -c "rich/deploy/oracle/run.sh" || true)
+  cronc=$({ crontab -l 2>/dev/null || true; } | grep -c "rich/deploy/oracle/collect.sh" || true)
+  rawn=$(find "$STATE/toss" -name '*.jsonl' 2>/dev/null | wc -l | tr -d ' ')
   echo "  ┌──────────────────────────────────────────"
   echo "  │ 운영체제      : ${PRETTY_NAME:-?} ($(uname -m))"
   echo "  │ CPU · 메모리   : $(nproc)코어 · $(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)MB · 스왑 $(awk '/SwapTotal/ {print int($2/1024)}' /proc/meminfo)MB"
@@ -168,6 +171,7 @@ check() {
   echo "  │ GitHub 쓰기   : $gh"
   echo "  │ 키 파일 항목  : ${names:-비어 있음}"
   echo "  │ 자동 실행     : $([ "$cronl" -gt 0 ] && echo '등록됨 (평일 08:40)' || echo '아직 안 함')"
+  echo "  │ 토스 수집     : $([ "$cronc" -gt 0 ] && echo '등록됨 (평일 18:50)' || echo '아직 안 함') · 원본 파일 ${rawn}개"
   echo "  │ 바깥으로 나가는 IP : $out_ip   ← 토스 '허용 IP'에 이 값을 등록 (보낼 때는 가려도 됩니다)"
   echo "  └──────────────────────────────────────────"
 }
@@ -220,6 +224,23 @@ run_probe() {
   fi
 }
 
+install_collect() {
+  step "토스 시세·수급 이력 수집 — 조회만 (주문·잔고 API 는 쓰지 않음)"
+  git -C "$DIR" pull -q --ff-only || true
+  mkdir -p "$STATE/logs"
+  line="50 * * * * bash $DIR/deploy/oracle/collect.sh >> $STATE/logs/collect.log 2>&1"
+  ( { crontab -l 2>/dev/null || true; } | { grep -v "rich/deploy/oracle/collect.sh" || true; } ; echo "$line" ) | crontab -
+  ok "매일 수집 등록 (한국 시간 평일 18:50): $line"
+  if pgrep -f "deploy/oracle/toss_collect.py" >/dev/null 2>&1; then
+    ok "이미 되채우는 중입니다 — 진행 보기: tail -f $STATE/logs/collect_backfill.log"
+  else
+    nohup env FORCE=1 bash "$DIR/deploy/oracle/collect.sh" > "$STATE/logs/collect_backfill.log" 2>&1 &
+    ok "지금 2018년까지 되채우기를 뒤에서 시작했습니다 (1시간 안팎 · 앱을 닫아도 계속됩니다)"
+    echo "  진행 보기: tail -f $STATE/logs/collect_backfill.log   (그만 보기: Ctrl+C — 수집은 계속됨)"
+    echo "  끝나면 통계가 GitHub 에 저절로 올라갑니다. 채팅으로 '수집 끝'이라고만 알려 주세요."
+  fi
+}
+
 install_cron() {
   # 서버 시간대와 상관없이: 매시 40분에 깨어나고, run.sh 가 '한국 시간 평일 08시'일 때만 실제로 일한다
   line="40 * * * * bash $DIR/deploy/oracle/run.sh >> $STATE/logs/cron.log 2>&1"
@@ -232,6 +253,7 @@ case "$MODE" in
   --keys)  set_keys; check ;;
   --token) set_token; check ;;
   --probe) run_probe ;;
+  --collect) install_collect ;;
   --cron)  install_cron; check ;;
   *)       install_packages; tune_system; get_code; deploy_key; secrets_file; check
            echo; echo "다음 단계: 위 ✗ 항목을 해결한 뒤 'bash ~/rich/deploy/oracle/setup.sh --check' 로 다시 확인하세요." ;;

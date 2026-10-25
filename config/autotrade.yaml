@@ -45,6 +45,16 @@ evolve:
   long_forward_days: 250   # 길 B: 적응을 신뢰하지 못해도, 약 1년 전진 시험에서 확실히 이기면 승격 후보
   max_challengers: 6
 
+# ── 단기 모의투자 (src/short_trader.py · 매일 daily.yml) — 30일 자동매매와 별개의 가상 계좌 ──
+#   매일 저녁 후보 모델 전부를 다시 시뮬레이션하고, 아래 규칙으로 따라갈 모델을 고른다. 검증: src/short_lab.py · docs/STRATEGY.md 3-7
+#   rule: every=몇 거래일마다 다시 고를지 · L=최근 며칠 성적 · how=sharpe(위험조정)|ret(수익) · pool=SLOW|ALL
+#   ⚠️ every:1 · how:ret (매일 수익 1등) 은 검증에서 지수 보유보다 나빴다 — 바꾸기 전에 docs/short.html '검증 결과'를 볼 것
+short:
+  enabled: true
+  initial_cash: 10000000
+  buy_buffer: 0.02         # 수량 계산 때 어제 종가보다 2% 비싸게 잡는다 (시가 갭 상승 대비)
+  rule: {pool: SLOW, every: 5, L: 250, how: sharpe, k: 1, sticky: 0.0}
+
 # ── 안전장치 (수익을 위한 규칙이 아니라 사고를 막는 규칙 — 백테스트에 없음) ──
 risk:
   max_position_weight: 0.15     # 한 종목 최대 비중 (평가금액 기준)
