@@ -36,6 +36,15 @@ strategy:
   #   0 = 끔. 검증 결과는 docs/STRATEGY.md '선택 규칙' 참고
   cooldown_days: 0
 
+# ── 모델 진화 (src/evolve.py · 매주 토요일 evolve.yml) ──
+#   매주 전체 데이터로 설정을 진화시켜 '도전자'로 등록하고, 등록일 이후 새 데이터로만 챔피언과 맞붙인다.
+#   승격된 설정은 config/champion.yaml 에 쓰이고 위 strategy 를 덮어쓴다 (지우면 원래대로).
+evolve:
+  auto_promote: false      # false = 승격 '제안'만 (autotrade-control → promote 로 승인). true = 조건 통과 시 자동 적용
+  min_forward_days: 60     # 길 A: 적응을 신뢰할 때 필요한 전진 시험 기간 (거래일)
+  long_forward_days: 250   # 길 B: 적응을 신뢰하지 못해도, 약 1년 전진 시험에서 확실히 이기면 승격 후보
+  max_challengers: 6
+
 # ── 안전장치 (수익을 위한 규칙이 아니라 사고를 막는 규칙 — 백테스트에 없음) ──
 risk:
   max_position_weight: 0.15     # 한 종목 최대 비중 (평가금액 기준)

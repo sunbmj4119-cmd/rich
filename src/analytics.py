@@ -27,6 +27,7 @@ import yaml
 
 sys.path.insert(0, "src")
 import features as F            # noqa: E402
+import settings                                # noqa: E402
 
 OUT = "docs/analytics.json"
 FWD = 30
@@ -262,6 +263,10 @@ def pattern_validation(close, dates):
 # ══════════════════════════════════════════════════════════════
 def main():
     panel, feats = F.build_all()
+    try:
+        feats = F.apply_strategy(panel, feats, settings.load()["strategy"])
+    except Exception:
+        pass
     dates, codes, close = panel["dates"], panel["codes"], panel["close"]
     t = len(dates) - 1
     asof = dates[t]

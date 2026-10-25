@@ -17,6 +17,10 @@
 .sim-ax .seg { flex-wrap: nowrap }
 .cmp td:nth-child(2), .cmp td:nth-child(3) { font-weight: 600 }
 .cmp td, .cmp th { white-space: normal }
+.evo-t { font-size: 13px }
+.evo-t td, .evo-t th { white-space: nowrap; padding: 8px 4px }
+.evo-t td:first-child { white-space: normal; min-width: 0; width: 46% }
+.evo-t td .small { font-size: 11px }
 </style>
 </head>
 <body>
@@ -31,7 +35,7 @@
 
   <div class="stick"><div class="tabs" id="tabs">
     <button data-t="sum">요약</button><button data-t="chart">차트</button><button data-t="trades">거래</button>
-    <button data-t="sim">설정 바꿔보기</button><button data-t="live">실전 추적</button>
+    <button data-t="sim">설정 바꿔보기</button><button data-t="live">실전 추적</button><button data-t="evo">모델 진화</button>
   </div></div>
 
   <!-- 요약 -->
@@ -94,6 +98,17 @@
     <details class="fold"><summary><div class="sum"><b>이 설정을 쓰려면</b><span>config/autotrade.yaml 에 붙여넣기</span></div></summary>
       <div class="body"><pre class="code" id="sim-yaml"></pre><button class="btn ghost" id="sim-copy" type="button">설정 복사</button>
         <p class="guide" id="sim-note"></p></div></details>
+  </div>
+
+  <!-- 모델 진화 (src/evolve.py → evolve.json) -->
+  <div class="tabpane" data-tab="evo" id="evo">
+    <section class="card" id="evo-status"><p class="mut">불러오는 중…</p></section>
+    <section class="card" id="evo-meta" hidden></section>
+    <section class="card" id="evo-ch" hidden></section>
+    <details class="fold" id="evo-weekly-fold" hidden><summary><div class="sum"><b>주간 기록</b><span id="evo-weekly-sum"></span></div></summary>
+      <div class="body"><div class="scroll"><table id="evo-weekly"></table></div></div></details>
+    <details class="fold"><summary><div class="sum"><b>어떻게 진화하나</b><span>유전자 · 점수 · 승격 규칙</span></div></summary>
+      <div class="body" id="evo-how"></div></details>
   </div>
 
   <!-- 실전 추적 -->
@@ -229,6 +244,88 @@ U.nav("report.html");
       ${x.frac < 1 ? `<p class="small mut">보유의 ${Math.round(x.frac * 100)}%만 판 부분 익절입니다.</p>` : ""}
       <a class="btn" style="text-align:center;text-decoration:none" href="stock.html#c${x.code}">종목 분석 열기</a>`);
   });
+
+  // ── 모델 진화 ──
+  U.j("evolve.json").then((E) => {
+    const ch = E.champion, mt = E.meta, sh = (v) => (U.ok(v) ? (+v).toFixed(2) : "—");
+    const stTag = (s) => s === "승격 후보" ? '<span class="st st-매수">승격 후보</span>' : s === "탈락" ? '<span class="st st-관망">탈락</span>' : '<span class="st st-유지">관찰 중</span>';
+    U.$("#evo-status").innerHTML = `
+      <header><h2>모델 진화</h2><span class="badge ${E.auto_promote ? "b-ref" : "b-mut"}">${E.auto_promote ? "자동 승격 켬" : "승인 후 적용"}</span></header>
+      <div><div class="eyebrow">지금 챔피언</div>
+        <div class="row" style="align-items:baseline;gap:8px;flex-wrap:wrap"><span class="mid-num">${U.esc(ch.id)}</span>
+          <span class="mut">${U.esc(ch.since)}부터 · ${U.esc(ch.source || "")}</span></div></div>
+      <ul class="small" style="margin:0;padding-left:18px;color:var(--mut)">${(ch.desc || []).slice(0, 4).map((d) => `<li>${U.esc(d)}</li>`).join("")}</ul>
+      <div class="facts">
+        <div class="fact"><span>지금까지 시험한 설정</span><b>${U.num(E.n_evaluated)}개</b></div>
+        <div class="fact"><span>관찰 중인 도전자</span><b>${E.challengers.length}개</b></div>
+        <div class="fact"><span>이번 주 진화 방식</span><b style="font-size:15px">${U.esc(((E.mode || {}).label || "—").split(" (")[0])}</b></div>
+        <div class="fact"><span>적응을 믿어도 되나</span><b class="${mt && mt.trusted ? "good" : "bad"}" style="font-size:15px">${mt ? (mt.trusted ? "검증 통과" : "아직 아님") : "측정 전"}</b></div>
+      </div>
+      ${E.proposal ? `<div class="warn"><b>승격 제안: ${U.esc(E.proposal)}</b><br>GitHub → Actions → autotrade-control → Run workflow에서 action <b>promote</b>, challenger 칸에 <b>${U.esc(E.proposal)}</b>를 넣으면 적용됩니다.</div>` : ""}
+      ${E.promoted ? `<div class="note">이번 주 자동 승격: <b>${U.esc(E.promoted)}</b></div>` : ""}
+      <p class="guide">${U.esc(E.asof)} 데이터 기준 · 매주 토요일 저녁에 다시 진화합니다.</p>`;
+
+    if (mt) {
+      const M = U.$("#evo-meta"); M.hidden = false;
+      const sp = mt.spread || {}, modes = mt.modes || {};
+      const rows = Object.keys(modes).map((k) => [k, modes[k]]).concat([["static", "지금 설정 고정"], ["naive", "무학습 기준"]]);
+      const cell = (k, p) => { const x = (sp[k] || {})[p]; return x ? `${sh(x.mean)}${p === "all" && x.min !== x.max ? `<div class="small mut">${sh(x.min)}–${sh(x.max)}</div>` : ""}` : sh(mt.results[k][p].sharpe); };
+      const nv = sp.naive ? sp.naive.all.mean : mt.results.naive.all.sharpe;
+      M.innerHTML = `<h2>진화가 실제로 도움이 됐나</h2>
+        <div class="${mt.trusted ? "note" : "warn"}">${mt.trusted
+          ? `<b>예.</b> ${U.esc(modes[mt.trusted_mode] || "")} 방식이 '아무것도 배우지 않은 기준'을 모든 구간·모든 시드에서 이겼습니다. 그래서 새 데이터로 60거래일 이상 이긴 도전자는 승격 후보가 됩니다.`
+          : `<b>아직 아닙니다.</b> ${mt.period[0].slice(0, 4)}년부터 분기마다 <b>그 시점까지의 데이터만으로</b> 진화시켜 다음 분기를 운용해 보니, 어떤 방식도 '아무것도 배우지 않은 기준'(Sharpe ${sh(nv)})을 확실히 넘지 못했습니다. 그래서 설정을 자주 바꾸지 않고, <b>새 데이터로 약 1년 동안 확실히 이긴 도전자만</b> 승격 후보로 올립니다.`}</div>
+        <div class="scroll"><table class="evo-t"><tr><th>방식</th><th>전체</th><th>~23년</th><th>24년~</th></tr>
+          ${rows.map(([k, lab]) => `<tr${k === "naive" || k === "static" ? ' style="background:var(--soft)"' : ""}><td>${U.esc(lab)}${(mt.passed || []).includes(k) ? ' <span class="badge b-ok">통과</span>' : ""}</td>
+            <td class="${k in modes && (sp[k] ? sp[k].all.mean : 0) > nv ? "good" : ""}">${cell(k, "all")}</td><td>${cell(k, "pre")}</td><td>${cell(k, "post")}</td></tr>`).join("")}</table></div>
+        <div class="chart" id="c-evo"></div>
+        <div class="legend"><span><i style="background:var(--blue)"></i>${U.esc(modes[mt.best] || "진화")}</span><span><i style="background:var(--fg)"></i>지금 설정 고정</span><span><i style="background:var(--faint)"></i>무학습 기준</span></div>
+        <p class="guide">숫자는 Sharpe (시드별 평균, 작은 글씨는 최소–최대). 바깥 구간(학습에 안 쓴 다음 분기)만 이어 붙인 성과입니다. ${mt.refits}번 다시 진화 · 시드 ${(mt.seeds || [1]).length}개 · 설정 ${U.num(mt.n_eval)}개 평가.
+          방식을 ${Object.keys(modes).length}개 시험했으므로 통과 문턱을 P &lt; ${mt.alpha}로 높였습니다. '지금 설정 고정'은 가중치를 2024년 이후 성과까지 보고 골라 위쪽으로 치우친 기준입니다.</p>`;
+      const cv = mt.curve;
+      U.line(U.$("#c-evo"), { labels: cv.d, h: 190, xfmt: (d) => d.slice(2, 7), yfmt: (v) => `${v.toFixed(1)}배`, tipfmt: (v) => `${v.toFixed(2)}배`,
+        series: [{ name: "무학습 기준", data: cv.naive, color: "var(--faint)", width: 1.5 }, { name: "지금 설정 고정", data: cv.static, color: "var(--fg)", width: 1.2, dash: "4 3" },
+                 { name: modes[mt.best] || "진화", data: cv[mt.best], color: "var(--blue)", width: 2, end: true }], aria: "진화 방식의 바깥 구간 성과" });
+    }
+
+    const C = U.$("#evo-ch"); C.hidden = false;
+    const need = (c) => (c.checks && c.checks.A && c.checks.A.meta) ? E.min_forward_days : (E.rules.long_forward_days || 250);
+    C.innerHTML = `<header><h2>도전자</h2><span class="mut small">등록한 날 이후 새 데이터로만 채점</span></header>
+      <div id="evo-list">${E.challengers.length ? E.challengers.map((c, i) => {
+        const f = c.forward || {}, me = f.me || {}, hm = f.champ || {}, d = (U.ok(me.total) && U.ok(hm.total)) ? me.total - hm.total : null;
+        return `<button class="li" type="button" data-i="${i}"><span class="main"><span class="t">${U.esc(c.id)} ${stTag(c.status)}</span>
+          <span class="s">${U.esc(c.source || "")} · ${U.esc(c.born)} 등록</span></span>
+          <span class="r"><b>${f.days || 0}<span class="mut" style="font-weight:400">/${need(c)}일</span></b><span class="${d == null ? "mut" : d >= 0 ? "good" : "bad"}">${d == null ? "채점 전" : `챔피언 대비 ${d >= 0 ? "+" : ""}${d.toFixed(1)}%p`}</span></span>
+          <span class="chev" aria-hidden="true"></span></button>`;
+      }).join("") : `<div class="empty">관찰 중인 도전자가 없습니다.</div>`}</div>
+      ${(E.retired || []).length ? `<p class="guide">물러난 설정: ${E.retired.map((r) => `${U.esc(r.id)}(${U.esc(r.status || "")})`).join(" · ")}</p>` : ""}`;
+    C.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-i]"); if (!b) return;
+      const c = E.challengers[+b.dataset.i], f = c.forward || {}, me = f.me || {}, hm = f.champ || {};
+      const row = (lab, ok) => `<div class="kv"><span>${lab}</span><b class="${ok ? "good" : "bad"}">${ok ? "충족" : "미충족"}</b></div>`;
+      const A = (c.checks || {}).A || {}, Bc = (c.checks || {}).B || {};
+      U.sheet(`도전자 ${c.id}`, `
+        <div class="note">${U.esc(c.source || "")} · ${U.esc(c.born)} 등록 · 지금 ${U.esc(c.status)}</div>
+        <section class="card"><h3>챔피언과 다른 점</h3><ul style="margin:0;padding-left:18px;font-size:14px">${(c.diff || []).map((d) => `<li>${U.esc(d)}</li>`).join("") || "<li>없음</li>"}</ul></section>
+        <section class="card"><h3>전진 시험 (${f.days || 0}거래일)</h3>
+          <div class="facts"><div class="fact"><span>도전자 수익</span><b class="${U.cls(me.total)}">${U.pct(me.total)}</b></div><div class="fact"><span>같은 기간 챔피언</span><b class="${U.cls(hm.total)}">${U.pct(hm.total)}</b></div>
+          <div class="fact"><span>도전자 Sharpe</span><b>${sh(me.sharpe)}</b></div><div class="fact"><span>챔피언 Sharpe</span><b>${sh(hm.sharpe)}</b></div></div></section>
+        <section class="card"><h3>승격 조건</h3>
+          <div class="eyebrow">길 A — 적응을 신뢰할 때</div>${row(`전진 ${E.min_forward_days}거래일 이상`, A.days)}${row("챔피언보다 Sharpe·수익 모두 높음", A.beat)}${row("전체 기간 점수 유지", A.fit)}${row("진화 방식 검증 통과", A.meta)}
+          <div class="eyebrow" style="margin-top:6px">길 B — 오래 이겼을 때</div>${row(`전진 ${E.rules.long_forward_days}거래일 이상`, Bc.days)}${row("챔피언보다 Sharpe·수익 모두 높음", Bc.beat)}${row("우연일 확률 10% 미만", Bc.p)}</section>`);
+    });
+
+    if ((E.weekly || []).length) {
+      U.$("#evo-weekly-fold").hidden = false;
+      U.$("#evo-weekly-sum").textContent = `${E.weekly.length}주 기록`;
+      U.$("#evo-weekly").innerHTML = `<tr><th>날짜</th><th>평가</th><th>최선</th><th>챔피언</th><th>새 도전자</th></tr>` +
+        E.weekly.slice().reverse().map((w) => `<tr><td>${U.esc(String(w["날짜"]).slice(5))}</td><td>${U.num(w["평가 수"])}</td><td>${sh(w["최선 점수"])}</td><td>${sh(w["챔피언 점수"])}</td><td>${U.esc(w["새 도전자"] || "")}</td></tr>`).join("");
+    }
+    U.$("#evo-how").innerHTML = `<p style="font-size:14px;line-height:1.7"><b>유전자</b> — 순위 가중치 9개(가치·수익성·성장·수급·위험조정모멘텀·모멘텀·저변동·급등 적음·섹터 모멘텀)와 매매 규칙 11개(보유 수·진입/이탈 순위·최소 보유일·손절·트레일·트레일 조임·부분익절·급락장 게이트·반등 기준·수급 필터).</p>
+      <p style="font-size:14px;line-height:1.7"><b>점수</b> — ${U.esc(E.rules.fitness)}. 한 해만 잘된 설정보다 해마다 고르게 괜찮은 설정이 이깁니다. 수축 방식은 기본값에서 멀어질수록 감점합니다.</p>
+      <p style="font-size:14px;line-height:1.7"><b>진화</b> — 설정 ${E.rules.pop}개로 시작해 ${E.rules.gens}세대 동안 잘한 설정끼리 섞고(교차) 조금씩 바꿉니다(변이). 챔피언보다 점수가 ${E.rules.hyst} 이상 높아야 도전자로 등록됩니다.</p>
+      <p style="font-size:14px;line-height:1.7"><b>왜 바로 바꾸지 않나</b> — 과거에 가장 잘 맞춘 설정은 앞으로 잘 맞지 않는 경우가 많습니다(과최적화). 그래서 등록한 날 이후 들어온 데이터로만 채점하고, 기준을 넘어야 승격합니다.</p>`;
+  }).catch(() => { U.$("#evo-status").innerHTML = `<h2>모델 진화</h2><p class="mut">아직 첫 진화 전입니다. 매주 토요일 저녁에 실행됩니다.</p>`; });
 
   // ── 실전 추적 ──
   const eq = (S.equity_curve || []).filter((x) => U.ok(x.equity));

@@ -56,7 +56,7 @@ def load_panel():
     score = piv(s, "종합점수")
     panel = {"dates": dates, "codes": codes, "names": names,
              "close": close, "volume": volume, "score": score}
-    for k in ["s_value", "s_profit", "s_grow", "s_flow", "s_rmom", "이격도20"]:
+    for k in ["s_value", "s_profit", "s_grow", "s_flow", "s_rmom", "s_mom", "이격도20"]:
         if k in s.columns:
             panel[k] = piv(s, k)
     return panel
@@ -262,6 +262,58 @@ def flow_strength(dates, codes):
     cap = (mc.pivot_table(index="날짜", columns="종목코드", values="시가총액")
              .reindex(index=dates, columns=codes).ffill())
     return f20 / cap
+
+
+# ══════════════════════════════════════════════════════════════
+# 진화 모델(evolve.py)이 고른 순위 가중치
+#   종합점수 요소 6개(0~100) + 위험·섹터 신호 3개(0~100 백분위, 높을수록 좋음)의 가중합으로 순위를 다시 매긴다.
+#   config/autotrade.yaml strategy.rank_weights 가 없으면 기존 종합점수 순위 그대로.
+# ══════════════════════════════════════════════════════════════
+RANK_KEYS = ["s_value", "s_profit", "s_grow", "s_flow", "s_rmom", "s_mom", "x_ivol", "x_max21", "x_secmom"]
+
+
+def extra_signals(p, f):
+    """x_ivol: 고유변동성 낮음 (Ang 외 2006) · x_max21: 최근 한 달 하루 최대 급등 작음 (Bali 외 2011)
+    · x_secmom: 섹터 6개월 모멘텀. alpha_lab.py 에서 IC 가 기존 점수보다 강했던 신호들."""
+    close = p["close"]
+    r = close.pct_change(fill_method=None)
+    rm = r.mean(axis=1)
+    cov = r.mul(rm, axis=0).rolling(252, min_periods=150).mean() \
+        - r.rolling(252, min_periods=150).mean().mul(rm.rolling(252, min_periods=150).mean(), axis=0)
+    beta = cov.div(rm.rolling(252, min_periods=150).var(), axis=0)
+    resid = r - beta.shift(1).mul(rm, axis=0)
+    pct = lambda m: m.rank(axis=1, pct=True) * 100  # noqa: E731
+    out = {"x_ivol": pct(-resid.rolling(60, min_periods=40).std()),
+           "x_max21": pct(-r.rolling(21, min_periods=15).max())}
+    if "sec_mom_rank" in f:
+        out["x_secmom"] = f["sec_mom_rank"] * 100
+    return out
+
+
+def genome_rank(p, f, weights, extra=None):
+    """가중치 dict → 날짜별 순위(1=최고). 값이 없는 요소는 중립 50으로."""
+    if any(k.startswith("x_") and v for k, v in weights.items()):
+        extra = extra if extra is not None else extra_signals(p, f)
+    sc = None
+    for k, w in weights.items():
+        if not w:
+            continue
+        m = p.get(k) if k.startswith("s_") else (extra or {}).get(k)
+        if m is None:
+            continue
+        part = m.fillna(50) * float(w)
+        sc = part if sc is None else sc + part
+    if sc is None:
+        return p["score"].rank(axis=1, ascending=False, method="first")
+    return sc.where(p["score"].notna()).rank(axis=1, ascending=False, method="first")
+
+
+def apply_strategy(p, f, st):
+    """전략 설정에 rank_weights 가 있으면 그 가중치로 순위를 바꾼 feats 를 돌려준다."""
+    w = (st or {}).get("rank_weights")
+    if not w:
+        return f
+    return {**f, "rank": genome_rank(p, f, w)}
 
 
 def build_all():

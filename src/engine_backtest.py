@@ -15,10 +15,10 @@ import json
 import sys
 
 import numpy as np
-import yaml
 
 sys.path.insert(0, "src")
 import features as F                    # noqa: E402
+import settings                                # noqa: E402
 from decision_engine import decide, SELL, BUY   # noqa: E402
 
 CFG = "config/autotrade.yaml"
@@ -125,8 +125,9 @@ def market(panel, d0, d1):
 
 
 def main():
-    cfg = yaml.safe_load(open(CFG, encoding="utf-8"))
+    cfg = settings.load(CFG)
     panel, feats = F.build_all()
+    feats = F.apply_strategy(panel, feats, cfg["strategy"])
     dates = panel["dates"]
     nD = len(dates)
     split = int(np.searchsorted(dates.values, np.datetime64(SPLIT)))
