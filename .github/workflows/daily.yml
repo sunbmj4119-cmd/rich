@@ -60,6 +60,27 @@ jobs:
       - name: 5) HTML 리포트
         run: python src/report.py
 
+      - name: 5-2) 종목 분석값 (팩터 등급·기여도·예측 밴드·순위 성적표·섹터)
+        run: python src/analytics.py || echo "분석값 계산 실패(무시하고 계속)"
+
+      - name: 5-3) 성과 보고서 (격자는 주 1회 robust.yml 에서)
+        run: python src/tearsheet.py --no-grid || echo "성과 보고서 실패(무시하고 계속)"
+
+      - name: 6) 자동매매 판단 (매수/유지/매도/관망 → 주문 계획 · 모의계좌 체결)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+          KIS_ACCOUNT: ${{ secrets.KIS_ACCOUNT }}
+          KIS_ACCOUNT_PRODUCT: ${{ secrets.KIS_ACCOUNT_PRODUCT }}
+        run: |
+          echo "## 🤖 자동매매 판단" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          python src/autotrader.py --phase decide 2>&1 | tee -a $GITHUB_STEP_SUMMARY || echo "자동매매 판단 실패(무시하고 계속)"
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
       - name: 5) 커밋
         run: |
           git config user.name "github-actions"

@@ -1,0 +1,70 @@
+name: autotrade-control
+# 휴대폰 GitHub 앱/웹에서 누르는 원격 조종 버튼 (Freqtrade 텔레그램 /pause · /stop · 승인과 같은 역할)
+#   approve : 승인 모드(execution.approval: manual)에서 오늘 계획을 주문. skip 칸의 종목코드는 빼고.
+#   pause   : 신규 매수만 중단 (손절·익절 매도는 계속)      → config/PAUSE
+#   resume  : pause 해제
+#   kill    : 모든 주문 중단 (매도 포함)                   → config/KILL
+#   unkill  : kill 해제
+#   status  : 현재 계획·상태만 출력
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "무엇을 할까요"
+        type: choice
+        options: [status, approve, pause, resume, kill, unkill]
+        default: status
+      skip:
+        description: "approve 때 뺄 종목코드 (쉼표 구분, 예: 005930,000660)"
+        required: false
+        default: ""
+concurrency:
+  group: autotrade
+  cancel-in-progress: false
+jobs:
+  control:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: install
+        run: pip install pandas numpy pyyaml requests
+      - name: 실행
+        env:
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+          KIS_ACCOUNT: ${{ secrets.KIS_ACCOUNT }}
+          KIS_ACCOUNT_PRODUCT: ${{ secrets.KIS_ACCOUNT_PRODUCT }}
+          AUTOTRADE_CONFIRM: ${{ vars.AUTOTRADE_CONFIRM }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          A: ${{ inputs.action }}
+          SKIP: ${{ inputs.skip }}
+        run: |
+          # 입력값은 환경변수로만 받는다 (스크립트에 직접 끼워 넣으면 명령 주입 위험)
+          echo "## 🎛 autotrade-control: $A" >> $GITHUB_STEP_SUMMARY
+          case "$A" in
+            pause)  date -u +%FT%TZ > config/PAUSE ;;
+            resume) rm -f config/PAUSE ;;
+            kill)   date -u +%FT%TZ > config/KILL ;;
+            unkill) rm -f config/KILL ;;
+            approve)
+              python src/autotrader.py --phase execute --approve --skip "$SKIP" 2>&1 | tee -a $GITHUB_STEP_SUMMARY ;;
+          esac
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          python -c "import json;p=json.load(open('data/autotrade/plan.json'));print('계획',p['date'],p.get('status',''),'주문',len(p['orders']));[print(' ',o['side'],o['name'],o['code'],o['qty']) for o in p['orders']]" | tee -a $GITHUB_STEP_SUMMARY
+          ls config/PAUSE config/KILL 2>/dev/null | sed 's/^/ON: /' | tee -a $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: 커밋
+        env:
+          A: ${{ inputs.action }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add -A config/ data/autotrade/ || true
+          git commit -m "autotrade-control $A $(date +%Y-%m-%d)" || echo "no changes"
+          git pull --rebase
+          git push

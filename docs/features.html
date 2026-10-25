@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>매매비서 기능 고르기</title>
+<link rel="stylesheet" href="ui.css">
+<style>
+.lead { font-size: 14.5px; line-height: 1.6; color: var(--mut) }
+.group-h { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px }
+.group-h h2 { font-size: 16px }
+.cat { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px }
+.fcard { background: var(--card); border-radius: 14px; padding: 12px 12px 10px 14px; display: flex; flex-direction: column; gap: 4px; border: 2px solid transparent; min-width: 0 }
+.fcard.picked { border-color: color-mix(in srgb, var(--green) 55%, transparent) }
+.fcard .top { display: flex; gap: 10px; align-items: center }
+.fcard .meta { display: flex; gap: 6px; align-items: center; min-width: 0; margin-top: 2px }
+.fcard .top > div { flex: 1; min-width: 0 }
+.fcard h3 { color: var(--fg); font-size: 15px }
+.fcard .src { font-size: 11.5px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.fcard .what { font-size: 13px; color: var(--fg); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+.fcard details summary { font-size: 12.5px; color: var(--blue); padding-block: 4px; list-style: none }
+.fcard details summary::-webkit-details-marker { display: none }
+.fcard details[open] summary { color: var(--mut) }
+.prev { background: var(--soft); border-radius: 10px; padding: 10px; font-size: 13px; display: flex; flex-direction: column; gap: 6px }
+.prow { display: flex; align-items: center; gap: 10px; padding-block: 10px; border-bottom: 1px solid var(--line); cursor: pointer; width: 100%;
+  background: none; border-left: 0; border-right: 0; border-top: 0; font: inherit; color: inherit; text-align: left; min-height: 52px }
+.prow:last-child { border-bottom: 0 }
+.prow:focus-visible { outline: 2px solid var(--blue); border-radius: 8px }
+.prow .main { flex: 1; min-width: 0; display: flex; flex-direction: column }
+.prow .main b { font-size: 14.5px }
+.prow .main span { font-size: 12.5px; color: var(--green); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.dl { display: grid; grid-template-columns: 5em 1fr; gap: 6px 10px; font-size: 14px; margin: 0 }
+.dl dt { color: var(--mut); font-size: 12.5px; padding-top: 2px }
+.dl dd { margin: 0 }
+.rules ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px }
+textarea { width: 100%; min-height: 64px; font: inherit; font-size: 14px; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--fg); resize: vertical }
+</style>
+</head>
+<body class="has-save-bar">
+<div class="wrap">
+  <nav class="nav" id="topnav" aria-label="페이지"></nav>
+  <header class="phead">
+    <h1>기능 고르기</h1>
+    <p class="lead">시중 프로그램 32곳에서 가져온 기능을 이 시스템 데이터로 만들어 두었습니다. 미리보기를 보고 쓸 것만 켜세요.</p>
+    <p class="mut small" id="sub"></p>
+  </header>
+
+  <div class="stick"><div class="tabs" id="tabs">
+    <button data-t="pick">화면 기능</button><button data-t="act">매매 동작</button><button data-t="compare">시중 비교</button><button data-t="rules">원칙</button>
+  </div></div>
+
+  <!-- 고르기 -->
+  <div class="tabpane" data-tab="pick">
+    <p class="small mut">켜면 이 기기 화면에 바로 적용됩니다. 미리보기를 눌러 실제 모습을 보세요.</p>
+    <div class="cat" id="cat-display"></div>
+  </div>
+  <div class="tabpane" data-tab="act">
+    <p class="small mut">주문·알림 방식은 config/autotrade.yaml 에 반영해야 바뀝니다 (아래 '설정 보기').</p>
+    <div class="cat" id="cat-behavior"></div>
+  </div>
+
+  <!-- 시중 비교 -->
+  <div class="tabpane" data-tab="compare">
+    <p class="small mut">서비스를 누르면 예측값 표시 방식·편의 기능·가져온 것을 봅니다. 출처는 PLATFORM_RESEARCH.md.</p>
+    <div id="prog" style="display:flex;flex-direction:column;gap:8px"></div>
+  </div>
+
+  <!-- 원칙 -->
+  <div class="tabpane" data-tab="rules">
+    <section class="card rules"><h2>조사에서 얻은 결론</h2><ul>
+      <li><b>잘하는 곳은 근거와 범위를 같이 보여 줍니다.</b> 등급별 과거 성적표(Zacks), "N건 중 M건"(알파스퀘어), "59% 대 평균 52%"(Danelfin).</li>
+      <li><b>발표와 검증이 자주 엇갈립니다.</b> Zacks 실제 계좌는 시장과 같은 수익, Tickeron 고신뢰 패턴의 목표 도달 약 18%, 라씨 적중률은 기준 비공개.</li>
+      <li><b>편의 기능의 핵심은 멈추는 버튼과 확인 후 주문.</b> Freqtrade 일시정지, Trade Ideas 승인, 키움·토스 감시주문.</li></ul></section>
+    <details class="fold" open><summary><div class="sum"><b style="color:var(--green)">따라 한 것</b><span>빈도 표기 · 범위 · 섹터 상대 등급 · 기여도</span></div></summary><div class="body rules"><ul>
+      <li>확률은 "10번 중 8번", "N건 중 M건"처럼 빈도로 씁니다.</li>
+      <li>가격은 범위로, 그 범위가 과거에 실제로 맞았는지까지 씁니다.</li>
+      <li>등급은 같은 섹터 안에서 매기고 백분위임을 밝힙니다.</li>
+      <li>"왜"는 팩터별 기여도로 쪼갭니다.</li>
+      <li>순위 구간별 과거 성적을 표본 수와 함께 보여 줍니다.</li>
+      <li>백테스트·모의·실전을 라벨로 나누고 가설 성과 고지를 붙입니다.</li></ul></div></details>
+    <details class="fold"><summary><div class="sum"><b style="color:var(--red)">피한 것</b><span>가짜 정밀도 · 목표가 하나 · 조건 없는 승률</span></div></summary><div class="body rules"><ul>
+      <li>표본오차보다 정밀한 숫자 (59.48% 같은).</li>
+      <li>검증하지 않은 '신뢰도'를 확률처럼 쓰기.</li>
+      <li>목표가 하나만 제시 — 애널리스트 목표가는 기간 말 26%만 도달.</li>
+      <li>기간·비용·생존편향을 뺀 승률, 회사 자체 발표 수익률.</li>
+      <li>최근 수익률 순 정렬 — 과최적화 전략이 위로 올라옴.</li>
+      <li>여러 설정을 시험하고 최고값만 보여 주기 → 시뮬레이터에 운의 폭을 함께 표시.</li></ul></div></details>
+  </div>
+</div>
+
+<div class="save-bar" role="region" aria-label="고른 결과">
+  <div class="grow"><b id="sb-count"></b><div class="mut" id="save-status" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div></div>
+  <button class="btn" id="open-result" type="button">설정 보기</button>
+</div>
+
+<script src="ui.js"></script>
+<script>
+U.nav("features.html");
+/* ── 시중 프로그램 (출처: docs/PLATFORM_RESEARCH.md) — [분류, 이름, 자동화, 보여 주는 법, 편의 기능, 가져온 것] ── */
+const PROGRAMS = [
+  ["국내 증권사", "키움 영웅문·REST API", "반자동~완전자동", "키우GO 로보: 기간별 수익률표(1주~2년·연환산) + 표준편차·샤프·최대손실", "서버 자동감시주문(30일): 이익실현·이익보존·손실제한·트레일링, 매수 전 미리 거는 '잔고편입 스탑로스', 실시간 조건검색", "감시가 표시 · 기간별 수익률표"],
+  ["국내 증권사", "토스증권", "반자동", "AI 시그널: 가격 변동 원인 요약(점수·신호 없음)", "익절·손절 한 화면 OCO 조건주문, 주식 모으기(무료 적립식), 주주 배지 커뮤니티", "손절가·부분익절가 함께 표시"],
+  ["국내 증권사", "한국투자증권", "API 완전자동", "AI 종목분석 '지금 종목은'(화면 미확인)", "Open API, 자연어로 투자 프로그램 만드는 MCP 서비스", "주문 API 연동(이미 구현)"],
+  ["국내 증권사", "미래에셋 MAPS", "정보", "마켓Now: 2시간마다 한 문장 시황, AI 이슈체크", "AI 자동주문 단계적 도입 예정", "매일 요약 알림"],
+  ["국내 증권사", "삼성증권 mPOP", "정보", "해외 공시 AI 요약", "홈 '마이픽'에 매매일지·보유 리포트, 통합 주문 버튼", "자동 매매일지"],
+  ["국내 증권사", "신한 SOL증권", "반자동", "—", "해외 자동감시주문 90일, '시가 대비' 조건", "참고"],
+  ["퀀트 플랫폼", "젠포트(뉴지스탁)", "완전자동", "포트별 누적수익·CAGR·MDD, 젠마켓 최근 1개월 수익순 정렬", "백테스트→가상매매→실전 3단계, 전략 복사, 자연어 포트AI", "백테스트·모의·실전 라벨 구분"],
+  ["퀀트 플랫폼", "인텔리퀀트", "백테스트", "총수익·MDD·샤프·승률·손익비 한 화면", "블록 조립 전략, 거래비용 반영 20년 백테스트", "핵심 지표 카드"],
+  ["퀀트 플랫폼", "퀀터스", "백테스트", "결과 해석 가이드: CAGR 15%↑ 우수, MDD −20% 이내 안정, 샤프 1↑", "단계별 전략 설정", "지표 읽는 법"],
+  ["퀀트 플랫폼", "콴텍 · 핀트", "투자일임", "테스트베드(RATB) 수익률", "AI가 사고팔 때마다 푸시", "체결 알림"],
+  ["분석·신호 앱", "알파스퀘어", "신호", "유사 차트 '10개 중 7개 상승 = 70%' 빈도 표기, 2개월 예상주가, 5단계 의견 + 목표가·손절가", "보조지표 전략 수익 TOP3, 전략 알림", "빈도 표기 · 유사패턴(검증 탈락)"],
+  ["분석·신호 앱", "초이스스탁", "신호", "스마트스코어 5축, 매수→보유→매도→관망 4단계, 세 조건 모두 통과해야 매수, 마켓스코어(매수·보유 비율)", "[지금 살까?] 버튼, 테마 레시피", "4상태 구조 · 조건 체크 · 시장 점수"],
+  ["분석·신호 앱", "라씨 매매비서", "신호", "종목별 '50회·평균 26일·적중 83%·평균 +10.9%' 카드(산출 기준 비공개)", "매수가 기준 맞춤 매도 신호, 실시간 푸시", "종목별 엔진 기록(비용·표본 명시)"],
+  ["분석·신호 앱", "증권플러스", "정보", "—", "장전·장중·장마감 하루 3회 이슈 요약 푸시", "요약 알림"],
+  ["해외 점수", "Danelfin", "점수", "AI 점수 1~10, 시장 초과 확률 59% vs 전체 평균 52%, 신호별 ±%p 기여", "무료/유료 설명 차등", "기여도 분해 · 기준선 비교"],
+  ["해외 점수", "Zacks Rank", "점수", "1~5등급, 등급별 연수익표(#1 23.8% … #5 2.6%)", "스타일 점수 A~F", "순위 성적표 (실계좌는 SPY와 같았다는 반론 포함)"],
+  ["해외 점수", "Seeking Alpha Quant", "점수", "팩터 등급 A+~F를 같은 섹터와 비교, Quant·애널리스트·월가 의견 나란히", "등급 이력 차트", "팩터 성적표"],
+  ["해외 점수", "Tickeron", "신호", "confidence %, 'N건 중 M건' (고신뢰 패턴 실제 목표 도달 약 18%)", "패턴 검색", "피할 사례: 보정 안 된 확률"],
+  ["해외 점수", "TipRanks", "점수", "Smart Score 1~10(상대 분포), 목표가 최고/평균/최저 + 애널리스트 수", "애널리스트 적중률 Z검정", "범위로 표시"],
+  ["해외 점수", "Morningstar", "점수", "적정가치 + 별 1~5, 불확실성이 클수록 별 기준 폭을 넓힘", "해자 등급", "불확실하면 관망 원칙"],
+  ["해외 점수", "Simply Wall St", "점수", "Snowflake 5축 레이더(축마다 체크 6개)", "DCF 적정가 막대", "레이더"],
+  ["해외 점수", "Portfolio123 · Stockopedia", "점수", "순위 버킷별 성과 막대, 출시 후 실성과 매일 갱신", "롤링 테스트", "순위 성적표"],
+  ["해외 점수", "Finviz", "정보", "섹터 히트맵(크기=시총, 색=등락)", "스크리너 신호", "섹터 히트맵"],
+  ["해외 자동매매", "TradingView", "신호→웹훅", "Strategy Tester: 지표·자산곡선·거래목록·거래별 run-up/drawdown", "앱·이메일·웹훅 알림, 모의매매", "성과 보고서 · 거래 목록"],
+  ["해외 자동매매", "Trade Ideas (Holly)", "수동/자동 선택", "진입·손절·목표·예상 보유시간", "수동(사람이 주문) ↔ 자동(Brokerage Plus) 전환", "승인 모드"],
+  ["해외 자동매매", "Composer", "완전자동", "OOS 시작일 이후 성과를 따로 표시", "마감 전 일괄 실행, 변경은 다음 주기 반영", "실전 추적"],
+  ["해외 자동매매", "QuantConnect", "완전자동", "월별 히트맵, 롤링 Sharpe, 실거래를 백테스트 위에 겹쳐 그림", "이메일·SMS·텔레그램 알림", "보고서 · 실전 추적"],
+  ["해외 자동매매", "Freqtrade", "완전자동", "청산 사유별 성과, SQN, 기간별 손익", "dry-run, 텔레그램 /pause(신규만 중단)·/stop, 쿨다운 보호", "신규매수 일시정지 · 재진입 대기(검증 탈락)"],
+  ["해외 자동매매", "Hummingbot · eToro", "완전자동", "—", "손실률 도달 시 자동 정지(kill switch), 복사 전체 손절", "계좌 서킷브레이커(이미 구현)"],
+  ["해외 자동매매", "Collective2", "신호 공유", "모든 성과 '가설' 표기, 비용 포함 평가", "신호 사후 수정 금지", "날짜별 계획 보관"],
+  ["해외 자동매매", "QuantStats · pyfolio", "보고서", "티어시트: 최악 낙폭 표, 수중 차트, 실전 시작일 기준 기대 범위(cone)", "—", "보고서 · 기대 범위"],
+  ["해외 자동매매", "Interactive Brokers", "조건부 주문", "Risk Navigator 시나리오", "주문 금액·수량 한도 확인(precautionary)", "주문 한도(이미 구현)"],
+];
+const DISPLAY = [
+  { k: "forecast_band", t: "30일 가격 범위", src: "Tickeron · TipRanks · 중앙은행 fan chart", what: "같은 순위·국면 과거 종목들의 30일 뒤 분포로 10~90% 범위를 그립니다.", link: "stock.html", st: "band" },
+  { k: "rank_track", t: "순위 구간별 과거 성적", src: "Zacks · Portfolio123 · Stockopedia", what: "순위 구간마다 30일 뒤 시장 대비 수익과 'N건 중 M건'.", link: "stock.html", st: "track" },
+  { k: "factor_grades", t: "팩터 성적표 A+~F", src: "Seeking Alpha · 초이스스탁 · Simply Wall St", what: "가치·수익성·수급·성장·모멘텀을 같은 섹터 안 순위로 등급화.", link: "stock.html", st: "grades" },
+  { k: "contribution", t: "왜 이 순위인가", src: "Danelfin", what: "종합점수를 팩터별 기여로 쪼갭니다. 더하면 정확히 종합점수.", link: "stock.html", st: "contrib" },
+  { k: "stock_record", t: "종목별 엔진 매매 기록", src: "라씨 매매비서", what: "엔진이 그 종목을 몇 번 사고팔았고 몇 번 이익이었는지(비용 반영).", link: "stock.html", st: "record" },
+  { k: "similar_patterns", t: "비슷했던 과거 차트", src: "알파스퀘어 · 딥서치", what: "최근 60일 모양이 비슷한 과거 20개 구간과 그 뒤 30일.", link: "stock.html", st: "analog" },
+  { k: "market_score", t: "시장 점수와 상태 분포", src: "초이스스탁 마켓스코어", what: "매수·유지·매도·관망 종목 수와 신규 매수 가능 여부.", link: "autotrade.html", st: "market" },
+  { k: "sector_heatmap", t: "섹터 히트맵", src: "Finviz", what: "섹터별 하루·20일 등락과 10위 안 종목 수.", link: "autotrade.html", st: "sector" },
+  { k: "backtest_report", t: "성과 보고서", src: "TradingView · QuantStats · 인텔리퀀트", what: "핵심 지표, 자산·수중 차트, 월별 히트맵, 청산 사유, 거래 목록.", link: "report.html", st: "report" },
+  { k: "strategy_simulator", t: "설정 바꿔보기", src: "젠포트 · 인텔리퀀트 · Composer", what: "보유 종목 수·트레일·손절 등 72개 조합을 즉시 비교.", link: "report.html#sim", st: "sim" },
+  { k: "live_tracking", t: "실전(모의) 추적", src: "pyfolio · Composer", what: "모의 계좌를 백테스트 기대 범위 위에 겹쳐 봅니다.", link: "report.html#live", st: "live" },
+  { k: "trade_journal", t: "자동 매매일지", src: "Tradervue · 삼성 mPOP", what: "주문마다 이유와 당시 순위·국면·범위·승인 여부.", link: "autotrade.html", st: "journal" },
+  { k: "metric_guide", t: "숫자 읽는 법", src: "퀀터스", what: "Sharpe·MDD 같은 지표에 '몇 이상이면 좋은지' 해설.", link: "report.html", st: "guide" },
+];
+const ALERT_EVENTS = [["sell", "매도 판단"], ["buy", "매수 판단"], ["fill", "체결·주문"], ["safety", "안전장치"], ["approval", "승인 대기"], ["daily", "매일 요약"]];
+const DEF_BEHAVIOR = { approval: "auto", alerts: { enabled: false, channels: ["telegram", "ntfy"], on: ["sell", "buy", "fill", "safety", "approval", "daily"] }, cooldown_days: 0 };
+
+(async () => {
+  const [A, B, S] = await Promise.all([U.j("analytics.json"), U.j("backtest.json").catch(() => ({})), U.j("autotrade.json").catch(() => ({})), U.feat.load()]);
+  U.$("#sub").textContent = `미리보기는 ${A.asof} 실제 결과 · 시장 ${A.regime}`;
+
+  // ── 시중 비교: 분류별로 접고, 누르면 시트 ──
+  const cats = [...new Set(PROGRAMS.map((p) => p[0]))];
+  U.$("#prog").innerHTML = cats.map((c, ci) => {
+    const ps = PROGRAMS.map((p, i) => [p, i]).filter(([p]) => p[0] === c);
+    return `<details class="fold" ${ci === 0 ? "open" : ""}><summary><div class="sum"><b>${U.esc(c)}</b><span>${ps.map(([p]) => U.esc(p[1])).join(" · ")}</span></div></summary>
+      <div class="body" style="gap:0">${ps.map(([p, i]) => `<button class="prow" type="button" data-i="${i}"><span class="main"><b>${U.esc(p[1])}</b><span>가져온 것: ${U.esc(p[5])}</span></span>
+        <span class="badge b-mut">${U.esc(p[2])}</span><span class="chev" aria-hidden="true"></span></button>`).join("")}</div></details>`;
+  }).join("");
+  U.$("#prog").addEventListener("click", (e) => {
+    const b = e.target.closest(".prow"); if (!b) return;
+    const p = PROGRAMS[+b.dataset.i];
+    U.sheet(p[1], `<span class="badge b-mut" style="align-self:flex-start">${U.esc(p[0])} · ${U.esc(p[2])}</span>
+      <dl class="dl"><dt>보여 주는 법</dt><dd>${U.esc(p[3])}</dd><dt>편의 기능</dt><dd>${U.esc(p[4])}</dd><dt>가져온 것</dt><dd style="color:var(--green);font-weight:600">${U.esc(p[5])}</dd></dl>`);
+  });
+
+  // ── 화면 기능 카드 ──
+  const top = Object.entries(A.stocks).sort((a, b) => a[1].rank - b[1].rank)[0];
+  const [tc, ts] = top;
+  const cal = A.band_calibration, pv = A.pattern_validation, tr = A.rank_track;
+  const cnt = S.counts || {};
+  const badge = {
+    band: Math.abs(cal.cover80 - 80) < 5 ? ["b-ok", `검증됨 · 적중 ${Math.round(cal.cover80)}%`] : ["b-ref", "참고"],
+    track: ["b-ok", "검증됨 · 1~10위"], grades: ["b-mut", "순위 분해"], contrib: ["b-ok", "정확"], record: ["b-ref", "가설 성과"],
+    analog: ["b-no", "검증 탈락"], market: ["b-mut", "현황"], sector: ["b-mut", "현황"], report: ["b-ref", "가설 성과"],
+    sim: ["b-ref", "운의 폭 표시"], live: ["b-mut", `모의 ${(S.equity_curve || []).length}일째`], journal: ["b-mut", "기록"], guide: ["b-mut", "해설"],
+  };
+  const baseRow = B.grid && B.grid.rows.find((x) => x.max_positions === B.settings.max_positions && x.trail_base === B.settings.trail_base && x.stop_loss === B.settings.stop_loss && x.crash_gate === B.settings.crash_gate && x.take_profit);
+  const prevHTML = {
+    band: () => ts.band ? `<b>${U.esc(ts.name)}</b> 30거래일 뒤 <b>10번 중 8번</b> ${U.won(ts.band.price[0])} ~ ${U.won(ts.band.price[4])}<span class="small mut">2024년 이후 ${U.num(cal.n)}건에서 80% 범위가 실제 ${cal.cover80}% 적중</span>` : "자료 없음",
+    track: () => `<div class="chart pv-track"></div>`,
+    grades: () => `<div class="chips">${A.factors.filter((f) => f.weight > 0).map((f) => { const g = ts.grades[f.key]; return `<span class="badge ${g.no_data ? "b-mut" : g.grade[0] === "A" ? "b-ok" : "DF".includes(g.grade[0]) ? "b-no" : "b-ref"}">${U.esc(f.label)} ${U.esc(g.grade)}</span>`; }).join("")}</div><span class="small mut">${U.esc(ts.name)} · 섹터 안 순위</span>`,
+    contrib: () => `<div class="pv-contrib" style="display:flex;flex-direction:column;gap:4px"></div>`,
+    record: () => { const r = (B.by_stock || {})[tc]; return r ? `${U.esc(ts.name)}: <b>${r.n}번 중 ${Math.round(r.n * r.win / 100)}번</b> 이익 · 평균 ${U.pct(r.avg)} · 가운데 ${U.pct(r.med)}` : "기록 없음"; },
+    analog: () => `방향 적중 <b>${pv.hit}%</b>로 '무조건 상승'(${pv.base_up}%)보다 낮음 (2024~ ${U.num(pv.n)}건) → 기본 꺼짐`,
+    market: () => `<div class="chips">${["매수", "유지", "매도", "관망"].map((s) => `<span class="st st-${s}">${s} ${cnt[s] ?? 0}</span>`).join("")}</div>`,
+    sector: () => `<div class="chips">${(A.sectors || []).slice(0, 5).map((x) => `<span class="badge" style="${U.heatBg(x.ret20, 20)}">${U.esc(x.sector)} ${U.pct(x.ret20, 0)}</span>`).join("")}</div>`,
+    report: () => B.summary ? `연평균 ${U.pct(B.summary.full.cagr)} · Sharpe ${U.num(B.summary.full.sharpe, 2)} · 최대낙폭 ${U.pct(B.summary.full.mdd)}<span class="small mut">시장 ${U.pct(B.summary.bench_full.cagr)} · ${U.pct(B.summary.bench_full.mdd)}</span>` : "",
+    sim: () => baseRow ? `72개 중 두 기간 모두 나은 조합 <b>${B.grid.rows.filter((r) => r.train.sharpe > baseRow.train.sharpe && r.test.sharpe > baseRow.test.sharpe).length}개</b><span class="small mut">운만으로도 Sharpe +${B.grid.deflated.sr0_annual} 가능</span>` : "격자 계산 전",
+    live: () => { const e = S.equity_curve || []; return e.length ? `모의 계좌 ${U.won(e[e.length - 1].equity)} · ${e.length}거래일째` : "기록 없음"; },
+    journal: () => { const j = S.journal || []; return j.length ? `${j[0].date} ${j[0].side === "buy" ? "매수" : "매도"} ${U.esc(j[0].name)} — ${U.esc(j[0].reason)}` : "아직 주문 없음 (전 종목 관망). 첫 주문부터 쌓입니다."; },
+    guide: () => `<b>Sharpe 1.02</b><span class="small mut">변동성 1만큼 견딜 때 얻는 수익. 1 이상 우수.</span>`,
+  };
+  U.$("#cat-display").innerHTML = DISPLAY.map((f) => `<article class="fcard" data-k="${f.k}">
+      <div class="top"><div><h3>${U.esc(f.t)}</h3><div class="meta"><span class="badge ${badge[f.st][0]}">${U.esc(badge[f.st][1])}</span><span class="src">${U.esc(f.src)}</span></div></div>
+        <button class="sw" role="switch" aria-checked="false" aria-label="${U.esc(f.t)} 켜기" data-k="${f.k}" type="button"></button></div>
+      <details data-st="${f.st}"><summary>설명·미리보기 ▾</summary><div class="prev"><span>${U.esc(f.what)}</span>${prevHTML[f.st]()}<a class="small" href="${f.link}">전체 화면에서 보기 →</a></div></details></article>`).join("");
+  let previewsDrawn = false;
+  U.$("#cat-display").addEventListener("toggle", (e) => {
+    if (!e.target.open || previewsDrawn) return;
+    previewsDrawn = true;
+    document.querySelectorAll(".pv-track").forEach((el) => U.bars(el, { labels: tr.test.map((r) => r.bucket.replace("위", "")), values: tr.test.map((r) => r.excess), h: 120, yfmt: (v) => `${v.toFixed(1)}%` }));
+    document.querySelectorAll(".pv-contrib").forEach((el) => U.contrib(el, (ts.contrib || []).slice().sort((a, b) => b.contrib - a.contrib).map((x) => ({ label: x.label, value: x.contrib, faded: x.no_data }))));
+  }, true);
+
+  // ── 매매 동작 카드 ──
+  let beh = JSON.parse(JSON.stringify(DEF_BEHAVIOR));
+  let memo = "";
+  const drawBehavior = () => {
+    U.$("#cat-behavior").innerHTML = `
+      <article class="fcard"><div class="top"><div><h3>주문 방식</h3><div class="src">Trade Ideas · Portfolio123 · Webull</div></div></div>
+        <div class="seg" id="b-appr"><button type="button" data-v="auto">자동 주문</button><button type="button" data-v="manual">승인 후 주문</button></div>
+        <p class="what">승인 후 주문이면 계획만 만들고 알림 → GitHub 앱에서 approve를 눌러야 주문합니다.</p></article>
+      <article class="fcard"><div class="top"><div><h3>알림</h3><div class="src">라씨 · 핀트 · Freqtrade 텔레그램</div></div>
+        <button class="sw" role="switch" id="b-al" aria-label="알림 받기" type="button" aria-checked="${beh.alerts.enabled}"></button></div>
+        <div class="chips scroll-x" id="b-ch">${[["telegram", "텔레그램"], ["ntfy", "ntfy 앱"]].map(([v, l]) => `<button type="button" class="chip ${beh.alerts.channels.includes(v) ? "on" : ""}" data-v="${v}">${l}</button>`).join("")}</div>
+        <div class="chips scroll-x" id="b-ev">${ALERT_EVENTS.map(([v, l]) => `<button type="button" class="chip ${beh.alerts.on.includes(v) ? "on" : ""}" data-v="${v}">${l}</button>`).join("")}</div>
+        <p class="small mut">키는 GitHub Secrets: TELEGRAM_BOT_TOKEN·TELEGRAM_CHAT_ID 또는 NTFY_TOPIC</p></article>
+      <article class="fcard"><div class="top"><div><h3>신규 매수만 멈추기</h3><div class="src">Freqtrade /pause</div></div><span class="badge b-mut">버튼</span></div>
+        <p class="what">새로 사는 것만 멈추고 손절·익절은 계속. GitHub 앱 → Actions → autotrade-control → pause / resume${S.paused ? " · <b>지금 일시정지 중</b>" : ""}</p></article>
+      <article class="fcard"><div class="top"><div><h3>재진입 대기</h3><div class="src">Freqtrade CooldownPeriod</div></div><span class="badge b-no">검증 탈락</span></div>
+        <div class="seg" id="b-cd">${[0, 5, 10, 20].map((v) => `<button type="button" data-v="${v}">${v ? v + "일" : "끔"}</button>`).join("")}</div>
+        <p class="what">10종목·10일 대기는 2019~23 Sharpe를 0.76→0.27로 떨어뜨렸습니다.</p></article>`;
+    U.$("#b-appr").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === beh.approval));
+    U.$("#b-cd").querySelectorAll("button").forEach((b) => b.classList.toggle("on", +b.dataset.v === beh.cooldown_days));
+  };
+  drawBehavior();
+  U.$("#cat-behavior").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    const box = b.parentElement.id;
+    if (box === "b-appr") beh.approval = b.dataset.v;
+    else if (b.id === "b-al") beh.alerts.enabled = !beh.alerts.enabled;
+    else if (box === "b-ch") { const v = b.dataset.v, a = beh.alerts.channels; beh.alerts.channels = a.includes(v) ? a.filter((x) => x !== v) : a.concat(v); }
+    else if (box === "b-ev") { const v = b.dataset.v, a = beh.alerts.on; beh.alerts.on = a.includes(v) ? a.filter((x) => x !== v) : a.concat(v); }
+    else if (box === "b-cd") beh.cooldown_days = +b.dataset.v;
+    else return;
+    drawBehavior(); render(); persist();
+  });
+  U.$("#cat-display").addEventListener("click", (e) => {
+    const sw = e.target.closest(".sw"); if (!sw) return;
+    U.feat.set(sw.dataset.k, !U.feat.on(sw.dataset.k)); render(); persist();
+  });
+
+  // ── 고른 결과: 하단 막대 + 시트 ──
+  function yamlOut() {
+    const all = U.feat.all();
+    return ["display:\n" + DISPLAY.map((f) => `  ${f.k}: ${all[f.k] !== false}`).join("\n"),
+      `strategy:\n  cooldown_days: ${beh.cooldown_days}\nexecution:\n  approval: ${beh.approval}\nalerts:\n  enabled: ${beh.alerts.enabled}\n  channels: [${beh.alerts.channels.join(", ")}]\n  on: [${beh.alerts.on.join(", ")}]`];
+  }
+  let status = "이 기기에 저장됩니다";
+  function render() {
+    let on = 0;
+    document.querySelectorAll("#cat-display .sw").forEach((sw) => {
+      const v = U.feat.on(sw.dataset.k); on += v;
+      sw.setAttribute("aria-checked", v); sw.closest(".fcard").classList.toggle("picked", v);
+    });
+    U.$("#sb-count").textContent = `화면 기능 ${on}/${DISPLAY.length}개 · ${beh.approval === "manual" ? "승인 후 주문" : "자동 주문"} · 알림 ${beh.alerts.enabled ? "켬" : "끔"}`;
+    U.$("#save-status").textContent = status;
+  }
+  U.$("#open-result").addEventListener("click", () => {
+    const [yf, ya] = yamlOut();
+    U.sheet("고른 결과", `<p class="small mut">${U.esc(status)}</p>
+      <label class="small mut" for="memo">더 원하는 기능이나 바꾸고 싶은 점 (선택)</label>
+      <textarea id="memo" placeholder="예: 매도 알림만 받고 싶다">${U.esc(memo)}</textarea>
+      <h3>config/features.yaml</h3><pre class="code">${U.esc(yf)}</pre>
+      <h3>config/autotrade.yaml 에서 바꿀 부분</h3><pre class="code">${U.esc(ya)}</pre>
+      <div class="row" style="flex-wrap:wrap"><button class="btn" id="copy-all" type="button">설정 전체 복사</button><button class="btn ghost" id="reset" type="button">기본값으로</button></div>`, (box) => {
+      box.querySelector("#memo").addEventListener("input", (e) => { memo = e.target.value; persist(); });
+      box.querySelector("#copy-all").addEventListener("click", (e) => U.copy(`# config/features.yaml\n${yf}\n\n# config/autotrade.yaml (해당 항목만)\n${ya}\n` + (memo ? `\n# 메모: ${memo.replace(/\n/g, " ")}\n` : ""), e.target));
+      box.querySelector("#reset").addEventListener("click", (e) => {
+        U.feat.reset(); beh = JSON.parse(JSON.stringify(DEF_BEHAVIOR)); memo = ""; box.querySelector("#memo").value = "";
+        drawBehavior(); render(); persist(); e.target.textContent = "기본값으로 되돌림";
+      });
+    });
+  });
+
+  /* 선택 저장: Claude 화면에서는 db에 저장해 Claude가 읽는다. 그 밖에서는 이 기기에만. */
+  let db = null, timer = null;
+  function persist() {
+    if (!db) return;
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      try {
+        await db.doc("picks/current").set({ display: U.feat.all(), behavior: beh, memo, updated: new Date().toISOString() });
+        status = `저장됨 ${new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} · Claude에게 "고른 기능 반영해 줘"`;
+      } catch (err) { status = `저장 실패(${err.code || err.message}) · '설정 보기'에서 복사하세요`; }
+      render();
+    }, 700);
+  }
+  render();
+  U.tabs(U.$("#tabs"), "features");
+  const d = await (window.claude && window.claude.use ? window.claude.use("db") : Promise.resolve(null)).catch(() => null);
+  if (d) {
+    db = d;
+    try {
+      const snap = await db.doc("picks/current").get();
+      const v = snap.exists ? snap.data() : null;
+      if (v) {
+        if (v.display) for (const [k, on] of Object.entries(v.display)) U.feat.set(k, on);
+        if (v.behavior) beh = { ...DEF_BEHAVIOR, ...v.behavior, alerts: { ...DEF_BEHAVIOR.alerts, ...(v.behavior.alerts || {}) } };
+        memo = v.memo || "";
+        drawBehavior();
+      }
+      status = v ? `지난 선택 불러옴 (${(v.updated || "").slice(5, 16).replace("T", " ")}) · 바꾸면 자동 저장` : "고르면 자동 저장 · 그다음 Claude에게 \"고른 기능 반영해 줘\"";
+      render();
+    } catch { db = null; }
+  }
+})().catch((e) => { document.getElementById("sub").textContent = "자료를 불러오지 못했습니다: " + e.message; });
+</script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>자동매매 판단</title>
+<link rel="stylesheet" href="ui.css">
+<style>
+.gate-pill { font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px }
+.gate-pill i { width: 10px; height: 10px; border-radius: 50%; background: var(--watch) }
+.gate-pill.open i { background: var(--buy) } .gate-pill.shut i { background: var(--sell) }
+.cnt { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px }
+.cnt button { border: 0; background: var(--soft); color: var(--fg); font: inherit; border-radius: 12px; padding: 8px 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; min-height: 52px }
+.cnt button b { font-size: 20px; font-variant-numeric: tabular-nums; line-height: 1.2 }
+.cnt button span { font-size: 12px; color: var(--mut) }
+.cnt button.on { outline: 2px solid var(--fg) }
+.cnt button:focus-visible { outline: 2px solid var(--blue) }
+.todo li + li { margin-top: 6px }
+.todo ul { margin: 0; padding-left: 18px; font-size: 14px }
+.ck { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13.5px }
+.ck:last-child { border-bottom: 0 }
+.ck > span:last-child { text-align: right; color: var(--mut); min-width: 0 }
+.ck i { font-style: normal; font-size: 11px; color: var(--faint); margin-left: 4px }
+.sec td:first-child { max-width: 120px; white-space: normal }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav" id="topnav" aria-label="페이지"></nav>
+  <header class="phead"><h1>자동매매</h1><div class="mut small" id="sub">불러오는 중…</div></header>
+
+  <section class="card" id="status" aria-live="polite"></section>
+  <details class="fold" id="warnbox" hidden><summary><div class="sum"><b id="warn-title"></b><span id="warn-first"></span></div></summary><div class="body" id="warns"></div></details>
+
+  <div class="stick"><div class="tabs" id="tabs">
+    <button data-t="today">오늘 판단</button><button data-t="market">시장</button><button data-t="account">계좌·기록</button>
+  </div></div>
+
+  <div class="tabpane" data-tab="today">
+    <section class="card todo" id="todo"></section>
+    <section class="card">
+      <header><h2>종목별 판단</h2><span class="mut small">누르면 근거</span></header>
+      <div class="chips scroll-x" id="filt"></div>
+      <div id="dlist"></div>
+    </section>
+  </div>
+
+  <div class="tabpane" data-tab="market">
+    <section class="card" id="gate-detail"></section>
+    <section class="card" data-feat="sector_heatmap">
+      <header><h2>섹터</h2><span class="mut small">평균 등락</span></header>
+      <div class="scroll"><table class="sec" id="sec"></table></div>
+    </section>
+  </div>
+
+  <div class="tabpane" data-tab="account">
+    <section class="card"><h2>계좌</h2><div class="facts" id="acct"></div>
+      <a class="small" href="report.html#live">실전(모의) 추적 그래프 →</a></section>
+    <section class="card" data-feat="trade_journal"><header><h2>자동 매매일지</h2><span class="mut small">누르면 근거</span></header><div id="journal"></div></section>
+    <details class="fold"><summary><div class="sum"><b>검증 요약</b><span>엔진 백테스트 · 가설 성과</span></div></summary>
+      <div class="body"><div class="scroll"><table id="bt"></table></div>
+      <p class="guide">비용 왕복 0.3% · 다음 날 종가 체결. 근거와 탈락한 지표는 STRATEGY.md에 있습니다.</p>
+      <a class="small" href="report.html">성과 보고서 전체 →</a></div></details>
+  </div>
+</div>
+<script src="ui.js"></script>
+<script>
+U.nav("autotrade.html");
+(async () => {
+  const [d, A] = await Promise.all([U.j("autotrade.json"), U.j("analytics.json").catch(() => null), U.feat.load()]);
+  const ORDER = ["매도", "매수", "유지", "관망"];
+  U.$("#sub").textContent = `${d.asof} 장 마감 기준 · ${d.broker === "paper" ? "모의 계좌" : d.broker}${d.live ? " (실주문)" : ""} · ${d.approval === "manual" ? "승인 후 주문" : "자동 주문"}`;
+
+  // ── 상태 요약 (탭 위, 항상 보임) ──
+  const g = d.gate;
+  U.$("#status").innerHTML = `
+    <div class="row" style="justify-content:space-between;flex-wrap:wrap">
+      <div class="gate-pill ${g.open ? "open" : "shut"}"><i></i>신규 매수 ${g.open ? "열림" : "닫힘"}</div><span class="badge b-mut">${U.esc(g.regime)}</span></div>
+    ${g.need ? `<p class="small" style="color:var(--orange)">열리는 조건: ${U.esc(g.need)}</p>` : `<p class="small mut">${U.esc(g.reason)}</p>`}
+    <div class="cnt" id="cnt" data-feat="market_score">${ORDER.map((s) => `<button type="button" data-s="${s}"><b>${d.counts[s]}</b><span>${s}</span></button>`).join("")}</div>`;
+
+  // ── 경고: 접어서 한 줄 ──
+  const w = [...d.issues];
+  if (d.flags.flow_stale) w.push(`수급 데이터가 ${d.flags.flow_last} 이후 ${d.flags.flow_gap}거래일 비어 있어 신규 매수를 보류합니다. KRX 수집(collect_flows)을 확인하세요.`);
+  if (d.flags.account_halt) w.push(d.flags.account_halt);
+  if (d.paused) w.push("신규 매수 일시정지 중입니다. 손절·익절 매도는 계속합니다. 해제: Actions → autotrade-control → resume");
+  if (d.plan_status === "승인 대기") w.push(`주문 ${d.orders.length}건이 승인을 기다립니다. Actions → autotrade-control → approve (뺄 종목코드는 skip 칸에)`);
+  if (w.length) {
+    U.$("#warnbox").hidden = false;
+    U.$("#warn-title").textContent = `⚠️ 확인할 것 ${w.length}건`;
+    U.$("#warn-first").textContent = w[0];
+    U.$("#warns").innerHTML = w.map((x) => `<div class="warn">${U.esc(x)}</div>`).join("");
+  }
+
+  // ── 오늘 할 일 ──
+  const by = (s) => d.decisions.filter((x) => x.state === s);
+  const sells = by("매도"), buys = by("매수");
+  const top = by("관망").filter((x) => x.rank <= 10);
+  const needs = [...new Set(top.flatMap((x) => x.need || []))];
+  U.$("#todo").innerHTML = `<h2>오늘 할 일</h2>` + (sells.length || buys.length
+    ? `<ul>${sells.map((x) => `<li><b style="color:var(--sell)">${U.esc(x.action)}</b> ${U.esc(x.name)} — ${U.esc(x.reason)}</li>`).join("")}
+        ${buys.map((x) => { const o = d.orders.find((o) => o.code === x.code); return `<li><b style="color:var(--buy)">매수</b> ${U.esc(x.name)} ${o ? `${o.qty}주 · ${o.kind === "limit" ? "지정가 " + U.won(o.price) : "시장가"}` : ""}</li>`; }).join("")}</ul>
+       ${d.plan_status === "승인 대기" ? `<p class="small" style="color:var(--orange)">승인해야 주문이 나갑니다.</p>` : `<p class="small mut">${d.broker === "paper" ? "모의 주문은 다음 거래일 종가로 체결됩니다." : "다음 거래일 08:40에 주문합니다."}</p>`}`
+    : `<p style="font-size:15px">주문 없음. ${by("유지").length ? `보유 ${by("유지").length}종목 유지,` : ""} 관심 ${by("관망").length}종목은 관망입니다.</p>
+       ${needs.length ? `<div class="note"><b>매수가 다시 열리는 조건</b><ul style="margin:4px 0 0">${needs.map((n) => `<li>${U.esc(n)}</li>`).join("")}</ul></div>` : ""}`);
+
+  // ── 종목별 판단: 한 줄 + 시트 ──
+  let filt = "전체";
+  const draw = () => {
+    U.$("#filt").innerHTML = ["전체", ...ORDER].map((s) => {
+      const n = s === "전체" ? d.decisions.length : d.counts[s];
+      return `<button type="button" class="chip ${filt === s ? "on" : ""}" data-s="${s}" ${n ? "" : "disabled"}>${s} ${n}</button>`;
+    }).join("");
+    U.$("#cnt").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.s === filt));
+    const xs = d.decisions.filter((x) => filt === "전체" || x.state === filt);
+    U.more(U.$("#dlist"), xs, (x) => {
+      const sub = x.state === "관망" ? (x.need || [])[0] || x.reason : x.state === "유지" ? `감시가 ${U.won(x.guard_price)} · ${x.held_days}일째` : x.reason;
+      const right = U.ok(x.ret) ? `<span class="${U.cls(x.ret)}">${U.pct(x.ret * 100)}</span>` : `<span class="mut">${U.won(x.price)}</span>`;
+      return `<button class="li" type="button" data-code="${x.code}"><span class="st st-${x.state}">${x.state}</span>
+        <span class="main"><span class="t">${U.esc(x.name)} <span class="small mut">${x.rank ?? "권외"}위</span></span><span class="s">${U.esc(sub)}</span></span>
+        <span class="r">${right}</span><span class="chev" aria-hidden="true"></span></button>`;
+    }, 8, 12);
+  };
+  const pick = (s) => { filt = s; draw(); };
+  U.$("#filt").addEventListener("click", (e) => { const b = e.target.closest("button[data-s]"); if (b) pick(b.dataset.s); });
+  U.$("#cnt").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-s]"); if (!b) return;
+    T.show("today", true); pick(filt === b.dataset.s ? "전체" : b.dataset.s);
+  });
+  U.$("#dlist").addEventListener("click", (e) => {
+    const b = e.target.closest(".li"); if (!b) return;
+    const x = d.decisions.find((y) => y.code === b.dataset.code);
+    const o = d.orders.find((y) => y.code === x.code);
+    const band = A && A.stocks[x.code] && A.stocks[x.code].band;
+    const ck = (x.checks || []).map((c) => `<div class="ck"><span>${c.ok ? "✅" : "❌"} ${U.esc(c.label)}<i>${U.esc(c.tier)}</i></span><span>${U.esc(c.value)}</span></div>`).join("");
+    const rf = (x.ref?.items || []).map((r) => `<div class="ck"><span>${r.good ? "＋" : "－"} ${U.esc(r.label)}<i>${U.esc(r.source)}</i></span><span>${U.esc(r.value)}</span></div>`).join("");
+    U.sheet(`${x.name} · ${x.state}`, `
+      <div class="row" style="flex-wrap:wrap;gap:8px"><span class="st st-${x.state}">${x.state}${x.action ? " · " + U.esc(x.action) : ""}</span>
+        <span class="mut">${x.rank ?? "권외"}위 · ${U.esc(x.sector)} · ${U.won(x.price)}</span></div>
+      <p>${U.esc(x.reason)}</p>
+      ${o ? `<div class="note">주문: ${o.side === "buy" ? "매수" : "매도"} ${o.qty}주 · ${o.kind === "limit" ? "지정가 " + U.won(o.price) : "시장가"}</div>` : ""}
+      ${x.need && x.need.length ? `<div class="warn">매수로 넘어가려면: ${x.need.map(U.esc).join(" / ")}</div>` : ""}
+      ${band ? `<div class="note" data-feat="forecast_band">30거래일 뒤 범위(10번 중 8번): <b>${U.won(band.price[0])} ~ ${U.won(band.price[4])}</b></div>` : ""}
+      <section class="card" style="padding:12px"><h3>결정 조건</h3><div>${ck}</div></section>
+      ${rf ? `<details class="fold"><summary><div class="sum"><b>참고 지표</b><span>검증에서 탈락 — 결정에 쓰지 않음</span></div></summary><div class="body">${rf}</div></details>` : ""}
+      <a class="btn" style="text-align:center;text-decoration:none" href="stock.html#c${x.code}">종목 분석 열기</a>`);
+  });
+
+  // ── 시장 ──
+  U.$("#gate-detail").innerHTML = `<h2>시장 게이트</h2><p class="small mut">${U.esc(g.reason)}</p><div class="facts">
+    <div class="fact"><span>지수 / 200일선</span><b class="${U.cls(g.trend)}">${U.ok(g.trend) ? U.pct(g.trend * 100) : "—"}</b></div>
+    <div class="fact"><span>60일선 위 종목</span><b>${U.ok(g.breadth) ? Math.round(g.breadth * 100) + "%" : "—"}</b></div>
+    <div class="fact"><span>고점 대비</span><b class="neg">${U.ok(g.dd) ? U.pct(g.dd * 100) : "—"}</b></div>
+    <div class="fact"><span>20일 저점 대비 반등</span><b>${U.ok(g.rebound) ? U.pct(g.rebound * 100) : "—"}</b></div></div>
+    <p class="guide">급락장(고점 대비 −15% 이하)에서는 지수가 20일 저점보다 +5% 이상 반등해야 새로 삽니다. 검증: 12개 변형 모두 두 기간에서 개선.</p>`;
+  if (A) {
+    U.$("#sec").innerHTML = `<tr><th>섹터</th><th>오늘</th><th>20일</th><th>10위 안</th></tr>` +
+      A.sectors.map((x) => `<tr><td>${U.esc(x.sector)} <span class="small mut">${x.n}</span></td><td style="${U.heatBg(x.ret1, 4)}">${U.pct(x.ret1)}</td>
+        <td style="${U.heatBg(x.ret20, 20)}">${U.pct(x.ret20, 0)}</td><td>${x.top10 || ""}</td></tr>`).join("");
+  }
+
+  // ── 계좌·기록 ──
+  U.$("#acct").innerHTML = `<div class="fact"><span>평가액</span><b>${U.won(d.equity)}</b></div><div class="fact"><span>현금</span><b>${U.won(d.cash)}</b></div>
+    <div class="fact"><span>고점 대비</span><b>${U.pct(d.drawdown * 100)}</b></div><div class="fact"><span>기록</span><b>${(d.equity_curve || []).length}거래일</b></div>`;
+  const j = d.journal || [];
+  if (j.length) {
+    U.more(U.$("#journal"), j, (x, i) => `<button class="li" type="button" data-i="${i}"><span class="st st-${x.side === "buy" ? "매수" : "매도"}">${x.side === "buy" ? "매수" : "매도"}</span>
+      <span class="main"><span class="t">${U.esc(x.name)} <span class="small mut">${x.qty}주</span></span><span class="s">${x.date} · ${U.esc(x.reason)}</span></span>
+      <span class="chev" aria-hidden="true"></span></button>`, 5, 10);
+    U.$("#journal").addEventListener("click", (e) => {
+      const b = e.target.closest(".li"); if (!b) return;
+      const x = j[+b.dataset.i];
+      U.sheet(`${x.name} ${x.side === "buy" ? "매수" : "매도"}`, `<div class="facts">
+        <div class="fact"><span>날짜</span><b>${x.date}</b></div><div class="fact"><span>수량·가격</span><b>${x.qty}주 · ${U.won(x.price)}</b></div>
+        <div class="fact"><span>당시 순위</span><b>${x.rank || "—"}위</b></div><div class="fact"><span>시장</span><b>${U.esc(x.regime) || "—"}</b></div>
+        <div class="fact"><span>30일 범위(80%)</span><b>${U.ok(x.band_p10) ? `${U.pct(x.band_p10, 0)} ~ ${U.pct(x.band_p90, 0)}` : "—"}</b></div>
+        <div class="fact"><span>주문 방식</span><b>${x.approved_by === "approve" ? "사용자 승인" : "자동"}</b></div></div>
+        <p>${U.esc(x.reason)}</p>`);
+    });
+  } else {
+    U.$("#journal").innerHTML = `<p class="mut">아직 주문이 없습니다. 첫 주문부터 이유와 당시 근거가 쌓입니다.</p>`;
+  }
+  const bt = d.backtest || {};
+  U.$("#bt").innerHTML = `<tr><th></th><th>2019~23</th><th>2024~</th></tr>` + Object.entries(bt).map(([k, v]) =>
+    `<tr><td>${U.esc(k)}</td><td>${U.pct(v.train.ann)} · Sh ${v.train.sharpe}<div class="small mut">MDD ${U.pct(v.train.mdd)}</div></td>
+     <td>${U.pct(v.test.ann)} · Sh ${v.test.sharpe}<div class="small mut">MDD ${U.pct(v.test.mdd)}</div></td></tr>`).join("");
+
+  const T = U.tabs(U.$("#tabs"), "autotrade");
+  draw();
+  U.feat.apply();
+})().catch((e) => { document.getElementById("sub").textContent = "autotrade.json을 불러오지 못했습니다: " + e.message; });
+</script>
+</body>
+</html>

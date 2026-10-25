@@ -5,6 +5,57 @@
 - 대시보드: `docs/index.html` (GitHub Pages로 서빙 → 저녁에 휴대폰으로 확인)
 - 매매 기록: `docs/trade.html` (매수/매도 입력 → CSV 복사 → `data/my_trades.csv`에 붙여넣기)
 - 투자 논리: `docs/journal.html` (진입 논리·반대 논리·무효화 조건 기록 → `data/journal.csv`)
+- **자동매매: `docs/autotrade.html`** (매일 모든 종목을 매수/유지/매도/관망으로 확정 → 모의계좌 또는 한국투자증권 API로 주문)
+
+## 🤖 자동매매 (2026-10 신규) — 자세한 근거는 [`docs/STRATEGY.md`](docs/STRATEGY.md)
+
+| 상태 | 조건 |
+|---|---|
+| 🟢 **매수** | 종합순위 ≤10 · 빈 자리 · 시장 게이트 열림 · 외국인 순매도 아님 · 중대 악재 공시 없음 |
+| 🔵 **유지** | 보유 중 · 매도 조건 없음 (감시가 표시) |
+| 🔴 **매도** | 손절 −10% · 트레일 사다리 · 20위 밖+30일 · 강제매도 공시 → 전량 / +25% → 1/3 |
+| ⚪ **관망** | 20위 안이지만 매수 조건 미충족 → **무엇이 바뀌면 매수인지** 함께 표시 |
+
+- 논문·서적·차트분석 후보 15개(추세정렬·52주고가·RSI·F-score·이익서프라이즈·섹터 상대가치·산업모멘텀 등)를
+  같은 잣대(train·test 동시 개선 + 교차확인 5/7)로 검증 → **채택 1개: 급락장에서는 바닥 확인(지수 20일 저점 +5%) 전 신규매수 중단**.
+  나머지는 화면에 '참고'로만 표시합니다 (`src/engine_lab.py`).
+- 엔진 백테스트(현금 회계, 비용 0.3%): train Sharpe 0.65→**0.76**, MDD −41%→**−35%** · test 1.36→**1.43** (`src/engine_backtest.py`).
+- 기본은 **모의계좌**. 실계좌는 `broker: kis_real` + `live_trading: true` + `AUTOTRADE_CONFIRM=I_UNDERSTAND` 셋 다 필요.
+  즉시 정지: `config/KILL` 파일.
+
+### 🧰 시중 프로그램에서 가져온 기능 (2026-10 추가) — [`docs/PLATFORM_RESEARCH.md`](docs/PLATFORM_RESEARCH.md)
+
+국내외 32곳(키움·토스·젠포트·알파스퀘어·초이스스탁·라씨·Danelfin·Zacks·TradingView·Freqtrade 등)을 조사해
+쓸 만한 것을 이 데이터로 만들고 **검증 결과를 붙였습니다.** 고르는 화면은 `docs/features.html` (대시보드 → 🤖 → 기능 고르기).
+
+| 화면 | 내용 |
+|---|---|
+| `docs/stock.html` 종목 분석 | 30일 가격 범위(검증: 80% 범위가 실제 79.8% 적중) · 팩터 성적표 A+~F · 점수 기여도 · 순위대 과거 성적 · 종목별 엔진 매매 기록 · 유사 차트(검증 탈락, 기본 꺼짐) |
+| `docs/report.html` 성과 보고서 | 핵심 지표+해설 · 자산/수중 차트 · 월별 히트맵 · 최악 낙폭 5개 · MAE · 거래 목록 · 실전(모의) 추적 기대 범위 · **설정 바꿔보기 72개 조합** |
+| `docs/autotrade.html` 자동매매 | 4상태 판단 · 시장 점수 · 섹터 히트맵 · 승인 대기/일시정지 표시 · 자동 매매일지 |
+| `docs/features.html` 기능 고르기 | 32곳 비교 · 예측값 표시 원칙 · 기능별 실제 미리보기와 켜기/끄기 · 설정 YAML 복사 |
+
+- **승인 후 주문**: `execution.approval: manual` → 매일 계획만 만들고 알림, GitHub 앱의 Actions → `autotrade-control` → `approve` (뺄 종목은 `skip`).
+- **원격 조종** `autotrade-control`: `pause`(신규 매수만 중단) · `resume` · `kill`(전부 중단) · `unkill` · `approve` · `status`.
+- **알림**: 텔레그램(`TELEGRAM_BOT_TOKEN`·`TELEGRAM_CHAT_ID`) 또는 ntfy 앱(`NTFY_TOPIC`) Secrets + `alerts.enabled: true`.
+- 계획은 날짜별로 `data/autotrade/plans/`에 남고(사후 수정 금지), 주문마다 이유가 `data/autotrade/journal.csv`에 쌓입니다.
+- 검증에서 **탈락**: 유사 차트 패턴(방향 적중 47.6% < '무조건 상승' 54.2%), 재진입 대기(train Sharpe 0.76→0.27).
+
+### 📱 휴대폰 화면 구성 (2026-10)
+
+긴 페이지를 위아래로 계속 넘기지 않도록 모든 화면을 **요약 먼저, 상세는 한 번 더 눌러서** 구조로 바꿨습니다.
+
+| 부품 | 하는 일 |
+|---|---|
+| 하단 탭바 | 대시보드 · 자동매매 · 종목 · 성과 · 기능 이동 (넓은 화면에서는 위쪽 메뉴) |
+| 스티키 탭 | 페이지 안 구역을 나눔. 스크롤해도 위에 붙어 있고, 마지막에 본 탭을 기억 |
+| 바텀시트 | 종목 판단·거래·매매일지·서비스 상세를 목록을 늘리지 않고 띄움 (아래로 끌거나 Esc로 닫기) |
+| 접는 카드 | 덜 중요한 것(참고 지표, 레이더, 6개월 수익 등)은 제목+한 줄 요약만 |
+| 더 보기 | 목록은 앞의 8~10개만, 나머지는 눌러서 |
+
+휴대폰(390px) 기준 탭 하나가 1~2.2화면입니다 (이전: 페이지당 4.6~15화면).
+기존 대시보드도 오늘 / 종목 / 시장·계좌 / 검증 탭으로 나뉘고, '오늘' 맨 위에 자동매매 엔진의 판단이 한 줄로 뜹니다
+(대시보드의 매수 후보는 엔진의 시장 게이트를 거치지 않은 순위라 둘이 다를 수 있습니다).
 
 ## 📱 화면 보는 법
 
@@ -89,6 +140,8 @@
 | 4-5 | `src/news.py` | Google News RSS + DART 공시 → `data/news.csv` | 최신 뉴스·공시 + 감성 (실패해도 무시) |
 | 5 | `src/build_data.py` | 위 전부 + `journal.csv` → `docs/data.json` | BuyFit·유사사례·**시나리오·확률·판단등급**·계좌 스트레스 |
 | 6 | `src/report.py` | data.json(+robust.json) → `docs/index.html` | 대시보드 렌더 |
+| 7 | `src/autotrader.py --phase decide` | 위 전부 + `config/autotrade.yaml` → `data/autotrade/` + `docs/autotrade.json` | 4상태 판단 · 주문계획 · 모의체결 |
+| 다음날 08:40 | `src/autotrader.py --phase execute` (`autotrade.yml`) | `plan.json` → 증권사 | 한국투자증권 주문 (kis_* 설정 시) |
 
 `src/thesis.py`는 실행 스크립트가 아니라 `build_data.py`가 import하는 **판단 엔진**입니다
 (상승 시나리오 · 반대 논리 · 확률 · 시장 시나리오 · 등급).

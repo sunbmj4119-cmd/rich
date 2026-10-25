@@ -1,0 +1,39 @@
+name: financials
+# DART 분기 재무 갱신 — 공시 마감이 지났는데 아직 없는 분기만 받는다 (src/dart_financials.py --update)
+# 분기보고서 마감: 1Q 5/15 · 반기 8/14 · 3Q 11/14 · 사업보고서 3/31 (늦게 내는 종목이 있어 주 1회 계속 확인)
+on:
+  schedule:
+    - cron: "17 22 * * 0"              # 매주 월요일 07:17 KST
+    - cron: "17 22 15-25 5,8,11 *"     # 분기보고서 마감 직후 열흘은 매일
+    - cron: "17 22 1-10 4 *"           # 사업보고서 마감 직후
+  workflow_dispatch:
+concurrency:
+  group: financials
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: install
+        run: pip install pandas OpenDartReader
+      - name: 빠진 분기 받기
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: python src/dart_financials.py --update
+      - name: commit
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/financials.csv
+          if git diff --cached --quiet; then
+            echo "새 분기 없음"
+          else
+            git commit -m "financials update $(date +%Y-%m-%d)"
+            git pull --rebase
+            git push
+          fi

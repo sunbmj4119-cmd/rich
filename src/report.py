@@ -9,6 +9,80 @@ import os, json
 DATA="docs/data.json"; OUT="docs/index.html"
 
 
+BNAV = """<style>
+body{padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}
+.bnav{position:fixed;left:0;right:0;bottom:0;z-index:40;display:grid;grid-template-columns:repeat(5,1fr);
+  background:rgba(255,255,255,.94);-webkit-backdrop-filter:saturate(1.6) blur(14px);backdrop-filter:saturate(1.6) blur(14px);
+  border-top:1px solid #e6e6ec;padding-bottom:env(safe-area-inset-bottom,0px)}
+.bnav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;font-size:10.5px;color:#6e6e78;text-decoration:none}
+.bnav a.on{color:#0071e3;font-weight:700}
+.bnav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media (min-width:900px){.bnav{display:none}body{padding-bottom:14px}}
+[hidden]{display:none!important}
+.dtabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:#f2f2f7;margin:0 -14px 10px;padding:8px 14px;
+  display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;box-shadow:0 6px 8px -8px rgba(0,0,0,.25)}
+.dtabs::-webkit-scrollbar{display:none}
+.dtabs button{flex:0 0 auto;border:0;background:#fff;color:#1d1d1f;font:inherit;font-size:14px;font-weight:600;padding:8px 14px;border-radius:999px;min-height:38px}
+.dtabs button[aria-selected="true"]{background:#1d1d1f;color:#fff}
+</style>
+<nav class="bnav" aria-label="페이지 이동">
+<a href="index.html" class="on" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg><span>대시보드</span></a>
+<a href="autotrade.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5"/></svg><span>자동매매</span></a>
+<a href="stock.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M7 15l4-4 3 3 5-6"/></svg><span>종목</span></a>
+<a href="report.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></svg><span>성과</span></a>
+<a href="features.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span>기능</span></a>
+</nav>
+<script>
+/* 대시보드 카드를 탭으로 묶는다 — 한 화면에 다 늘어놓지 않게. 카드 제목의 낱말로 나눈다. */
+(function(){
+  var GROUPS=[["today","오늘",["할 일","데이터 지연","손절 (즉시","숫자 읽는 법"]],
+              ["list","종목",["사기 좋은","전체 종목"]],
+              ["market","시장·계좌",["어떤 시장","내 계좌","익절과 손절","시장 뉴스"]],
+              ["verify","검증",["기대수익","믿어도","방법론"]]];
+  var lv=document.querySelector(".lvbar"); if(!lv) return;
+  var cards=[].slice.call(document.body.children).filter(function(el){return el.classList&&(el.classList.contains("card")||el.classList.contains("strip"));});
+  var tabOf=function(el){
+    var h=el.querySelector("h2"), t=h?h.textContent:"";
+    if(el.classList.contains("strip")) return "today";
+    for(var i=0;i<GROUPS.length;i++) for(var j=0;j<GROUPS[i][2].length;j++) if(t.indexOf(GROUPS[i][2][j])>=0) return GROUPS[i][0];
+    return el.classList.contains("adv")?"verify":"today";
+  };
+  cards.forEach(function(c){c.dataset.dtab=tabOf(c);});
+  var bar=document.createElement("div"); bar.className="dtabs"; bar.setAttribute("role","tablist");
+  bar.innerHTML=GROUPS.map(function(g){return '<button type="button" role="tab" data-t="'+g[0]+'">'+g[1]+'</button>';}).join("");
+  lv.after(bar);
+  var cur="today"; try{cur=localStorage.getItem("rich.dtab")||"today";}catch(e){}
+  function show(t,user){
+    cur=t;
+    cards.forEach(function(c){c.hidden=c.dataset.dtab!==t;});
+    bar.querySelectorAll("button").forEach(function(b){
+      b.setAttribute("aria-selected",String(b.dataset.t===t));
+      // 지금 보기(쉽게/자세히)에서 보이는 카드가 하나도 없는 탭은 숨긴다
+      var any=cards.some(function(c){return c.dataset.dtab===b.dataset.t&&!(document.body.classList.contains("simple")&&c.classList.contains("adv"));});
+      b.hidden=!any;
+    });
+    if(bar.querySelector('[data-t="'+t+'"]').hidden){show("today");return;}
+    try{localStorage.setItem("rich.dtab",t);}catch(e){}
+    if(user){var y=bar.getBoundingClientRect().top+window.scrollY-8; if(window.scrollY>y) window.scrollTo(0,y);}
+  }
+  bar.addEventListener("click",function(e){var b=e.target.closest("button[data-t]"); if(b) show(b.dataset.t,true);});
+  var orig=window.setLv; window.setLv=function(x){orig(x); show(cur);};
+  show(cur);
+  // 자동매매 엔진의 오늘 판단을 '오늘' 탭 맨 위에 한 줄로 — 이 화면의 매수 후보와 엔진 판단이 다를 때 헷갈리지 않게
+  fetch("autotrade.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+    if(!d||!d.gate) return;
+    var c=d.counts||{}, g=d.gate, el=document.createElement("a");
+    el.href="autotrade.html"; el.className="card"; el.dataset.dtab="today";
+    el.style.cssText="display:flex;gap:10px;align-items:center;text-decoration:none;color:inherit;border-left:5px solid "+(g.open?"#34c759":"#ff3b30");
+    el.innerHTML='<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:15px">🤖 자동매매 엔진: 신규 매수 '+(g.open?"열림":"닫힘")+'</div>'+
+      '<div style="font-size:12.5px;color:#666;margin-top:2px">매도 '+(c["매도"]||0)+' · 매수 '+(c["매수"]||0)+' · 유지 '+(c["유지"]||0)+' · 관망 '+(c["관망"]||0)+
+      (g.open?'':' — '+(g.need||g.reason))+'</div><div style="font-size:11.5px;color:#999;margin-top:2px">이 화면의 매수 후보는 엔진의 시장 게이트를 거치지 않은 순위입니다</div></div><span style="color:#c8c8cd;font-size:20px">›</span>';
+    bar.after(el); cards.unshift(el); show(cur);
+  }).catch(function(){});
+})();
+</script>"""
+
+
 def main():
     os.makedirs("docs",exist_ok=True)
     d=json.load(open(DATA,encoding="utf-8"))
@@ -469,7 +543,7 @@ body:not(.simple) .simponly{{display:none}}
         H+='<div class="card"><h2>💼 보유 현황</h2>'+"".join(hold_row(i) for i in holds)+'</div>'
 
     H+='''<div class="card"><h2>🔎 전체 종목 (검색·정렬)</h2>
-<input id="q" placeholder="종목명 검색 (예: 삼성)" oninput="renderStocks()" style="width:100%;padding:11px;font-size:15px;border:1px solid #ddd;border-radius:10px;margin-bottom:8px">
+<input id="q" placeholder="종목명 검색 (예: 삼성)" oninput="renderStocks(true)" style="width:100%;padding:11px;font-size:15px;border:1px solid #ddd;border-radius:10px;margin-bottom:8px">
 <div id="sortBtns" style="display:flex;gap:6px;margin-bottom:6px"></div>
 <div id="stockList"></div></div>'''
 
@@ -719,14 +793,17 @@ let SORT='score';
   b.style.cssText='flex:1;padding:8px;border:0;border-radius:9px;background:'+(k==0?'#0071e3':'#e5e5ea')+';color:'+(k==0?'#fff':'#333')+';font-weight:700;font-size:13px';
   b.onclick=()=>{SORT=o[0];sb.querySelectorAll('button').forEach(x=>{x.style.background='#e5e5ea';x.style.color='#333'});b.style.background='#0071e3';b.style.color='#fff';renderStocks();};
   sb.appendChild(b);});})();
-function renderStocks(){
+let STOCK_N=10;   // 모바일에서 100종목이 한 번에 늘어지지 않게 — 10개부터, 20개씩 더
+function renderStocks(reset){
+ if(reset)STOCK_N=10;
  const el=document.getElementById('stockList');if(!el)return;
  const q=(document.getElementById('q').value||'').trim();
  let arr=DATA.items.slice();
  if(q)arr=arr.filter(i=>i.name.indexOf(q)>=0||(i.sector&&i.sector.indexOf(q)>=0)||(i.industry&&i.industry.indexOf(q)>=0));
  const key=i=>SORT==='conf'?(i.verdict?i.verdict.conf:0):(i[SORT]||0);
  arr.sort((a,b)=>key(b)-key(a));
- el.innerHTML=arr.slice(0,60).map(i=>{
+ const N=q?60:STOCK_N;
+ el.innerHTML=arr.slice(0,N).map(i=>{
    const sig=i.signal?`<span style="font-size:11px;margin-left:4px">${i.signal}</span>`:'';
    const pnl=(i.pnl!==''&&i.pnl!=null)?`<span class="${i.pnl>=0?'pp':'pn'}" style="font-size:13px;margin-right:6px">${i.pnl>=0?'+':''}${i.pnl}%</span>`:'';
    const sec=i.sector?`<div style="font-size:11px;color:#999;margin-top:1px">${i.sector}</div>`:'';
@@ -736,7 +813,8 @@ function renderStocks(){
      `<span style="font-size:12px;color:#888;margin-right:6px">BF ${(i.buyfit||0).toFixed(0)}</span>`+
      `<span class="sc">${i.score.toFixed(0)}</span><span class="chev">›</span></div>`;
  }).join('')||'<div class="empty" style="color:#aaa;text-align:center;padding:16px">검색 결과 없음</div>';
- if(arr.length>60)el.innerHTML+='<div class="leg" style="text-align:center">상위 60개 표시 · 검색(종목·업종)으로 좁히세요</div>';
+ if(arr.length>N&&!q)el.innerHTML+=`<button onclick="STOCK_N+=20;renderStocks()" style="display:block;margin:10px auto 0;border:0;background:#e9e9ee;border-radius:999px;padding:9px 18px;font-size:13.5px;font-weight:600">${Math.min(20,arr.length-N)}개 더 보기 · 남은 ${arr.length-N}개</button>`;
+ else if(arr.length>N)el.innerHTML+='<div class="leg" style="text-align:center">상위 60개 표시 · 검색(종목·업종)으로 좁히세요</div>';
 }
 renderStocks();
 
@@ -1240,6 +1318,8 @@ function setLv(simple){
 }
 setLv((()=>{ try{ return localStorage.getItem('rich_lv')!=='0'; }catch(e){ return true; } })());
 </script></body></html>"""
+    # 하단 탭바 — 자동매매·종목·성과·기능 화면과 같은 이동 막대 (ui.css 의 .bnav 와 같은 모양)
+    H=H.replace("</body></html>", BNAV+"</body></html>")
     open(OUT,"w",encoding="utf-8").write(H)
     print(f"리포트: {OUT} · BuyFit추천 {len(buylist)} · 보유 {len(holds)}")
 

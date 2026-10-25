@@ -452,7 +452,8 @@ def main():
     out["sizing"] = rows
 
     os.makedirs("data", exist_ok=True)
-    json.dump(out, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, allow_nan=False)
+    json.dump(out, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, allow_nan=False,
+              default=lambda o: o.item() if hasattr(o, "item") else str(o))   # numpy int64 직렬화
     print(f"\n저장: {OUT}")
     print("※ train에서 좋아도 test에서 나빠지면 채택하지 않는다. 표본은 한 시장·한 구간뿐이다.")
 

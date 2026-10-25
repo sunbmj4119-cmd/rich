@@ -1,0 +1,560 @@
+{
+ "generated": "2026-10-25 05:26",
+ "periods": {
+  "pre": [
+   "2021-02-10",
+   "2023-12-31"
+  ],
+  "post": [
+   "2024-01-01",
+   "2026-10-23"
+  ],
+  "all": [
+   "2021-02-10",
+   "2026-10-23"
+  ]
+ },
+ "cost_oneway": 0.0015,
+ "m_tests": 15,
+ "alpha": 0.0033,
+ "rule": "두 구간 모두 Sharpe 개선 + 전체 구간 부트스트랩 P[차≤0] < 0.05/시험 수",
+ "base": {
+  "pre": {
+   "ann": 3.5,
+   "sharpe": 0.28,
+   "mdd": -35.2
+  },
+  "post": {
+   "ann": 43.6,
+   "sharpe": 1.38,
+   "mdd": -30.7
+  },
+  "all": {
+   "ann": 21.5,
+   "sharpe": 0.93,
+   "mdd": -35.2
+  }
+ },
+ "rows": [
+  {
+   "key": "EQ",
+   "group": "순위 교체",
+   "desc": "과거 IC t>2 신호 동일가중",
+   "kind": "후보",
+   "pre": {
+    "ann": 1.9,
+    "sharpe": 0.2,
+    "mdd": -19.6
+   },
+   "post": {
+    "ann": 20.2,
+    "sharpe": 0.95,
+    "mdd": -20.4
+   },
+   "all": {
+    "ann": 10.5,
+    "sharpe": 0.63,
+    "mdd": -20.4
+   },
+   "p": 0.888,
+   "se": 0.298,
+   "d_sharpe": -0.3,
+   "verdict": "기각"
+  },
+  {
+   "key": "ICW",
+   "group": "순위 교체",
+   "desc": "과거 정보비율 가중 41개 신호",
+   "kind": "후보",
+   "pre": {
+    "ann": -7.2,
+    "sharpe": -0.4,
+    "mdd": -31.6
+   },
+   "post": {
+    "ann": 30.2,
+    "sharpe": 1.14,
+    "mdd": -31.5
+   },
+   "all": {
+    "ann": 9.5,
+    "sharpe": 0.53,
+    "mdd": -31.6
+   },
+   "p": 0.964,
+   "se": 0.212,
+   "d_sharpe": -0.4,
+   "verdict": "기각"
+  },
+  {
+   "key": "RIDGE",
+   "group": "순위 교체",
+   "desc": "릿지 회귀 41개 신호",
+   "kind": "후보",
+   "pre": {
+    "ann": -4.9,
+    "sharpe": -0.21,
+    "mdd": -40.0
+   },
+   "post": {
+    "ann": 30.1,
+    "sharpe": 1.2,
+    "mdd": -28.0
+   },
+   "all": {
+    "ann": 10.9,
+    "sharpe": 0.6,
+    "mdd": -40.0
+   },
+   "p": 0.9045,
+   "se": 0.259,
+   "d_sharpe": -0.33,
+   "verdict": "기각"
+  },
+  {
+   "key": "TOP_EQ",
+   "group": "순위 교체",
+   "desc": "상위10 성적 좋은 신호 + 기존 점수 반반",
+   "kind": "후보",
+   "pre": {
+    "ann": 2.0,
+    "sharpe": 0.2,
+    "mdd": -33.5
+   },
+   "post": {
+    "ann": 40.8,
+    "sharpe": 1.3,
+    "mdd": -35.4
+   },
+   "all": {
+    "ann": 19.4,
+    "sharpe": 0.85,
+    "mdd": -35.4
+   },
+   "p": 0.6637,
+   "se": 0.211,
+   "d_sharpe": -0.08,
+   "verdict": "기각"
+  },
+  {
+   "key": "TOP_TW",
+   "group": "순위 교체",
+   "desc": "상위10 t값 가중 + 기존 점수 반반",
+   "kind": "후보",
+   "pre": {
+    "ann": 0.4,
+    "sharpe": 0.11,
+    "mdd": -32.7
+   },
+   "post": {
+    "ann": 38.4,
+    "sharpe": 1.26,
+    "mdd": -37.3
+   },
+   "all": {
+    "ann": 17.5,
+    "sharpe": 0.79,
+    "mdd": -37.3
+   },
+   "p": 0.735,
+   "se": 0.208,
+   "d_sharpe": -0.14,
+   "verdict": "기각"
+  },
+  {
+   "key": "TOP_RIDGE",
+   "group": "순위 교체",
+   "desc": "릿지(기존 점수 포함)",
+   "kind": "후보",
+   "pre": {
+    "ann": -0.6,
+    "sharpe": 0.08,
+    "mdd": -33.7
+   },
+   "post": {
+    "ann": 10.9,
+    "sharpe": 0.47,
+    "mdd": -40.7
+   },
+   "all": {
+    "ann": 4.8,
+    "sharpe": 0.31,
+    "mdd": -40.7
+   },
+   "p": 0.963,
+   "se": 0.374,
+   "d_sharpe": -0.62,
+   "verdict": "기각"
+  },
+  {
+   "key": "veto:max21",
+   "group": "매수 제외",
+   "desc": "최근 한 달 하루 최대 급등 상위 10% 제외",
+   "kind": "후보",
+   "pre": {
+    "ann": -5.8,
+    "sharpe": -0.26,
+    "mdd": -42.6
+   },
+   "post": {
+    "ann": 32.3,
+    "sharpe": 1.12,
+    "mdd": -30.5
+   },
+   "all": {
+    "ann": 11.2,
+    "sharpe": 0.57,
+    "mdd": -42.6
+   },
+   "p": 1.0,
+   "se": 0.098,
+   "d_sharpe": -0.36,
+   "verdict": "기각"
+  },
+  {
+   "key": "veto:ivol",
+   "group": "매수 제외",
+   "desc": "고유변동성 상위 10% 제외",
+   "kind": "후보",
+   "pre": {
+    "ann": -1.1,
+    "sharpe": 0.02,
+    "mdd": -36.9
+   },
+   "post": {
+    "ann": 41.1,
+    "sharpe": 1.35,
+    "mdd": -26.6
+   },
+   "all": {
+    "ann": 17.7,
+    "sharpe": 0.82,
+    "mdd": -36.9
+   },
+   "p": 0.8768,
+   "se": 0.119,
+   "d_sharpe": -0.11,
+   "verdict": "기각"
+  },
+  {
+   "key": "veto:lowvol",
+   "group": "매수 제외",
+   "desc": "60일 변동성 상위 10% 제외",
+   "kind": "후보",
+   "pre": {
+    "ann": -2.9,
+    "sharpe": -0.09,
+    "mdd": -37.2
+   },
+   "post": {
+    "ann": 39.7,
+    "sharpe": 1.32,
+    "mdd": -29.3
+   },
+   "all": {
+    "ann": 16.0,
+    "sharpe": 0.75,
+    "mdd": -37.2
+   },
+   "p": 0.9653,
+   "se": 0.11,
+   "d_sharpe": -0.18,
+   "verdict": "기각"
+  },
+  {
+   "key": "veto:lowbeta",
+   "group": "매수 제외",
+   "desc": "베타 상위 10% 제외",
+   "kind": "후보",
+   "pre": {
+    "ann": 1.4,
+    "sharpe": 0.17,
+    "mdd": -38.8
+   },
+   "post": {
+    "ann": 30.7,
+    "sharpe": 1.13,
+    "mdd": -26.8
+   },
+   "all": {
+    "ann": 14.8,
+    "sharpe": 0.73,
+    "mdd": -38.8
+   },
+   "p": 0.96,
+   "se": 0.115,
+   "d_sharpe": -0.2,
+   "verdict": "기각"
+  },
+  {
+   "key": "veto:inst60",
+   "group": "매수 제외",
+   "desc": "기관 60일 순매도 하위 10% 제외",
+   "kind": "후보",
+   "pre": {
+    "ann": -1.0,
+    "sharpe": 0.02,
+    "mdd": -39.2
+   },
+   "post": {
+    "ann": 43.1,
+    "sharpe": 1.44,
+    "mdd": -26.2
+   },
+   "all": {
+    "ann": 18.5,
+    "sharpe": 0.86,
+    "mdd": -39.2
+   },
+   "p": 0.7478,
+   "se": 0.118,
+   "d_sharpe": -0.07,
+   "verdict": "기각"
+  },
+  {
+   "key": "veto:bp_sn",
+   "group": "매수 제외",
+   "desc": "업종 내 PBR 최고 10% 제외",
+   "kind": "후보",
+   "pre": {
+    "ann": 1.3,
+    "sharpe": 0.16,
+    "mdd": -39.1
+   },
+   "post": {
+    "ann": 44.9,
+    "sharpe": 1.46,
+    "mdd": -29.5
+   },
+   "all": {
+    "ann": 20.6,
+    "sharpe": 0.92,
+    "mdd": -39.1
+   },
+   "p": 0.5535,
+   "se": 0.064,
+   "d_sharpe": -0.01,
+   "verdict": "기각"
+  },
+  {
+   "key": "veto:ep_sn",
+   "group": "매수 제외",
+   "desc": "업종 내 PER 최고 10% 제외",
+   "kind": "후보",
+   "pre": {
+    "ann": 2.6,
+    "sharpe": 0.24,
+    "mdd": -33.9
+   },
+   "post": {
+    "ann": 46.2,
+    "sharpe": 1.45,
+    "mdd": -30.7
+   },
+   "all": {
+    "ann": 22.0,
+    "sharpe": 0.96,
+    "mdd": -33.9
+   },
+   "p": 0.3247,
+   "se": 0.057,
+   "d_sharpe": 0.03,
+   "verdict": "기각"
+  },
+  {
+   "key": "buyfit:0.25",
+   "group": "BuyFit 매수 순서",
+   "desc": "λ=0.25 (기존 대시보드 값)",
+   "kind": "후보",
+   "pre": {
+    "ann": -2.6,
+    "sharpe": -0.05,
+    "mdd": -39.8
+   },
+   "post": {
+    "ann": 42.2,
+    "sharpe": 1.33,
+    "mdd": -33.5
+   },
+   "all": {
+    "ann": 17.3,
+    "sharpe": 0.77,
+    "mdd": -39.8
+   },
+   "p": 0.9377,
+   "se": 0.111,
+   "d_sharpe": -0.16,
+   "verdict": "기각"
+  },
+  {
+   "key": "volmgmt",
+   "group": "변동성 관리",
+   "desc": "시장 변동성 ↑ → 비중 ↓",
+   "kind": "후보",
+   "pre": {
+    "ann": 1.5,
+    "sharpe": 0.17,
+    "mdd": -37.4
+   },
+   "post": {
+    "ann": 33.8,
+    "sharpe": 1.47,
+    "mdd": -20.3
+   },
+   "all": {
+    "ann": 16.2,
+    "sharpe": 0.89,
+    "mdd": -37.4
+   },
+   "p": 0.6355,
+   "se": 0.141,
+   "d_sharpe": -0.04,
+   "verdict": "기각"
+  },
+  {
+   "key": "buyfit:0.1",
+   "group": "BuyFit 매수 순서",
+   "desc": "λ=0.1 (민감도)",
+   "kind": "민감도",
+   "pre": {
+    "ann": -0.2,
+    "sharpe": 0.08,
+    "mdd": -37.4
+   },
+   "post": {
+    "ann": 40.1,
+    "sharpe": 1.28,
+    "mdd": -37.9
+   },
+   "all": {
+    "ann": 17.8,
+    "sharpe": 0.79,
+    "mdd": -37.9
+   },
+   "p": 0.9177,
+   "se": 0.107,
+   "d_sharpe": -0.14,
+   "verdict": "민감도"
+  },
+  {
+   "key": "buyfit:0.5",
+   "group": "BuyFit 매수 순서",
+   "desc": "λ=0.5 (민감도)",
+   "kind": "민감도",
+   "pre": {
+    "ann": -0.3,
+    "sharpe": 0.07,
+    "mdd": -34.5
+   },
+   "post": {
+    "ann": 39.0,
+    "sharpe": 1.27,
+    "mdd": -35.4
+   },
+   "all": {
+    "ann": 17.3,
+    "sharpe": 0.77,
+    "mdd": -35.4
+   },
+   "p": 0.8852,
+   "se": 0.143,
+   "d_sharpe": -0.16,
+   "verdict": "민감도"
+  },
+  {
+   "key": "wf:FIX6",
+   "group": "가중치 재현",
+   "desc": "현재 고정 가중치 (6요소 재구성)",
+   "kind": "측정",
+   "pre": {
+    "ann": 4.0,
+    "sharpe": 0.31,
+    "mdd": -34.5
+   },
+   "post": {
+    "ann": 46.0,
+    "sharpe": 1.45,
+    "mdd": -30.4
+   },
+   "all": {
+    "ann": 22.7,
+    "sharpe": 0.98,
+    "mdd": -34.5
+   },
+   "p": 0.096,
+   "se": 0.039,
+   "d_sharpe": 0.05,
+   "verdict": "측정"
+  },
+  {
+   "key": "wf:ICW",
+   "group": "가중치 재현",
+   "desc": "매달 그때까지의 IC 비례 가중",
+   "kind": "측정",
+   "pre": {
+    "ann": -1.8,
+    "sharpe": -0.0,
+    "mdd": -27.2
+   },
+   "post": {
+    "ann": 31.8,
+    "sharpe": 1.05,
+    "mdd": -41.3
+   },
+   "all": {
+    "ann": 13.4,
+    "sharpe": 0.62,
+    "mdd": -41.3
+   },
+   "p": 0.864,
+   "se": 0.267,
+   "d_sharpe": -0.31,
+   "verdict": "측정",
+   "weights": {
+    "groups": [
+     "s_value",
+     "s_profit",
+     "s_grow",
+     "s_flow",
+     "s_rmom",
+     "s_mom"
+    ],
+    "first": [
+     "2021-02-09",
+     [
+      0.0,
+      0.27,
+      0.19,
+      0.13,
+      0.31,
+      0.11
+     ]
+    ],
+    "last": [
+     "2026-10-13",
+     [
+      0.29,
+      0.08,
+      0.03,
+      0.17,
+      0.39,
+      0.04
+     ]
+    ]
+   }
+  }
+ ],
+ "adopted": [],
+ "power": {
+  "se_sharpe_diff": 0.12,
+  "min_detectable": 0.32,
+  "note": "이 기간 길이로는 Sharpe 차이가 약 0.32 이상이어야 우연과 구별된다"
+ },
+ "hindsight": {
+  "fixed_post": 1.38,
+  "wf_post": 1.05,
+  "fixed_pre": 0.28,
+  "wf_pre": -0.0,
+  "note": "현재 가중치는 2024년 이후 성과도 보고 골랐다. 그 시점 정보만으로 가중치를 정하면 검증 구간 Sharpe 가 이만큼 낮다."
+ }
+}

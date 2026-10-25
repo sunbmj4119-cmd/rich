@@ -1,0 +1,17 @@
+{
+ "display": {
+  "factor_grades": true,
+  "contribution": true,
+  "forecast_band": true,
+  "rank_track": true,
+  "stock_record": true,
+  "similar_patterns": false,
+  "sector_heatmap": true,
+  "market_score": true,
+  "backtest_report": true,
+  "strategy_simulator": true,
+  "live_tracking": true,
+  "trade_journal": true,
+  "metric_guide": true
+ }
+}

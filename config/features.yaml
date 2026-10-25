@@ -1,0 +1,18 @@
+# 화면 기능 켜기/끄기 — docs/features.html 에서 미리보기를 보고 고른 뒤 여기에 붙여넣는다.
+# (features.html 에서 바로 바꾼 값은 그 기기에만 저장된다. 모든 기기 기본값은 이 파일.)
+#
+# 매매 동작을 바꾸는 설정(승인 모드·알림·규칙)은 config/autotrade.yaml 에 있다.
+display:
+  factor_grades: true        # 팩터 성적표 A+~F · 레이더          (Seeking Alpha Quant · 초이스스탁)
+  contribution: true         # 점수 기여도 — 왜 이 순위인가        (Danelfin)
+  forecast_band: true        # 30일 예측 밴드 + 실제 적중률        (Tickeron · TipRanks 범위 · 중앙은행 fan chart)
+  rank_track: true           # 순위 구간별 과거 성적표             (Zacks · Portfolio123 · Stockopedia)
+  stock_record: true         # 이 엔진이 이 종목을 과거에 매매한 성적 (라씨 매매비서)
+  similar_patterns: false    # 유사 차트 패턴 — 검증 탈락, 기본 꺼짐 (알파스퀘어)
+  sector_heatmap: true       # 섹터 히트맵                         (Finviz)
+  market_score: true         # 상태 분포 · 시장 점수                (초이스스탁 마켓스코어)
+  backtest_report: true      # 성과 보고서                         (TradingView · QuantStats · pyfolio)
+  strategy_simulator: true   # 설정 바꿔보기 (미리 계산한 72개 조합) (젠포트 · 인텔리퀀트 · Composer)
+  live_tracking: true        # 실전(모의) vs 백테스트 기대 범위     (pyfolio cone · Composer OOS)
+  trade_journal: true        # 자동 매매일지                       (Tradervue · 삼성 mPOP 매매일지)
+  metric_guide: true         # 숫자 읽는 법 (지표 해설)            (퀀터스)
