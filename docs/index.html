@@ -138,6 +138,7 @@ body:not(.simple) .simponly{display:none}
 <div style="display:flex;gap:8px;margin:14px 0">
   <a href="trade.html" class="btn" style="flex:1;margin:0">📝 매매 기록</a>
   <a href="journal.html" class="btn" style="flex:1;margin:0;background:#5856d6">📓 투자논리</a>
+  <a href="autotrade.html" class="btn" style="flex:1;margin:0;background:#1d1d1f">🤖 자동매매</a>
 </div>
 <div class="lvbar"><button id="lv0" class="on" onclick="setLv(1)">🟢 쉽게 보기</button>
   <button id="lv1" onclick="setLv(0)">🔬 자세히 보기</button></div>
@@ -181,10 +182,10 @@ body:not(.simple) .simponly{display:none}
 <div class="hist" id="mhist"></div>
 <div class="leg">100종목 점수 분포. 상위 추천권은 보통 65점+.</div></details></div><div class="card adv"><h2>🔬 현실적 기대수익<span class="tb t2">참고</span></h2>
 <div class="note" style="background:#f0f7ff">백테스트 숫자를 그대로 믿지 않기 위해 <b>거래비용을 현실화하고 생존편향을 일부</b> 보정한 결과:<br><br>
-이상적 가정 연 <b>+44%</b> → 보수적 가정 연 <b style="color:#0071e3">+34%</b> (비용·편향으로 <b>9%p</b> 증발)</div>
+이상적 가정 연 <b>+42%</b> → 보수적 가정 연 <b style="color:#0071e3">+33%</b> (비용·편향으로 <b>9%p</b> 증발)</div>
 <details style="margin-top:6px"><summary style="font-size:13px;color:#0071e3;cursor:pointer;font-weight:600">가정별 연율 수익 자세히</summary>
 <div class="date" style="margin:8px 0 4px">보수적일수록 아래:</div>
-<div class="bigbar-wrap"><span class="bl" style="width:auto;flex:1;font-size:12px">기존가정 (전종목·비용0.15%)</span><span class="bv" style="width:auto;color:#34c759">+44%</span></div><div class="bigbar-wrap"><span class="bl" style="width:auto;flex:1;font-size:12px">비용 현실화 0.35%</span><span class="bv" style="width:auto;color:#34c759">+40%</span></div><div class="bigbar-wrap"><span class="bl" style="width:auto;flex:1;font-size:12px">비용 현실화 0.50%</span><span class="bv" style="width:auto;color:#34c759">+38%</span></div><div class="bigbar-wrap"><span class="bl" style="width:auto;flex:1;font-size:12px">생존편향완화(2018존재 87종목)·0.35%</span><span class="bv" style="width:auto;color:#34c759">+37%</span></div><div class="bigbar-wrap"><span class="bl" style="width:auto;flex:1;font-size:12px">생존편향완화 87종목·비용0.50%</span><span class="bv" style="width:auto;color:#34c759">+34%</span></div><div class="bigbar-wrap"><span class="bl" style="width:auto;flex:1;font-size:12px">점수만(타이밍OFF)·87종목·0.35%</span><span class="bv" style="width:auto;color:#34c759">+39%</span></div>
+<div class="bigbar-wrap"><span class="bl" style="width:auto;flex:1;font-size:12px">기존가정 (전종목·비용0.15%)</span><span class="bv" style="width:auto;color:#34c759">+42%</span></div><div class="bigbar-wrap"><span class="bl" style="width:auto;flex:1;font-size:12px">비용 현실화 0.35%</span><span class="bv" style="width:auto;color:#34c759">+39%</span></div><div class="bigbar-wrap"><span class="bl" style="width:auto;flex:1;font-size:12px">비용 현실화 0.50%</span><span class="bv" style="width:auto;color:#34c759">+37%</span></div><div class="bigbar-wrap"><span class="bl" style="width:auto;flex:1;font-size:12px">생존편향완화(2018존재 87종목)·0.35%</span><span class="bv" style="width:auto;color:#34c759">+36%</span></div><div class="bigbar-wrap"><span class="bl" style="width:auto;flex:1;font-size:12px">생존편향완화 87종목·비용0.50%</span><span class="bv" style="width:auto;color:#34c759">+33%</span></div><div class="bigbar-wrap"><span class="bl" style="width:auto;flex:1;font-size:12px">점수만(타이밍OFF)·87종목·0.35%</span><span class="bv" style="width:auto;color:#34c759">+38%</span></div>
 </details>
 <div class="warn">※ ⚠️ 생존편향은 <b>비용·최근상장 제외까지만</b> 보정됐고, 진짜 상장폐지 종목은 데이터에 없어 <b>반영 못 했습니다</b>. 실제 기대는 아래 수치보다 더 낮습니다.<br>이 표본은 <b>강세장 비중이 큰 2018~2026</b> 구간이니 <b>실전 기대는 더 보수적으로</b> 잡으세요. 상장폐지 0종목은 애초에 데이터에 없습니다.</div></div><div class="card adv" style="border:2px solid #5856d6"><h2>🔍 이 숫자를 믿어도 되나<span class="tb t1">검증됨</span></h2>
 <div class="leg" style="margin-top:0">대시보드가 말하는 등급·확률을 <b>과거 시점 정보만으로 다시 계산해</b> 실제 결과와 대조했습니다.

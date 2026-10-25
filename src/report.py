@@ -165,6 +165,7 @@ body:not(.simple) .simponly{{display:none}}
 <div style="display:flex;gap:8px;margin:14px 0">
   <a href="trade.html" class="btn" style="flex:1;margin:0">📝 매매 기록</a>
   <a href="journal.html" class="btn" style="flex:1;margin:0;background:#5856d6">📓 투자논리</a>
+  <a href="autotrade.html" class="btn" style="flex:1;margin:0;background:#1d1d1f">🤖 자동매매</a>
 </div>
 <div class="lvbar"><button id="lv0" class="on" onclick="setLv(1)">🟢 쉽게 보기</button>
   <button id="lv1" onclick="setLv(0)">🔬 자세히 보기</button></div>

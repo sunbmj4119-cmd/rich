@@ -5,6 +5,23 @@
 - 대시보드: `docs/index.html` (GitHub Pages로 서빙 → 저녁에 휴대폰으로 확인)
 - 매매 기록: `docs/trade.html` (매수/매도 입력 → CSV 복사 → `data/my_trades.csv`에 붙여넣기)
 - 투자 논리: `docs/journal.html` (진입 논리·반대 논리·무효화 조건 기록 → `data/journal.csv`)
+- **자동매매: `docs/autotrade.html`** (매일 모든 종목을 매수/유지/매도/관망으로 확정 → 모의계좌 또는 한국투자증권 API로 주문)
+
+## 🤖 자동매매 (2026-10 신규) — 자세한 근거는 [`docs/STRATEGY.md`](docs/STRATEGY.md)
+
+| 상태 | 조건 |
+|---|---|
+| 🟢 **매수** | 종합순위 ≤10 · 빈 자리 · 시장 게이트 열림 · 외국인 순매도 아님 · 중대 악재 공시 없음 |
+| 🔵 **유지** | 보유 중 · 매도 조건 없음 (감시가 표시) |
+| 🔴 **매도** | 손절 −10% · 트레일 사다리 · 20위 밖+30일 · 강제매도 공시 → 전량 / +25% → 1/3 |
+| ⚪ **관망** | 20위 안이지만 매수 조건 미충족 → **무엇이 바뀌면 매수인지** 함께 표시 |
+
+- 논문·서적·차트분석 후보 15개(추세정렬·52주고가·RSI·F-score·이익서프라이즈·섹터 상대가치·산업모멘텀 등)를
+  같은 잣대(train·test 동시 개선 + 교차확인 5/7)로 검증 → **채택 1개: 급락장에서는 바닥 확인(지수 20일 저점 +5%) 전 신규매수 중단**.
+  나머지는 화면에 '참고'로만 표시합니다 (`src/engine_lab.py`).
+- 엔진 백테스트(현금 회계, 비용 0.3%): train Sharpe 0.65→**0.76**, MDD −41%→**−35%** · test 1.36→**1.43** (`src/engine_backtest.py`).
+- 기본은 **모의계좌**. 실계좌는 `broker: kis_real` + `live_trading: true` + `AUTOTRADE_CONFIRM=I_UNDERSTAND` 셋 다 필요.
+  즉시 정지: `config/KILL` 파일.
 
 ## 📱 화면 보는 법
 
@@ -89,6 +106,8 @@
 | 4-5 | `src/news.py` | Google News RSS + DART 공시 → `data/news.csv` | 최신 뉴스·공시 + 감성 (실패해도 무시) |
 | 5 | `src/build_data.py` | 위 전부 + `journal.csv` → `docs/data.json` | BuyFit·유사사례·**시나리오·확률·판단등급**·계좌 스트레스 |
 | 6 | `src/report.py` | data.json(+robust.json) → `docs/index.html` | 대시보드 렌더 |
+| 7 | `src/autotrader.py --phase decide` | 위 전부 + `config/autotrade.yaml` → `data/autotrade/` + `docs/autotrade.json` | 4상태 판단 · 주문계획 · 모의체결 |
+| 다음날 08:40 | `src/autotrader.py --phase execute` (`autotrade.yml`) | `plan.json` → 증권사 | 한국투자증권 주문 (kis_* 설정 시) |
 
 `src/thesis.py`는 실행 스크립트가 아니라 `build_data.py`가 import하는 **판단 엔진**입니다
 (상승 시나리오 · 반대 논리 · 확률 · 시장 시나리오 · 등급).
