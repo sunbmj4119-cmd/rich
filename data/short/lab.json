@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-25 12:03",
+ "generated": "2026-10-25 20:06",
  "period": [
   "2018-01-02",
   "2026-10-23"
@@ -14459,7 +14459,7 @@
   {
    "id": "E:oo_rev",
    "kind": "etf",
-   "desc": "하루 보유 (시가→다음 시가), 전날 지수가 내렸을 때만",
+   "desc": "전날 지수가 내렸으면 지수 ETF 보유, 오르면 다음 날 시가에 팔고 현금",
    "full": {
     "cagr": 0.0241,
     "vol": 0.2109,
@@ -14501,7 +14501,7 @@
   {
    "id": "E:oo_revid",
    "kind": "etf",
-   "desc": "하루 보유, 전날 장중에 내렸을 때만",
+   "desc": "전날 장중에 지수가 내렸으면 지수 ETF 보유, 아니면 현금 (시가에 사고팖)",
    "full": {
     "cagr": 0.0306,
     "vol": 0.2116,
@@ -14543,7 +14543,7 @@
   {
    "id": "E:ls_rev",
    "kind": "etf",
-   "desc": "전날 내렸으면 지수, 올랐으면 인버스 (하루)",
+   "desc": "전날 내렸으면 지수 ETF, 올랐으면 인버스 보유 (시가에 바꿈)",
    "full": {
     "cagr": -0.0879,
     "vol": 0.2815,
@@ -22654,8 +22654,8 @@
     "S:REV1:5:H10:trend": 210,
     "S:REV1:5:H10:crash": 160,
     "S:VSD:5:H5:crash": 140,
-    "S:REVC:5:H10:trend": 100,
-    "S:FOR20:5:H5:none": 100
+    "S:FOR20:5:H5:none": 100,
+    "S:REVC:5:H10:trend": 100
    },
    "curve": [
     1.0,
@@ -23536,8 +23536,8 @@
    "picks": {
     "E:ls_rev": 102,
     "S:REVC:5:H10:none": 75,
-    "S:MOM:5:H10:crash": 68,
     "S:FOR20:5:BAND:crash": 68,
+    "S:MOM:5:H10:crash": 68,
     "S:REV1:5:H10:trend": 65,
     "S:REVID:5:H5:none": 64
    },
@@ -23981,7 +23981,7 @@
     "E:overnight_for": 64,
     "S:REVC:5:H10:trend": 56,
     "S:REV1:10:H3:crash": 48,
-    "S:REV1:5:H10:trend": 45
+    "S:REV1:5:H10:crash": 45
    },
    "curve": [
     1.0,
@@ -24864,8 +24864,8 @@
     "S:REV1:5:H10:trend": 189,
     "S:REV1:5:H10:crash": 168,
     "S:VSD:5:H5:crash": 126,
-    "S:REV3_LV:10:H5:crash": 126,
-    "S:REVC:5:H10:trend": 126
+    "S:REVC:5:H10:trend": 126,
+    "S:REV3_LV:10:H5:crash": 126
    },
    "curve": [
     1.0,
