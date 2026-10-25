@@ -8,11 +8,16 @@ DART 분기 재무 수집 (1회 백필) — EPS/BPS/주식수 포함 버전
 - 이어받기: 이미 받은 종목 건너뜀
 - 고정 컬럼 스키마(COLS)로 저장 → resume 시 컬럼 어긋남 방지
 
+[갱신 모드] python src/dart_financials.py --update
+  이미 받은 종목도 최근 2개년 중 '공시 마감이 지났는데 아직 없는 분기'만 다시 받는다 (financials.yml 이 주기 실행).
+  같은 (종목, 연도, 분기) 행은 새로 받은 값으로 교체.
+
 [테스트 모드] 환경변수로 범위 축소 (없으면 전체 수집):
   TEST_LIMIT=3        → 상위 3종목만
   TEST_START_YEAR=2024 → 2024년부터만
 """
 import os
+import sys
 import time
 import pandas as pd
 from datetime import datetime
@@ -107,58 +112,72 @@ def get_shares(code, year, rcode):
         return None
 
 
-def collect_one(code, name):
+def due_quarters(start_year, today=None):
+    """공시 마감(사용가능일)이 지난 (연도, 분기) 목록 — 분기 순서대로."""
+    today = today or datetime.now()
+    out = []
+    for year in range(start_year, today.year + 1):
+        for q in QORDER:
+            avail = f"{year+1}{AVAIL[q]}" if q == "4Q" else f"{year}{AVAIL[q]}"
+            if datetime.strptime(avail, "%Y-%m-%d") <= today:
+                out.append((year, q))
+    return out
+
+
+def collect_one(code, name, targets=None, last_shares=None):
+    """targets: [(연도, 분기)] — 없으면 TEST_START_YEAR 부터 전부.
+    last_shares: 갱신 모드에서 기존 데이터의 마지막 주식수 (carry-forward 시작값)."""
     rows = []
     this_year = datetime.now().year
-    last_shares = None  # 직전에 구한 주식수 (carry-forward 용)
-    for year in range(TEST_START_YEAR, this_year + 1):
-        for qlabel in QORDER:                       # 분기 순서대로 (carry-forward 정확)
-            rcode = [k for k, v in REPRTS.items() if v == qlabel][0]
-            try:
-                fs = dart.finstate(code, year, reprt_code=rcode)
-                if fs is None or len(fs) == 0:
-                    continue
-                if "fs_div" in fs.columns:
-                    cfs = fs[fs["fs_div"] == "CFS"]
-                    fs = cfs if not cfs.empty else fs
+    if targets is None:
+        targets = [(y, q) for y in range(TEST_START_YEAR, this_year + 1) for q in QORDER]
+    for year, qlabel in targets:                    # 분기 순서대로 (carry-forward 정확)
+        rcode = [k for k, v in REPRTS.items() if v == qlabel][0]
+        try:
+            fs = dart.finstate(code, year, reprt_code=rcode)
+            if fs is None or len(fs) == 0:
+                continue
+            if "fs_div" in fs.columns:
+                cfs = fs[fs["fs_div"] == "CFS"]
+                fs = cfs if not cfs.empty else fs
 
-                revenue = pick(fs, ["매출액", "수익(매출액)", "영업수익"])
-                op = pick(fs, ["영업이익"])
-                net = pick(fs, ["당기순이익"])
-                assets = pick(fs, ["자산총계"])
-                liab = pick(fs, ["부채총계"])
-                equity = pick(fs, ["자본총계"])
+            revenue = pick(fs, ["매출액", "수익(매출액)", "영업수익"])
+            op = pick(fs, ["영업이익"])
+            net = pick(fs, ["당기순이익"])
+            assets = pick(fs, ["자산총계"])
+            liab = pick(fs, ["부채총계"])
+            equity = pick(fs, ["자본총계"])
 
-                debt_ratio = (liab / equity * 100) if (liab and equity) else None
-                op_margin = (op / revenue * 100) if (op and revenue) else None
-                net_margin = (net / revenue * 100) if (net and revenue) else None
-                roe = (net / equity * 100) if (net and equity) else None
+            debt_ratio = (liab / equity * 100) if (liab and equity) else None
+            op_margin = (op / revenue * 100) if (op and revenue) else None
+            net_margin = (net / revenue * 100) if (net and revenue) else None
+            roe = (net / equity * 100) if (net and equity) else None
 
-                # 주식수: 못 구하면 직전 주식수 사용 (1Q·3Q 빈 분기 보정)
-                shares = get_shares(code, year, rcode)
-                if shares and shares > 0:
-                    last_shares = shares
-                else:
-                    shares = last_shares
+            # 주식수: 못 구하면 직전 주식수 사용 (1Q·3Q 빈 분기 보정)
+            shares = get_shares(code, year, rcode)
+            if shares and shares > 0:
+                last_shares = shares
+            else:
+                shares = last_shares
 
-                eps = (net / shares) if (net and shares) else None
-                bps = (equity / shares) if (equity and shares) else None
+            eps = (net / shares) if (net and shares) else None
+            bps = (equity / shares) if (equity and shares) else None
 
-                avail = f"{year+1}{AVAIL[qlabel]}" if qlabel == "4Q" else f"{year}{AVAIL[qlabel]}"
+            avail = f"{year+1}{AVAIL[qlabel]}" if qlabel == "4Q" else f"{year}{AVAIL[qlabel]}"
 
-                rows.append({
-                    "종목코드": code, "종목명": name,
-                    "연도": year, "분기": qlabel, "사용가능일": avail,
-                    "매출액": revenue, "영업이익": op, "당기순이익": net,
-                    "자산총계": assets, "부채총계": liab, "자본총계": equity,
-                    "부채비율": debt_ratio, "영업이익률": op_margin,
-                    "순이익률": net_margin, "ROE": roe,
-                    "주식수": shares, "EPS": eps, "BPS": bps,
-                })
-                time.sleep(0.3)
-            except Exception as e:
-                print(f"  {name} {year}{qlabel} 실패: {e}")
-                time.sleep(0.3)
+            rows.append({
+                "종목코드": code, "종목명": name,
+                "연도": year, "분기": qlabel, "사용가능일": avail,
+                "매출액": revenue, "영업이익": op, "당기순이익": net,
+                "자산총계": assets, "부채총계": liab, "자본총계": equity,
+                "부채비율": debt_ratio, "영업이익률": op_margin,
+                "순이익률": net_margin, "ROE": roe,
+                "주식수": shares, "EPS": eps, "BPS": bps,
+            })
+            time.sleep(0.3)
+        except Exception as e:
+            print(f"  {name} {year}{qlabel} 실패: {e}")
+            time.sleep(0.3)
     return rows
 
 
@@ -170,7 +189,41 @@ def flush(buffer):
     df.to_csv(OUT, mode="a", header=header, index=False)
 
 
+def update():
+    """이미 받은 종목의 빠진 최근 분기만 채운다. 새로 편입된 종목은 전체 이력을 받는다."""
+    universe = get_universe()
+    if TEST_LIMIT > 0:
+        universe = universe[:TEST_LIMIT]
+    old = pd.read_csv(OUT, dtype={"종목코드": str}) if os.path.exists(OUT) else pd.DataFrame(columns=COLS)
+    old["종목코드"] = old["종목코드"].astype(str).str.zfill(6)
+    have = set(zip(old["종목코드"], old["연도"].astype(int), old["분기"]))
+    due = due_quarters(datetime.now().year - 1)
+    new, filled = [], 0
+    for i, (code, name) in enumerate(universe):
+        mine = old[old["종목코드"] == code]
+        if mine.empty:
+            rows = collect_one(code, name)
+        else:
+            want = [(y, q) for y, q in due if (code, y, q) not in have]
+            if not want:
+                continue
+            sh = pd.to_numeric(mine.sort_values(["연도", "분기"])["주식수"], errors="coerce").dropna()
+            rows = collect_one(code, name, want, float(sh.iloc[-1]) if len(sh) else None)
+        new.extend(rows)
+        filled += len(rows)
+        print(f"[{i+1}/{len(universe)}] {name} +{len(rows)}분기")
+    if not new:
+        print("새로 받을 분기 없음 (아직 공시 전이거나 이미 최신)")
+        return
+    df = pd.concat([old, pd.DataFrame(new, columns=COLS)], ignore_index=True)
+    df = df.drop_duplicates(["종목코드", "연도", "분기"], keep="last").sort_values(["종목코드", "연도", "분기"])
+    df.to_csv(OUT, index=False)
+    print(f"DART 재무 갱신 완료: +{filled}분기 · 최신 사용가능일 {df['사용가능일'].max()}")
+
+
 def main():
+    if "--update" in sys.argv:
+        return update()
     universe = get_universe()
 
     if TEST_LIMIT > 0:

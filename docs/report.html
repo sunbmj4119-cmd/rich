@@ -42,6 +42,12 @@
     </section>
     <section class="card"><h2>기간별 수익률</h2><div class="scroll"><table id="periods"></table></div></section>
     <section class="card"><h2>가장 깊었던 낙폭</h2><div id="wdd"></div></section>
+    <section class="card" id="plab" hidden>
+      <h2>검증 구간 성과, 얼마나 믿을 수 있나</h2>
+      <p class="warn" id="plab-hind"></p>
+    </section>
+    <details class="fold" id="plab-fold" hidden><summary><div class="sum"><b>예측력 개선 시도</b><span id="plab-sum"></span></div></summary>
+      <div class="body"><div class="scroll"><table class="cmp" id="plab-tbl"></table></div><p class="guide" id="plab-rule"></p></div></details>
   </div>
 
   <!-- 차트 -->
@@ -145,6 +151,27 @@ U.nav("report.html");
     <tr><td>시장</td>${B.periods.map((p) => `<td class="${U.cls(p.bench)}">${U.pct(p.bench, 0)}</td>`).join("")}</tr>`;
   U.$("#wdd").innerHTML = B.worst_dd.slice(0, 3).map((w) => `<div class="row" style="padding:6px 0;border-bottom:1px solid var(--line)">
       <b class="neg num" style="width:64px">${U.pct(w.depth)}</b><span class="grow small">${w.start} → 바닥 ${w.trough}<br><span class="mut">${w.end ? `회복 ${w.end} · ${w.days}거래일` : `회복 중 · ${w.days}거래일째`}</span></span></div>`).join("");
+
+  // 예측력 개선 시도 (src/prediction_lab.py) — 없으면 숨김
+  U.j("prediction_lab.json").then((L) => {
+    const b = L.base, h = L.hindsight, sh = (v) => U.num(v, 2);
+    if (h) {
+      U.$("#plab-hind").innerHTML = `현재 점수 가중치는 2024년 이후 성과까지 보고 정했습니다. 같은 엔진으로 ${L.periods.all[0]}부터 운용하되 ` +
+        `가중치를 <b>그때까지 알 수 있던 정보로만</b> 매달 다시 정하면 2024~ Sharpe가 <b>${sh(h.fixed_post)} → ${sh(h.wf_post)}</b>로 낮아집니다. 앞으로의 기대치는 낮은 쪽으로 잡으세요.`;
+      U.$("#plab").hidden = false;
+    }
+    const rows = L.rows.filter((x) => x.kind === "후보"), n_ok = rows.filter((x) => x.verdict === "채택").length;
+    const tag = (v) => v === "채택" ? '<span class="badge b-ok">채택</span>' : v === "기각" ? '<span class="badge b-mut">기각</span>' : '<span class="badge b-mut">보류</span>';
+    U.$("#plab-sum").textContent = `${rows.length}건 시험 · 채택 ${n_ok}건`;
+    U.$("#plab-tbl").innerHTML = `<tr><th>시도</th><th>~2023</th><th>2024~</th><th></th></tr>
+      <tr><td><b>현재 엔진</b></td><td>${sh(b.pre.sharpe)}</td><td>${sh(b.post.sharpe)}</td><td></td></tr>` +
+      rows.map((x) => `<tr><td>${U.esc(x.group)}<br><span class="mut small">${U.esc(x.desc)}</span></td>
+        <td class="${x.pre.sharpe > b.pre.sharpe ? "pos" : ""}">${sh(x.pre.sharpe)}</td>
+        <td class="${x.post.sharpe > b.post.sharpe ? "pos" : ""}">${sh(x.post.sharpe)}</td><td>${tag(x.verdict)}</td></tr>`).join("");
+    U.$("#plab-rule").textContent = `숫자는 Sharpe (${L.periods.pre[0]}~2023 / 2024~${L.periods.post[1]}), 초록은 현재 엔진보다 나은 칸. ` +
+      `채택 규칙: ${L.rule} (문턱 ${L.alpha}). ${L.power.note}. 판단 엔진을 그대로 돌렸고 비용은 편도 ${(L.cost_oneway * 100).toFixed(2)}%.`;
+    U.$("#plab-fold").hidden = false;
+  }).catch(() => {});
 
   // ── 차트 ──
   const yy = (d) => d.slice(2, 7);
