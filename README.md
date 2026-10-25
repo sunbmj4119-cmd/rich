@@ -140,8 +140,11 @@
 | 4-5 | `src/news.py` | Google News RSS + DART 공시 → `data/news.csv` | 최신 뉴스·공시 + 감성 (실패해도 무시) |
 | 5 | `src/build_data.py` | 위 전부 + `journal.csv` → `docs/data.json` | BuyFit·유사사례·**시나리오·확률·판단등급**·계좌 스트레스 |
 | 6 | `src/report.py` | data.json(+robust.json) → `docs/classic.html` | 이전 대시보드 렌더 (홈 `docs/index.html`은 정적 파일이 data.json·autotrade.json을 읽음) |
+| 1-2 | `src/collect_etf.py` | KRX → `data/etf_ohlcv.csv` | KODEX 200·인버스 일봉 (단기 모의투자용, 처음엔 2018년부터 저절로) |
 | 7 | `src/autotrader.py --phase decide` | 위 전부 + `config/autotrade.yaml` → `data/autotrade/` + `docs/autotrade.json` | 4상태 판단 · 주문계획 · 모의체결 |
+| 8 | `src/short_trader.py` | 위 데이터 → `data/short/` + `docs/short.json` | **단기 모의투자**: 어제 계획 체결 → 후보 모델 전부 재시뮬레이션 → 주 1회 모델 선택 → 내일 계획 (`docs/short.html`) |
 | 다음날 08:40 | `src/autotrader.py --phase execute` (`autotrade.yml`) | `plan.json` → 증권사 | 한국투자증권 주문 (kis_* 설정 시) |
+| 토요일 | `src/short_lab.py` (`evolve.yml`) | 위 데이터 → `data/short/lab.json` | 단기매매·'매일 갈아타기' 검증 다시 재기 (전략서 3-6-5) |
 
 `src/thesis.py`는 실행 스크립트가 아니라 `build_data.py`가 import하는 **판단 엔진**입니다
 (상승 시나리오 · 반대 논리 · 확률 · 시장 시나리오 · 등급).

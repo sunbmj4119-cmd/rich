@@ -62,7 +62,21 @@ GitHub → 저장소 → Settings → Deploy keys → Add deploy key → Title `
 - 키는 서버 파일에만: `bash ~/rich/deploy/oracle/setup.sh --keys` → 물어보는 항목마다 붙여넣고 Enter (화면에 안 보임)
   (또는 `nano ~/.rich/secrets.env` 로 직접 편집 — 저장 Ctrl+O, Enter, 나가기 Ctrl+X)
 
-## 6. 아직 하지 않을 것
+## 6. 토스 자료 수집 (지금 켜도 안전 — 조회만)
+
+```bash
+bash ~/rich/deploy/oracle/setup.sh --collect
+```
+
+- 종목별 투자자별·프로그램매매·공매도·신용·대차 일별 이력과 KOSPI 투자자별 매매대금, KODEX 200·인버스 일봉을 받습니다.
+- 처음 한 번은 2018년까지 거슬러 받느라 **1시간 안팎** 걸립니다. 뒤에서 돌기 때문에 앱을 닫아도 됩니다.
+  진행 보기: `tail -f ~/.rich/logs/collect_backfill.log` (그만 보기 Ctrl+C — 수집은 계속됨)
+- 그 뒤로는 **한국 시간 평일 18:50**에 그날 것만 덧붙입니다 (cron, 2~3분).
+- 원본은 서버의 `~/.rich/toss/`에만 둡니다 (저장소가 공개라 토스 자료를 그대로 올리지 않음).
+  GitHub 에는 몇 종목·며칠치를 받았는지(`data/toss/collect_status.json`)와 예측력 통계(`data/toss/lab.json`)만 올라갑니다.
+- 주문·잔고·계좌 API는 쓰지 않습니다. 디스크는 1년에 수십 MB 정도입니다.
+
+## 7. 아직 하지 않을 것
 
 `bash setup.sh --cron` (한국 시간 평일 08:40 자동 실행 — 서버 시간대와 무관)은 **토스 연결 코드가 들어간 뒤에** 켭니다.
 지금 켜도 설정이 모의 계좌라 아무 주문도 보내지 않고 끝나지만, 순서를 지키는 편이 안전합니다.

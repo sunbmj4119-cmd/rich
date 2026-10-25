@@ -1,5 +1,5 @@
 name: evolve
-# 모델 진화 (src/evolve.py) — 매주 토요일
+# 모델 진화 (src/evolve.py) + 단기매매 검증 (src/short_lab.py) — 매주 토요일
 #   1) 중첩 워크포워드: '그 시점 데이터만으로 진화했다면 실제로 나았나'를 진화 방식 6개 × 시드 3개로 다시 잰다
 #   2) 전체 데이터로 진화 → 챔피언보다 확실히 나으면 도전자로 등록
 #   3) 도전자마다 등록일 이후 새 데이터로만 전진 성적 → 승격 조건 판단 (기본은 제안만, 승인은 autotrade-control → promote)
@@ -33,10 +33,17 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           python src/evolve.py all 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: 단기매매 검증 (short_lab — 신호 IC · 모델 341개 · 고르는 방식 288가지)
+        run: |
+          echo "## ⚡ 단기매매 검증" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          python src/short_lab.py 2>&1 | grep -v Warning | tail -12 | tee -a $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
       - name: 커밋
         run: |
           git config user.name github-actions
           git config user.email actions@github.com
-          git add data/evolve/ docs/evolve.json config/champion.yaml 2>/dev/null || git add data/evolve/ docs/evolve.json
+          git add data/evolve/ docs/evolve.json data/short/lab.json docs/short_lab.json
+          git add config/champion.yaml 2>/dev/null || true
           git commit -m "evolve $(date +%F)" || echo "no change"
           git pull --rebase && git push
