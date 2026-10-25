@@ -9,6 +9,16 @@
           매도 먼저(시장가) → 매수(전일종가+1% 지정가). 수량은 실시간 잔고로 다시 계산.
   all     decide + execute 를 한 번에 (장중 로컬 실행용)
 
+승인 모드 (execution.approval)
+  auto   : 위 흐름 그대로 자동 주문
+  manual : 계획만 만들고 '승인 대기' 알림 → 사용자가 GitHub Actions 'autotrade-control'에서
+           approve 를 눌러야 주문 (Trade Ideas·Portfolio123 의 '신호 + 확인' 방식).
+           --skip 005930,000660 으로 고른 종목만 빼고 승인할 수 있다.
+
+원격 제어 파일 (control.yml 이 커밋한다)
+  config/KILL  : 모든 주문 중단 (매도 포함)
+  config/PAUSE : 신규 매수만 중단, 손절·익절 매도는 계속 (Freqtrade /pause 와 같은 단계)
+
 안전장치 (하나라도 걸리면 주문을 보내지 않고 이유를 기록)
   · enabled:false 또는 config/KILL 파일 → 킬스위치
   · 점수 데이터가 max_data_lag_days 보다 오래됨 → 낡은 정보로 매매 금지
@@ -21,12 +31,14 @@
   python src/autotrader.py --phase decide            # 설정의 broker로
   python src/autotrader.py --phase execute --broker kis_demo
   python src/autotrader.py --phase all --dry-run     # 무엇을 할지 보기만
+  python src/autotrader.py --phase execute --approve --skip 005930   # 승인 모드에서 승인
 """
 import argparse
 import csv
 import json
 import math
 import os
+import shutil
 import sys
 from datetime import datetime, timedelta, timezone
 
@@ -38,15 +50,19 @@ sys.path.insert(0, "src")
 import features as F                                     # noqa: E402
 from decision_engine import decide, load_news, BUY, SELL, HOLD, WATCH   # noqa: E402
 from brokers import make_broker, round_tick, PaperBroker  # noqa: E402
+import notify                                             # noqa: E402
 
 CFG = "config/autotrade.yaml"
 KILL = "config/KILL"
+PAUSE = "config/PAUSE"
 DIR = "data/autotrade"
 LEDGER = f"{DIR}/ledger.json"
 PLAN = f"{DIR}/plan.json"
 DECISIONS = f"{DIR}/decisions.csv"
 ORDERS = f"{DIR}/orders.csv"
 EQUITY = f"{DIR}/equity.csv"
+JOURNAL = f"{DIR}/journal.csv"
+PLANS = f"{DIR}/plans"                 # 날짜별 계획 보관 — 지난 판단을 고쳐 쓰지 않는다 (Collective2 관행)
 STATUS = "docs/autotrade.json"
 KST = timezone(timedelta(hours=9))
 
@@ -84,6 +100,30 @@ ORDER_FIELDS = ["ts", "plan_date", "broker", "side", "code", "name", "qty", "kin
                 "ok", "order_no", "msg", "reason"]
 
 
+JOURNAL_FIELDS = ["date", "broker", "side", "code", "name", "qty", "price", "reason", "rank", "regime",
+                  "band_p10", "band_p90", "ret_pct", "held_days", "ref_good", "ref_bad", "approved_by"]
+
+
+def journal(plan, rows, decisions, gate, broker_name, approved_by):
+    """자동 매매일지 — 주문마다 '왜 샀나/왜 팔았나'와 그때의 근거 숫자를 남긴다 (Tradervue·Edgewonk 방식)."""
+    by = {d["code"]: d for d in decisions or []}
+    bands = jload("docs/analytics.json", {}).get("stocks", {})
+    out = []
+    for r in rows:
+        if not r.get("ok"):
+            continue
+        d = by.get(r["code"], {})
+        b = (bands.get(r["code"], {}) or {}).get("band") or {}
+        out.append({"date": plan["date"], "broker": broker_name, "side": r["side"], "code": r["code"],
+                    "name": r["name"], "qty": r["qty"], "price": r.get("price") or r.get("ref_price"),
+                    "reason": r.get("reason", ""), "rank": d.get("rank"), "regime": gate.get("regime") if gate else "",
+                    "band_p10": (b.get("ret") or [None])[0], "band_p90": (b.get("ret") or [None] * 5)[-1],
+                    "ret_pct": round(d["ret"] * 100, 1) if "ret" in d else "",
+                    "held_days": d.get("held_days", ""), "ref_good": (d.get("ref") or {}).get("good", ""),
+                    "ref_bad": (d.get("ref") or {}).get("bad", ""), "approved_by": approved_by})
+    append_csv(JOURNAL, out, JOURNAL_FIELDS)
+
+
 def already_sent(plan_date, broker):
     """이 계획 날짜로 이미 보낸 (종목, 방향). 같은 계획을 두 번 실행해도 중복 주문이 안 나간다."""
     if not os.path.exists(ORDERS):
@@ -97,8 +137,13 @@ def already_sent(plan_date, broker):
 # 원장 — 증권사 잔고에 없는 정보(진입일·부분익절 여부)를 보관
 # ══════════════════════════════════════════════════════════════
 def reconcile(ledger, acct, asof):
-    """증권사 잔고가 진실. 원장은 잔고에 맞춰 고친다."""
-    new = {}
+    """증권사 잔고가 진실. 원장은 잔고에 맞춰 고친다. 사라진 종목은 '_exits'에 청산일을 남긴다."""
+    exits = dict(ledger.get("_exits", {}))
+    for c in ledger:
+        if c != "_exits" and c not in acct["positions"]:
+            exits[c] = asof
+    new = {"_exits": {c: d for c, d in exits.items()
+                      if (pd.Timestamp(asof) - pd.Timestamp(d)).days <= 120}}
     for c, p in acct["positions"].items():
         e = ledger.get(c)
         if e is None:
@@ -136,6 +181,8 @@ def safety(cfg, panel, feats):
     issues, flags = [], {}
     if not cfg.get("enabled", True) or os.path.exists(KILL):
         issues.append("킬스위치 ON (enabled:false 또는 config/KILL) — 주문 중단")
+    if os.path.exists(PAUSE):
+        flags["pause_entries"] = True          # 매도는 그대로, 신규 매수만 관망으로
     asof = panel["dates"][-1]
     lag = (now_kst().date() - asof.date()).days
     if lag > rk.get("max_data_lag_days", 4):
@@ -249,19 +296,30 @@ def phase_decide(cfg, dry):
     dd, halt = account_drawdown(equity, cfg)
     flags["account_halt"] = halt
 
+    flags["recent_exits"] = {c: int(np.searchsorted(panel["dates"].values, np.datetime64(d)))
+                             for c, d in ledger.get("_exits", {}).items()}
     decisions, gate = decide(t, panel, feats, pos, cfg, news=load_news(), flags=flags)
     plan = build_plan(decisions, acct, equity, cfg, asof)
     plan["issues"] = issues
+    approval = cfg.get("execution", {}).get("approval", "auto")
+    plan["approval"] = approval
+    plan["status"] = "승인 대기" if (approval == "manual" and plan["orders"]) else "자동"
     jsave(PLAN, plan)
     if not dry:
         jsave(LEDGER, ledger)
+        os.makedirs(PLANS, exist_ok=True)
+        shutil.copyfile(PLAN, f"{PLANS}/{asof_s}.json")
 
     sent = []
     if isinstance(broker, PaperBroker):
         if issues:
             print("⛔ 안전장치로 모의 주문도 보내지 않음:", *issues, sep="\n  ")
+        elif approval == "manual":
+            print(f"✋ 승인 모드 — 주문 {len(plan['orders'])}건은 승인 후 전송 (autotrade-control → approve)")
         else:
             sent = send(plan, broker, cfg, dry)
+            if not dry:
+                journal(plan, sent, decisions, gate, "paper", "auto")
         if not dry:
             broker.save()
     # 평가액 기록 (같은 날 재실행이면 덮어씀)
@@ -277,16 +335,49 @@ def phase_decide(cfg, dry):
     write_decisions(decisions)
     write_status(cfg, decisions, gate, plan, flags, issues, equity, dd, fills, sent, eq)
     report(decisions, gate, plan, flags, issues, equity, fills)
+    if not dry:
+        alert_decide(cfg, plan, decisions, gate, issues, fills)
     return plan
 
 
-def phase_execute(cfg, dry):
+def alert_decide(cfg, plan, decisions, gate, issues, fills):
+    """알림 — 어떤 사건을 받을지는 alerts.on 에서 고른다."""
+    url = (cfg.get("alerts") or {}).get("page_url") or None
+    if issues:
+        notify.send(cfg, "safety", "\n".join(issues), "⛔ 자동매매 안전장치", urgent=True)
+    if fills:
+        notify.send(cfg, "fill", notify.fmt_fills(fills), "체결 (모의)")
+    sells = [d for d in decisions if d["state"] == SELL]
+    if sells:
+        notify.send(cfg, "sell", "\n".join(f"{d['action']} {d['name']} — {d['reason']}" for d in sells),
+                    "🔴 매도 판단", urgent=True)
+    buys = [d for d in decisions if d["state"] == BUY]
+    if buys:
+        notify.send(cfg, "buy", "\n".join(f"{d['name']} {d['rank']}위" for d in buys), "🟢 매수 판단")
+    if plan.get("status") == "승인 대기":
+        notify.send(cfg, "approval", f"주문 {len(plan['orders'])}건 승인 대기 — GitHub Actions "
+                    f"'autotrade-control' 에서 approve (빼고 싶은 종목코드는 skip 칸에)", "✋ 승인 필요",
+                    urgent=True)
+    notify.send(cfg, "daily", notify.fmt_decisions(plan, decisions, gate, url), "오늘의 판단")
+
+
+def phase_execute(cfg, dry, approve=False, skip=()):
     plan = jload(PLAN, None)
     if not plan:
         print("계획 없음 — decide 먼저 실행"); return
+    manual = cfg.get("execution", {}).get("approval", "auto") == "manual"
+    if manual and not approve:
+        print(f"✋ 승인 모드 — 계획 {plan['date']} 주문 {len(plan['orders'])}건이 승인을 기다립니다. "
+              "autotrade-control 워크플로우에서 approve 를 실행하세요.")
+        return
     broker = make_broker(cfg)
-    if isinstance(broker, PaperBroker):
-        print("paper 브로커는 decide 단계에서 주문까지 끝낸다 — execute 불필요"); return
+    if isinstance(broker, PaperBroker) and not manual:
+        print("paper + 자동 모드는 decide 단계에서 주문까지 끝낸다 — execute 불필요"); return
+    if skip:
+        dropped = [o for o in plan["orders"] if o["code"] in skip]
+        plan["orders"] = [o for o in plan["orders"] if o["code"] not in skip]
+        for o in dropped:
+            print(f"  ⤫ 사용자가 제외: {o['side']} {o['name']}({o['code']})")
     panel_dates = pd.read_csv("data/scores.csv", usecols=["날짜"])["날짜"]
     latest = str(pd.to_datetime(panel_dates).max().date())
     problems = list(plan.get("issues", []))
@@ -300,6 +391,15 @@ def phase_execute(cfg, dry):
                              "broker": broker.name, "side": "-", "code": "-", "ok": False,
                              "msg": " / ".join(problems)}], ORDER_FIELDS)
         return
+    if isinstance(broker, PaperBroker):          # 승인 모드의 모의 계좌 — 다음 decide 때 종가 체결
+        rows = send(plan, broker, cfg, dry)
+        if not dry:
+            broker.save()
+            journal(plan, rows, jload("docs/autotrade.json", {}).get("decisions"), None, "paper",
+                    "approve" if manual else "auto")
+        print(f"[모의] 승인된 주문 {sum(1 for r in rows if r.get('ok'))}건 접수")
+        notify.send(cfg, "fill", f"승인된 모의 주문 {len(rows)}건 접수", "✅ 승인 처리")
+        return
     # 실시간 잔고로 수량 재계산 — 밤사이 수동 매매가 있었을 수 있다
     acct = broker.account()
     for o in plan["orders"]:
@@ -308,6 +408,12 @@ def phase_execute(cfg, dry):
             o["qty"] = min(o["qty"], have)
     plan["orders"] = [o for o in plan["orders"] if o["qty"] > 0]
     rows = send(plan, broker, cfg, dry)
+    if not dry:
+        journal(plan, rows, jload("docs/autotrade.json", {}).get("decisions"), None,
+                broker.name + ("_live" if broker.is_live else ""), "approve" if manual else "auto")
+        bad = [r for r in rows if not r.get("ok")]
+        notify.send(cfg, "fill", "\n".join(f"{'✅' if r.get('ok') else '⚠️'} {r['side']} {r['name']} {r['qty']}주 "
+                                           f"{r.get('msg', '')}" for r in rows), "주문 전송", urgent=bool(bad))
     mode = "실계좌" if broker.is_live else ("모의투자" if getattr(broker, "demo", False) else "DRY-RUN")
     print(f"\n[{mode}] 주문 {len(rows)}건")
     for r in rows:
@@ -337,6 +443,12 @@ def write_status(cfg, decisions, gate, plan, flags, issues, equity, dd, fills, s
     jsave(STATUS, {
         "asof": plan["date"], "generated": now_kst().isoformat(timespec="seconds"),
         "broker": cfg.get("broker"), "live": bool(cfg.get("live_trading")),
+        "approval": plan.get("approval", "auto"), "plan_status": plan.get("status", ""),
+        "paused": bool(flags.get("pause_entries")),
+        "features": (yaml.safe_load(open("config/features.yaml", encoding="utf-8"))
+                     if os.path.exists("config/features.yaml") else {}),
+        "journal": (pd.read_csv(JOURNAL).tail(40).iloc[::-1].fillna("").to_dict("records")
+                    if os.path.exists(JOURNAL) else []),
         "gate": gate, "flags": flags, "issues": issues,
         "equity": equity, "cash": plan["cash"], "drawdown": dd,
         "counts": {s: sum(1 for d in decisions if d["state"] == s) for s in (BUY, HOLD, SELL, WATCH)},
@@ -375,6 +487,8 @@ def main():
     ap.add_argument("--phase", choices=["decide", "execute", "all"], default="decide")
     ap.add_argument("--broker", help="설정 파일의 broker 덮어쓰기")
     ap.add_argument("--dry-run", action="store_true", help="파일 상태를 바꾸지 않고 주문도 보내지 않음")
+    ap.add_argument("--approve", action="store_true", help="승인 모드에서 오늘 계획을 승인")
+    ap.add_argument("--skip", default="", help="승인할 때 뺄 종목코드 (쉼표 구분)")
     a = ap.parse_args()
     cfg = yaml.safe_load(open(CFG, encoding="utf-8"))
     if a.broker:
@@ -382,7 +496,8 @@ def main():
     if a.phase in ("decide", "all"):
         phase_decide(cfg, a.dry_run)
     if a.phase in ("execute", "all"):
-        phase_execute(cfg, a.dry_run)
+        skip = tuple(x.strip().zfill(6) for x in a.skip.split(",") if x.strip())
+        phase_execute(cfg, a.dry_run, a.approve, skip)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>종목 분석</title>
+<link rel="stylesheet" href="ui.css">
+<style>
+.grades { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 8px }
+.grade { background: var(--soft); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 1px }
+.grade b { font-size: 22px; line-height: 1.1 }
+.grade .g-A { color: var(--green) } .grade .g-B { color: var(--blue) } .grade .g-C { color: var(--orange) }
+.grade .g-D, .grade .g-F { color: var(--red) } .grade .g-x { color: var(--faint) }
+.big { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums }
+.freq { font-size: 15px; line-height: 1.6 }
+.freq b { font-size: 17px }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav" aria-label="페이지">
+    <a href="index.html">대시보드</a><a href="autotrade.html">자동매매</a><a class="on" href="stock.html">종목 분석</a>
+    <a href="report.html">성과 보고서</a><a href="features.html">기능 고르기</a>
+  </nav>
+  <div class="row" style="flex-wrap:wrap;justify-content:space-between">
+    <div><h1 id="title">종목 분석</h1><div class="mut" id="sub">불러오는 중…</div></div>
+    <label class="mut" for="pick">종목 <select id="pick"></select></label>
+  </div>
+
+  <section class="card" id="head"></section>
+
+  <section class="card" data-feat="forecast_band">
+    <header><h2>30거래일 뒤 가격 범위</h2><span id="band-badge"></span></header>
+    <div id="band-text" class="freq"></div>
+    <div class="chart" id="c-band"></div>
+    <div class="legend"><span><i style="background:var(--fg)"></i>종가</span><span><i style="background:var(--orange)"></i>20일선</span>
+      <span><i style="background:var(--purple)"></i>200일선</span><span><i style="background:var(--blue);opacity:.35;height:8px"></i>50%·80% 범위</span></div>
+    <p class="guide" id="band-guide"></p>
+  </section>
+
+  <section class="card" data-feat="factor_grades">
+    <header><h2>팩터 성적표</h2><span class="badge b-mut">같은 섹터 안 순위</span></header>
+    <div class="grades" id="grades"></div>
+    <div class="chart" id="c-radar"></div>
+    <p class="guide">A+는 같은 섹터 상위 10%, F는 하위 20%입니다. 점선 육각형이 섹터 중간(50%)입니다. 가중치가 0인 팩터는 순위에 쓰이지 않고 참고로만 보여 줍니다.</p>
+  </section>
+
+  <section class="card" data-feat="contribution">
+    <header><h2>왜 이 순위인가</h2><span class="badge b-ok">종합점수 = 가중합</span></header>
+    <p class="mut" id="contrib-head"></p>
+    <div id="contrib" style="display:flex;flex-direction:column;gap:6px"></div>
+    <p class="guide">막대는 '가중치 × (팩터 점수 − 50)'입니다. 모든 막대를 더하고 50을 더하면 종합점수가 됩니다.</p>
+  </section>
+
+  <section class="card" data-feat="rank_track">
+    <header><h2>이 순위대의 과거 성적</h2><div class="seg" id="rt-seg"><button data-k="test" class="on">2024~</button><button data-k="train">2019~2023</button></div></header>
+    <div class="chart" id="c-rank"></div>
+    <p class="freq" id="rt-text"></p>
+    <p class="guide" id="rt-guide"></p>
+  </section>
+
+  <section class="card" data-feat="stock_record">
+    <header><h2>엔진이 이 종목을 매매한 기록</h2><span class="badge b-ref">가설 성과</span></header>
+    <div id="record"></div>
+  </section>
+
+  <section class="card" data-feat="similar_patterns">
+    <header><h2>비슷했던 과거 차트</h2><span class="badge b-no">미검증 — 예측력 없음</span></header>
+    <div id="analog"></div>
+  </section>
+
+  <section class="card" id="ref-card">
+    <header><h2>참고 지표</h2><span class="badge b-ref">결정에 쓰지 않음</span></header>
+    <div id="ref"></div>
+  </section>
+</div>
+<script src="ui.js"></script>
+<script>
+(async () => {
+  const [A, B, S] = await Promise.all([
+    U.j("analytics.json"),
+    U.j("backtest.json").catch(() => ({})),
+    U.j("autotrade.json").catch(() => ({})),
+    U.feat.load(),
+  ]);
+  const stocks = A.stocks;
+  const codes = Object.keys(stocks).sort((a, b) => stocks[a].rank - stocks[b].rank);
+  const decisions = Object.fromEntries((S.decisions || []).map((d) => [d.code, d]));
+  const pick = U.$("#pick");
+  pick.innerHTML = codes.map((c) => `<option value="${c}">${stocks[c].rank}위 ${U.esc(stocks[c].name)}</option>`).join("");
+  const fromUrl = () => {
+    const h = (location.hash || "").replace(/^#c?/, "");
+    const q = new URLSearchParams(location.search).get("code");
+    return [h, q].find((x) => x && stocks[x]) || codes[0];
+  };
+  U.$("#sub").textContent = `기준일 ${A.asof} · 시장 ${A.regime} · 모든 확률은 같은 조건의 과거 사례 빈도`;
+  pick.addEventListener("change", () => { history.replaceState(null, "", "#c" + pick.value); show(pick.value); });
+  window.addEventListener("hashchange", () => show(fromUrl()));
+
+  const gcls = (g) => (g === "—" ? "g-x" : "g-" + g[0]);
+  let rtKey = "test";
+
+  function show(code) {
+    pick.value = code;
+    const s = stocks[code], d = decisions[code];
+    U.$("#title").textContent = s.name;
+    document.title = `${s.name} 분석`;
+
+    // ── 머리: 엔진 판단 ──
+    const state = d ? `<span class="st st-${d.state}">${d.state}${d.action ? " · " + U.esc(d.action) : ""}</span>` : `<span class="badge b-mut">판단 대상 아님 (21위 이하)</span>`;
+    const need = d && d.need && d.need.length ? `<div class="warn">매수로 넘어가려면: ${d.need.map(U.esc).join(" / ")}</div>` : "";
+    U.$("#head").innerHTML = `
+      <div class="row" style="flex-wrap:wrap;gap:8px">${state}<span class="mut">${s.rank}위 · ${U.esc(s.sector)} · 종합점수 ${U.num(s.score, 1)}</span></div>
+      <div class="row" style="align-items:baseline;gap:10px;flex-wrap:wrap"><span class="big">${U.won(s.close)}</span>
+        <span class="${U.cls(s.ret20)}">20일 ${U.pct(s.ret20)}</span>
+        ${U.ok(s.beta) ? `<span class="mut">베타 ${U.num(s.beta, 2)} · 연변동성 ${U.num(s.vol, 0)}%</span>` : ""}</div>
+      ${d ? `<p class="mut">${U.esc(d.reason)}</p>` : ""}${need}`;
+
+    // ── 예측 밴드 ──
+    const b = s.band, cal = A.band_calibration;
+    U.$("#band-badge").innerHTML = U.ok(cal.cover80) && Math.abs(cal.cover80 - 80) < 5
+      ? `<span class="badge b-ok">검증됨 · 80% 범위 적중 ${Math.round(cal.cover80)}%</span>` : `<span class="badge b-ref">참고</span>`;
+    if (b) {
+      U.$("#band-text").innerHTML = `과거에 <b>${U.esc(b.cell)}</b>에 있던 종목들을 보면, 30거래일 뒤 가격은
+        <b>10번 중 8번</b> ${U.won(b.price[0])} ~ ${U.won(b.price[4])} (${U.pct(b.ret[0], 0)} ~ ${U.pct(b.ret[4], 0)}) 사이였고,
+        <b>절반</b>은 ${U.won(b.price[1])} ~ ${U.won(b.price[3])} 사이였습니다. 가운데 값은 ${U.won(b.price[2])} (${U.pct(b.ret[2], 0)})입니다.`;
+      U.$("#band-guide").textContent = `범위 폭은 이 종목의 최근 20일 변동성(30일 환산 ±${b.sigma30}%)에 맞춰 늘리거나 줄였습니다. ` +
+        `2019~2023년 자료로 만든 범위를 2024년 이후 ${U.num(cal.n)}건에 대 보니 80% 범위가 ${cal.cover80}%, 50% 범위가 ${cal.cover50}%를 담았습니다. ` +
+        `범위가 넓다는 건 그만큼 모른다는 뜻입니다 — 가운데 값 하나를 목표가처럼 쓰지 마세요.`;
+      const h = s.hist, H = 15, n0 = h.c.length;
+      const labels = h.d.concat(Array.from({ length: H }, (_, k) => `+${(k + 1) * 2}일`));
+      const fut = (q) => Array(n0 - 1).fill(null).concat([s.close], Array.from({ length: H }, (_, k) => s.close * (1 + (q / 100) * Math.sqrt((k + 1) / H))));
+      const pad = (a) => a.concat(Array(H).fill(null));
+      U.line(U.$("#c-band"), {
+        labels, h: 240, aria: "가격과 30일 예측 범위",
+        series: [{ name: "종가", data: pad(h.c), color: "var(--fg)", width: 2 },
+                 { name: "20일선", data: pad(h.ma20), color: "var(--orange)", width: 1.5 },
+                 { name: "200일선", data: pad(h.ma200), color: "var(--purple)", width: 1.5 },
+                 { name: "범위 가운데", data: fut(b.ret[2]), color: "var(--blue)", width: 1.5, dash: "4 3" }],
+        bands: [{ name: "80% 범위", lo: fut(b.ret[0]), hi: fut(b.ret[4]), color: "var(--blue)", opacity: 0.13 },
+                { name: "50% 범위", lo: fut(b.ret[1]), hi: fut(b.ret[3]), color: "var(--blue)", opacity: 0.2 }],
+        yfmt: (v) => U.num(v), xfmt: (x) => (x.startsWith("+") ? x : x.slice(2, 7)),
+      });
+    } else {
+      U.$("#band-text").textContent = "변동성 자료가 부족해 범위를 계산하지 못했습니다.";
+      U.$("#c-band").innerHTML = "";
+    }
+
+    // ── 팩터 성적표 ──
+    const fx = A.factors.map((f) => ({ ...f, ...(s.grades[f.key] || {}) }));
+    U.$("#grades").innerHTML = fx.map((f) => `<div class="grade"><span class="small mut">${U.esc(f.label)}${f.weight ? ` · ${Math.round(f.weight * 100)}%` : " · 참고"}</span>
+      <b class="${gcls(f.grade)}">${U.esc(f.grade)}</b><span class="small mut">${f.no_data ? "자료 없음(중립 50)" : `섹터 ${U.num(f.sector_pct)}% · 전체 ${U.num(f.market_pct)}%`}</span></div>`).join("");
+    U.radar(U.$("#c-radar"), fx.filter((f) => f.weight > 0).map((f) => ({ label: f.label, value: f.no_data ? 50 : f.sector_pct, nodata: f.no_data })));
+
+    // ── 기여도 ──
+    const items = (s.contrib || []).slice().sort((a, b) => b.contrib - a.contrib);
+    const tot = items.reduce((a, x) => a + x.contrib, 0);
+    U.$("#contrib-head").innerHTML = `중립 50점에서 시작해 ${items.map((x) => `${U.esc(x.label)} ${x.contrib > 0 ? "+" : ""}${x.contrib.toFixed(1)}`).join(", ")} → <b>${(50 + tot).toFixed(1)}점</b>`
+      + (A.flow_no_data ? ` <span class="badge b-no">외국인 수급 자료 끊김 — 전 종목 중립</span>` : "");
+    U.contrib(U.$("#contrib"), items.map((x) => ({ label: x.label, sub: `가중 ${Math.round(x.weight * 100)}% · ${U.num(x.score, 0)}점`, value: x.contrib, faded: x.no_data })));
+
+    // ── 순위 성적표 ──
+    drawRank(s);
+
+    // ── 종목별 엔진 기록 ──
+    const r = (B.by_stock || {})[code];
+    U.$("#record").innerHTML = r ? `
+      <p class="freq">2019년 이후 엔진이 이 종목을 <b>${r.n}번</b> 사고팔았고 그중 <b>${Math.round(r.n * r.win / 100)}번</b> 이익이었습니다.
+        평균 ${U.pct(r.avg)}, 가운데 값 ${U.pct(r.med)}, 평균 ${r.hold}거래일 보유 · 마지막 청산 ${r.last}</p>
+      <p class="guide">비용(왕복 0.3%)을 뺀 가설 성과입니다. 평균이 가운데 값보다 크면 소수의 큰 이익이 평균을 끌어올린 것입니다. ${r.n < 10 ? "표본이 10번 미만이라 우연의 몫이 큽니다." : ""}</p>`
+      : `<p class="mut">이 기간에 엔진이 이 종목을 산 적이 없습니다.</p>`;
+
+    // ── 유사 패턴 ──
+    const pv = A.pattern_validation, an = s.analog;
+    U.$("#analog").innerHTML = `<div class="warn">이 방식은 검증에서 탈락했습니다. 2024년 이후 ${U.num(pv.n)}건에 대 보니 방향 적중 ${pv.hit}%로,
+        무조건 '오른다'고 했을 때(${pv.base_up}%)보다 낮았습니다 (순위상관 ${pv.ic}). 기록으로만 보세요.</div>` +
+      (an ? `<p class="freq">최근 60일 모양이 가장 비슷한 과거 20개 구간(평균 유사도 ${an.sim}) 중 <b>${Math.round(an.up / 5)}개</b>가 30일 뒤 올랐고, 가운데 값은 ${U.pct(an.median)}였습니다.</p>
+        <div class="scroll"><table><tr><th>비슷했던 구간</th><th>날짜</th><th>유사도</th><th>30일 뒤</th></tr>
+        ${an.cases.map((c) => `<tr><td>${U.esc(c.name)}</td><td>${c.date}</td><td>${c.sim}</td><td class="${U.cls(c.ret)}">${U.pct(c.ret)}</td></tr>`).join("")}</table></div>`
+        : `<p class="mut">30위 밖 종목은 계산하지 않습니다.</p>`);
+
+    // ── 참고 지표 ──
+    const ref = d && d.ref ? d.ref.items : [];
+    U.$("#ref-card").hidden = !ref.length;
+    U.$("#ref").innerHTML = `<div class="list">${ref.map((x) => `<div class="row"><span class="grow">${x.good ? "＋" : "－"} ${U.esc(x.label)} <span class="small mut">${U.esc(x.source)}</span></span><b class="num">${U.esc(x.value)}</b></div>`).join("")}</div>
+      <p class="guide">논문·서적에서 가져왔지만 이 데이터 검증에서 매매 성과를 개선하지 못한 지표입니다(STRATEGY.md). 판단에는 쓰지 않습니다.</p>`;
+    U.feat.apply();
+  }
+
+  function drawRank(s) {
+    const rows = A.rank_track[rtKey];
+    const mine = Math.min(9, Math.floor((s.rank - 1) / 10));
+    U.bars(U.$("#c-rank"), {
+      labels: rows.map((r) => r.bucket.replace("위", "")), values: rows.map((r) => r.excess), h: 200, aria: "순위 구간별 시장 대비 초과수익",
+      yfmt: (v) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`,
+      color: (v, i) => (i === mine ? "var(--blue)" : v >= 0 ? "var(--green)" : "var(--red)"),
+    });
+    const r = rows[mine];
+    U.$("#rt-text").innerHTML = `<b>${r.bucket}</b>(파란 막대)에 있던 종목은 30거래일 뒤 시장보다 평균 <b class="${U.cls(r.excess)}">${U.pct(r.excess, 1)}p</b>였고,
+      <b>${U.num(r.n)}건 중 ${U.num(Math.round(r.n * r.beat / 100))}건</b>(${Math.round(r.beat)}%)이 시장을 이겼습니다. 겹치지 않는 독립 표본은 ${r.n_eff}개입니다.`;
+    U.$("#rt-guide").textContent = `시장을 이긴 비율이 50% 아래인데 평균이 플러스인 것은, 소수 종목의 큰 상승이 평균을 끌어올리기 때문입니다. ` +
+      `순위 순서가 수익 순서와 맞는 정도(순위상관): 2019~2023 ${A.rank_track.train_spearman}, 2024~ ${A.rank_track.test_spearman}. 두 구간 모두에서 확실한 건 1~10위뿐입니다.`;
+  }
+  U.$("#rt-seg").addEventListener("click", (e) => {
+    const k = e.target.dataset.k; if (!k) return;
+    rtKey = k;
+    U.$("#rt-seg").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.k === k));
+    drawRank(stocks[pick.value]);
+  });
+  show(fromUrl());
+})().catch((e) => { document.getElementById("sub").textContent = "자료를 불러오지 못했습니다: " + e.message; });
+</script>
+</body>
+</html>

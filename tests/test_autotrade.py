@@ -139,6 +139,59 @@ def test_real_account_needs_three_keys():
                 os.environ[k] = v
 
 
+def test_pause_blocks_buys_not_sells():
+    cfg = open_cfg()
+    c1 = top(1)[0]
+    px = PANEL["close"].iloc[T]
+    pos = {c1: {"shares": 10, "avg": px[c1] / 0.85, "entry_t": T - 5, "peak": px[c1] / 0.85, "partial_done": False}}
+    dec, _ = decide(T, PANEL, FEATS, pos, cfg, flags={"flow_stale": True, "pause_entries": True})
+    assert not any(d["state"] == BUY for d in dec)
+    assert {d["code"]: d for d in dec}[c1]["state"] == SELL          # 손절은 일시정지와 무관
+    w = [d for d in dec if d["state"] == WATCH and d["rank"] <= 10]
+    assert w and all(any("일시정지" in n for n in d["need"]) for d in w)
+
+
+def test_cooldown_rule():
+    cfg = open_cfg()
+    cfg["strategy"]["cooldown_days"] = 10
+    c1 = top(1)[0]
+    dec, _ = decide(T, PANEL, FEATS, {}, cfg, flags={"flow_stale": True, "recent_exits": {c1: T - 3}})
+    d = {x["code"]: x for x in dec}[c1]
+    assert d["state"] == WATCH and any("재진입" in n or "청산 후" in n for n in d["need"])
+    cfg["strategy"]["cooldown_days"] = 0
+    dec, _ = decide(T, PANEL, FEATS, {}, cfg, flags={"flow_stale": True, "recent_exits": {c1: T - 3}})
+    assert {x["code"]: x for x in dec}[c1]["state"] == BUY
+
+
+def test_manual_approval_holds_orders(tmp=None):
+    """승인 모드: 승인 없이 execute 하면 아무 주문도 나가지 않는다."""
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        old = (A.PLAN, A.ORDERS)
+        A.PLAN, A.ORDERS = os.path.join(d, "plan.json"), os.path.join(d, "orders.csv")
+        json.dump({"date": "2026-10-23", "orders": [{"side": "buy", "code": "005930", "name": "삼성전자",
+                                                      "qty": 1, "kind": "limit", "price": 1000}]},
+                  open(A.PLAN, "w"))
+        try:
+            cfg = copy.deepcopy(CFG)
+            cfg["execution"]["approval"] = "manual"
+            A.phase_execute(cfg, dry=False, approve=False)
+            assert not os.path.exists(A.ORDERS)
+        finally:
+            A.PLAN, A.ORDERS = old
+
+
+def test_notify_disabled_is_silent():
+    import notify
+    assert notify.send({"alerts": {"enabled": False}}, "sell", "x") == []
+    assert notify.send({"alerts": {"enabled": True, "on": ["buy"]}}, "sell", "x") == []
+    # 키가 없으면 채널이 있어도 보내지 않는다 (네트워크 호출 없음)
+    for k in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "NTFY_TOPIC"):
+        os.environ.pop(k, None)
+    assert notify.send({"alerts": {"enabled": True, "on": ["sell"], "channels": ["telegram", "ntfy"]}},
+                       "sell", "x") == []
+
+
 if __name__ == "__main__":
     for k, fn in list(globals().items()):
         if k.startswith("test_"):

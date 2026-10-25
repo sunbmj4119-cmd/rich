@@ -247,8 +247,16 @@ def decide(t, panel, feats, positions, cfg, news=None, flags=None):
                 checks.append({"label": "외국인 20일 순매도 아님", "ok": not (np.isfinite(fs) and fs < 0),
                                "value": f"{fs*1e4:+.1f}bp(시총대비)" if np.isfinite(fs) else "자료없음",
                                "tier": "검증됨"})
+        cd = int(st.get("cooldown_days", 0) or 0)
+        ex_t = (flags.get("recent_exits") or {}).get(c)
+        if cd and ex_t is not None and t - ex_t < cd:
+            checks.append({"label": f"재진입 대기 {cd}거래일", "ok": False,
+                           "value": f"청산 후 {t - ex_t}일", "tier": "선택 규칙"})
         checks.append({"label": "중대 악재 공시 없음", "ok": not vetoed,
                        "value": vetoed[0][:40] if vetoed else f"최근 {lb}일 없음", "tier": "안전장치"})
+        if flags.get("pause_entries"):
+            checks.append({"label": "신규매수 일시정지 해제", "ok": False,
+                           "value": "config/PAUSE — 사용자가 신규 매수를 멈춤", "tier": "안전장치"})
         if flags.get("account_halt"):
             checks.append({"label": "계좌 서킷브레이커", "ok": False, "value": flags["account_halt"],
                            "tier": "안전장치"})
@@ -274,6 +282,10 @@ def decide(t, panel, feats, positions, cfg, news=None, flags=None):
                                 else "수급 데이터 갱신 (collect_flows)")
                 elif "공시" in x["label"]:
                     need.append(f"악재 공시 후 {lb}일 경과")
+                elif x["label"].startswith("재진입 대기"):
+                    need.append(f"청산 후 {cd}거래일 경과 (현재 {t - ex_t}일)")
+                elif "일시정지" in x["label"]:
+                    need.append("사용자가 일시정지 해제 (autotrade-control → resume)")
                 elif x["label"] == "빈 자리":
                     need.append("보유 종목 매도로 자리 생김")
                 else:

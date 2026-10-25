@@ -32,6 +32,9 @@ strategy:
   crash_gate: true
   crash_rebound_window: 20 # 지수가 최근 N일 최저점 대비
   crash_rebound_min: 0.05  #   이만큼 반등해야 '바닥 확인'
+  # 선택 규칙 — 전량 청산한 종목을 N거래일 동안 다시 사지 않음 (Freqtrade CooldownPeriod)
+  #   0 = 끔. 검증 결과는 docs/STRATEGY.md '선택 규칙' 참고
+  cooldown_days: 0
 
 # ── 안전장치 (수익을 위한 규칙이 아니라 사고를 막는 규칙 — 백테스트에 없음) ──
 risk:
@@ -50,7 +53,21 @@ risk:
   force_sell_events: "상장폐지|관리종목|거래정지|감사의견\\s?거절|횡령|배임|분식"
 
 execution:
+  # auto   = 판단대로 자동 주문
+  # manual = 계획만 만들고 '승인 대기' 알림 → GitHub 앱/웹에서 autotrade-control 워크플로우의
+  #          approve 실행 시에만 주문 (빼고 싶은 종목은 skip 칸에 종목코드)
+  approval: auto
   # 신호는 장 마감 후(17:00) 만들고, 다음 거래일에 체결한다 (백테스트 = t+1 종가 체결).
   buy_order: limit         # limit = 전일종가×(1+buy_slippage) 지정가 · market = 시장가
   buy_slippage: 0.01
   sell_order: market       # 손절·트레일·이탈 매도는 체결이 우선 → 시장가
+
+# ── 알림 (src/notify.py) — 키는 GitHub Secrets 에 넣는다 ──
+#   텔레그램: TELEGRAM_BOT_TOKEN · TELEGRAM_CHAT_ID   /   ntfy 앱: NTFY_TOPIC
+alerts:
+  enabled: false
+  channels: [telegram, ntfy]
+  # sell=매도 판단 · buy=매수 판단 · fill=체결/주문 결과 · safety=안전장치 발동
+  # approval=승인 대기 · daily=매일 요약 (주문 없어도)
+  on: [sell, buy, fill, safety, approval, daily]
+  page_url: ""               # 대시보드 주소 — 알림 끝에 링크로 붙는다

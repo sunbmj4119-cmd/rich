@@ -32,9 +32,14 @@ jobs:
           KIS_ACCOUNT: ${{ secrets.KIS_ACCOUNT }}
           KIS_ACCOUNT_PRODUCT: ${{ secrets.KIS_ACCOUNT_PRODUCT }}
           AUTOTRADE_CONFIRM: ${{ vars.AUTOTRADE_CONFIRM }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          DRY: ${{ inputs.dry_run }}
+          EVENT: ${{ github.event_name }}
         run: |
           FLAG=""
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then FLAG="--dry-run"; fi
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "$DRY" = "true" ]; then FLAG="--dry-run"; fi
           echo "## 🤖 주문 실행" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           python src/autotrader.py --phase execute $FLAG 2>&1 | tee -a $GITHUB_STEP_SUMMARY

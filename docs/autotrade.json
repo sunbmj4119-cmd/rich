@@ -1,13 +1,34 @@
 {
  "asof": "2026-10-23",
- "generated": "2026-10-25T11:54:38+09:00",
+ "generated": "2026-10-25T13:33:11+09:00",
  "broker": "paper",
  "live": false,
+ "approval": "auto",
+ "plan_status": "자동",
+ "paused": false,
+ "features": {
+  "display": {
+   "factor_grades": true,
+   "contribution": true,
+   "forecast_band": true,
+   "rank_track": true,
+   "stock_record": true,
+   "similar_patterns": false,
+   "sector_heatmap": true,
+   "market_score": true,
+   "backtest_report": true,
+   "strategy_simulator": true,
+   "live_tracking": true,
+   "trade_journal": true,
+   "metric_guide": true
+  }
+ },
+ "journal": [],
  "gate": {
   "regime": "급락장",
-  "trend": -0.11916319184244994,
+  "trend": -0.11916319184244972,
   "breadth": 0.11,
-  "dd": -0.24149183063176438,
+  "dd": -0.24149183063176427,
   "rebound": 0.0,
   "open": false,
   "reason": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
@@ -17,7 +38,8 @@
   "flow_last": "2026-08-27",
   "flow_stale": true,
   "flow_gap": 37,
-  "account_halt": null
+  "account_halt": null,
+  "recent_exits": {}
  },
  "issues": [],
  "equity": 10000000.0,

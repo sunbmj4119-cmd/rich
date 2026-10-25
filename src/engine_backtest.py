@@ -28,13 +28,15 @@ WARMUP = 260
 COST = 0.0015
 
 
-def run(panel, feats, cfg, d0, d1):
+def run(panel, feats, cfg, d0, d1, detail=False):
+    """detail=True 면 일별 평가액·노출도·거래 상세(종목·날짜·MAE/MFE)를 raw 로 함께 돌려준다 (tearsheet.py 용)."""
     close = panel["close"].values
     codes = panel["codes"]
     ci = {c: i for i, c in enumerate(codes)}
     cash, pos, pending = 1.0, {}, []
-    curve, trades, states = [], [], {"매수": 0, "유지": 0, "매도": 0, "관망": 0}
+    curve, expo, trades, states = [], [], [], {"매수": 0, "유지": 0, "매도": 0, "관망": 0}
     gate_closed = 0
+    exits = {}                                   # 종목 → 마지막 전량청산일 (재진입 대기 규칙용)
     for t in range(d0, d1):
         # 1) 어제 판단한 주문을 오늘 종가로 체결
         eq_now = cash + sum(q["shares"] * close[t, ci[c]] for c, q in pos.items()
@@ -48,12 +50,15 @@ def run(panel, feats, cfg, d0, d1):
                 sh = q["shares"] * o["fraction"]
                 cash += sh * px * (1 - COST)
                 trades.append({"ret": px * (1 - COST) / (q["avg"] * (1 + COST)) - 1,
-                               "held": t - q["entry_t"], "why": o["why"], "frac": o["fraction"]})
+                               "held": t - q["entry_t"], "why": o["why"], "frac": o["fraction"],
+                               "code": o["code"], "t0": q["entry_t"], "t1": t, "w": q["w0"],
+                               "mae": q["low"] / q["avg"] - 1, "mfe": q["peak"] / q["avg"] - 1})
                 q["shares"] -= sh
                 if o["fraction"] < 1:
                     q["partial_done"] = True
                 if q["shares"] <= 1e-12 or o["fraction"] >= 1:
                     pos.pop(o["code"])
+                    exits[o["code"]] = t
         for o in pending:
             px = close[t, ci[o["code"]]]
             if o["side"] != "buy" or not np.isfinite(px) or o["code"] in pos:
@@ -63,27 +68,30 @@ def run(panel, feats, cfg, d0, d1):
                 continue
             sh = amt / (px * (1 + COST))
             cash -= amt
-            pos[o["code"]] = {"shares": sh, "avg": px, "entry_t": t, "peak": px,
-                              "partial_done": False}
+            pos[o["code"]] = {"shares": sh, "avg": px, "entry_t": t, "peak": px, "low": px,
+                              "partial_done": False, "w0": amt / eq_now if eq_now else 0}
         pending = []
         # 2) 고점 갱신 & 평가
         for c, q in pos.items():
             px = close[t, ci[c]]
             if np.isfinite(px):
                 q["peak"] = max(q["peak"], px)
+                q["low"] = min(q["low"], px)
         eq = cash + sum(q["shares"] * (close[t, ci[c]] if np.isfinite(close[t, ci[c]]) else q["avg"])
                         for c, q in pos.items())
         curve.append(eq)
+        expo.append(1 - cash / eq if eq else 0)
         if t >= d1 - 1:
             break
         # 3) 오늘 장 마감 정보로 판단 → 내일 체결
-        dec, gate = decide(t, panel, feats, pos, cfg)
+        dec, gate = decide(t, panel, feats, pos, cfg, flags={"recent_exits": exits})
         gate_closed += not gate["open"]
         for d in dec:
             states[d["state"]] += 1
             if d["state"] == SELL:
                 pending.append({"side": "sell", "code": d["code"], "fraction": d["fraction"],
-                                "why": d["reason"].split(" ")[0]})
+                                "why": ("부분익절" if d["action"] == "부분익절"
+                                        else d["reason"].split(" ")[0])})
             elif d["state"] == BUY:
                 pending.append({"side": "buy", "code": d["code"]})
     c = np.array(curve)
@@ -103,6 +111,7 @@ def run(panel, feats, cfg, d0, d1):
         "exits": why, "states": states,
         "gate_closed_days": int(gate_closed),
         "curve": [round(float(x), 4) for x in c[::5]],
+        **({"raw": {"curve": c, "expo": np.array(expo), "trades": trades, "d0": d0}} if detail else {}),
     }
 
 

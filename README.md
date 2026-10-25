@@ -23,6 +23,24 @@
 - 기본은 **모의계좌**. 실계좌는 `broker: kis_real` + `live_trading: true` + `AUTOTRADE_CONFIRM=I_UNDERSTAND` 셋 다 필요.
   즉시 정지: `config/KILL` 파일.
 
+### 🧰 시중 프로그램에서 가져온 기능 (2026-10 추가) — [`docs/PLATFORM_RESEARCH.md`](docs/PLATFORM_RESEARCH.md)
+
+국내외 32곳(키움·토스·젠포트·알파스퀘어·초이스스탁·라씨·Danelfin·Zacks·TradingView·Freqtrade 등)을 조사해
+쓸 만한 것을 이 데이터로 만들고 **검증 결과를 붙였습니다.** 고르는 화면은 `docs/features.html` (대시보드 → 🤖 → 기능 고르기).
+
+| 화면 | 내용 |
+|---|---|
+| `docs/stock.html` 종목 분석 | 30일 가격 범위(검증: 80% 범위가 실제 79.8% 적중) · 팩터 성적표 A+~F · 점수 기여도 · 순위대 과거 성적 · 종목별 엔진 매매 기록 · 유사 차트(검증 탈락, 기본 꺼짐) |
+| `docs/report.html` 성과 보고서 | 핵심 지표+해설 · 자산/수중 차트 · 월별 히트맵 · 최악 낙폭 5개 · MAE · 거래 목록 · 실전(모의) 추적 기대 범위 · **설정 바꿔보기 72개 조합** |
+| `docs/autotrade.html` 자동매매 | 4상태 판단 · 시장 점수 · 섹터 히트맵 · 승인 대기/일시정지 표시 · 자동 매매일지 |
+| `docs/features.html` 기능 고르기 | 32곳 비교 · 예측값 표시 원칙 · 기능별 실제 미리보기와 켜기/끄기 · 설정 YAML 복사 |
+
+- **승인 후 주문**: `execution.approval: manual` → 매일 계획만 만들고 알림, GitHub 앱의 Actions → `autotrade-control` → `approve` (뺄 종목은 `skip`).
+- **원격 조종** `autotrade-control`: `pause`(신규 매수만 중단) · `resume` · `kill`(전부 중단) · `unkill` · `approve` · `status`.
+- **알림**: 텔레그램(`TELEGRAM_BOT_TOKEN`·`TELEGRAM_CHAT_ID`) 또는 ntfy 앱(`NTFY_TOPIC`) Secrets + `alerts.enabled: true`.
+- 계획은 날짜별로 `data/autotrade/plans/`에 남고(사후 수정 금지), 주문마다 이유가 `data/autotrade/journal.csv`에 쌓입니다.
+- 검증에서 **탈락**: 유사 차트 패턴(방향 적중 47.6% < '무조건 상승' 54.2%), 재진입 대기(train Sharpe 0.76→0.27).
+
 ## 📱 화면 보는 법
 
 ### 🟢 쉽게 보기 / 🔬 자세히 보기
