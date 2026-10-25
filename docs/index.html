@@ -22,7 +22,6 @@
 .gate .row { justify-content: space-between; font-size: 14px }
 .gate .meter > i { background: var(--up) }
 .gate.open .meter > i { background: var(--green) }
-.acct-sub { font-size: 14px; color: var(--mut) }
 .search { width: 100%; font: inherit; font-size: 15px; padding: 11px 14px; border-radius: 12px; border: 0; background: var(--soft); color: var(--fg) }
 .search:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px }
 .held-tag { font-size: 11px; font-weight: 700; color: var(--blue); background: var(--down-bg); border-radius: 5px; padding: 1px 6px }
@@ -53,7 +52,7 @@
     <div class="col">
       <!-- 오늘 할 일 -->
       <section class="card todo" id="todo-card">
-        <header><h2>오늘 할 일</h2><span class="mut" id="todo-n"></span></header>
+        <header><h2>자동매매가 할 일</h2><span class="mut" id="todo-n"></span></header>
         <div id="todo"><div class="skeleton"></div></div>
       </section>
 
@@ -71,12 +70,6 @@
     </div>
 
     <div class="col">
-      <!-- 내 계좌 -->
-      <section class="card" id="acct">
-        <header><span class="eyebrow">내 계좌 · 직접 매매</span><a class="mut" href="trade.html">기록 ›</a></header>
-        <div id="acct-body"></div>
-      </section>
-
       <!-- 자동매매 -->
       <a class="card" href="autotrade.html" id="auto" style="color:inherit">
         <header><span class="eyebrow">자동매매 · <span id="auto-broker">모의 계좌</span></span><span class="chev" aria-hidden="true"></span></header>
@@ -92,13 +85,20 @@
         <p class="mut" id="short-note" style="font-size:13.5px"></p>
       </a>
 
+      <!-- 학습·진화 -->
+      <a class="card" href="report.html#evo" id="evo" style="color:inherit" hidden>
+        <header><span class="eyebrow">학습·진화 · 2시간마다 쉬지 않고</span><span class="chev" aria-hidden="true"></span></header>
+        <div class="minis" id="evo-minis"></div>
+        <p class="mut" id="evo-note" style="font-size:13.5px"></p>
+      </a>
+
       <!-- 종목 순위 -->
       <section class="card" id="rank">
         <header><h2>종목 순위</h2><span class="mut small" id="rank-sub"></span></header>
         <input class="search" id="q" type="search" placeholder="종목 이름 또는 섹터 검색" aria-label="종목 검색" autocomplete="off">
         <div class="chips" id="rank-chips" role="group" aria-label="목록 고르기">
           <button class="chip on" type="button" data-k="all">전체</button>
-          <button class="chip" type="button" data-k="held">보유</button>
+          <button class="chip" type="button" data-k="held">자동매매 보유</button>
           <button class="chip" type="button" data-k="up">20일 상승</button>
           <button class="chip" type="button" data-k="down">20일 하락</button>
         </div>
@@ -108,7 +108,7 @@
   </div>
 
   <p class="foot">
-    <a href="classic.html">이전 대시보드 보기</a> · 확률·등급표·시나리오 같은 자세한 표는 이전 화면에 있습니다<br>
+    완전 자동 — 판단·주문(모의)·학습·진화를 사람 손 없이 돌립니다 · 매일 17시 판단 · 2시간마다 진화<br>
     과거 통계는 미래를 보장하지 않습니다 · 투자 판단과 책임은 본인에게 있습니다
   </p>
 </div>
@@ -123,9 +123,13 @@ U.nav("index.html");
     U.$("#lead").textContent = "잠시 뒤 새로고침해 주세요. (" + e.message + ")";
     U.$("#grid").hidden = true; return;
   }
+  let S = null, EV = null, SE = null;
   try { A = await U.j("autotrade.json"); } catch { A = null; }
+  try { S = await U.j("short.json"); } catch { S = null; }
+  try { EV = await U.j("evolve.json"); } catch { EV = null; }
+  try { SE = await U.j("short_evo.json"); } catch { SE = null; }
 
-  const m = D.market, items = D.items, pf = D.portfolio || {}, rg = (D.regime || {}).current || {};
+  const m = D.market, items = D.items, rg = (D.regime || {}).current || {};
   const byCode = Object.fromEntries(items.map((i) => [i.code, i]));
   const link = (c) => `stock.html?code=${encodeURIComponent(c)}`;
   const WD = "일월화수목금토";
@@ -144,35 +148,34 @@ U.nav("index.html");
       <p class="guide">수집은 매일 오후 5시에 자동으로 다시 시도합니다. 해결되면 이 표시는 사라집니다.</p>`));
   } else { fr.innerHTML = `<i class="dot d-ok"></i>데이터 최신`; fr.disabled = true; }
 
-  // ── 신호 이름 (이모지 없이) ──
-  const SIG = { "🔴손절": ["매도", "손절선 넘음"], "🔵매도": ["매도", "매도 신호"], "🟠부분익절": ["매도", "일부 익절"],
-                "🟢유지": ["유지", "보유 유지"], "⏳보유": ["유지", "최소 보유기간"], "🟡매수": ["매수", "매수 후보"] };
-  const held = items.filter((i) => i.held).sort((a, b) => (a.pnl ?? 0) - (b.pnl ?? 0));
-  const exits = held.filter((i) => (SIG[i.signal] || [])[0] === "매도");
+  // ── 자동매매 계좌들의 보유·주문 (사람이 직접 매매한 기록은 쓰지 않는다) ──
   const g = A && A.gate, decs = (A && A.decisions) || [];
   const eSell = decs.filter((x) => x.state === "매도"), eBuy = decs.filter((x) => x.state === "매수");
+  const heldSet = new Set(decs.filter((x) => x.state === "유지" || x.state === "매도").map((x) => x.code));
+  ((S && S.account && S.account.positions) || []).forEach((p) => heldSet.add(p.code));
+  items.forEach((i) => { i.auto_held = heldSet.has(i.code); });
+  const sOrders = (S && S.plan && S.plan.orders) || [];
 
-  // ── 한 줄 결론 + 오늘 할 일 ──
+  // ── 한 줄 결론 + 오늘 할 일 (모두 자동으로 처리됨 — 확인용) ──
   const todo = [];
-  exits.forEach((i) => todo.push({ st: "매도", t: i.name, s: `${SIG[i.signal][1]} · ${i.reason || U.pct(i.pnl)}`, href: link(i.code) }));
-  eSell.forEach((x) => todo.push({ st: "매도", t: x.name, s: `자동매매(모의) · ${x.reason}`, href: "autotrade.html" }));
-  eBuy.forEach((x) => todo.push({ st: "매수", t: x.name, s: `자동매매(모의) · ${x.rank}위 · ${x.reason}`, href: "autotrade.html" }));
-  if (g && !g.open) todo.push({ st: "관망", t: "신규 매수 쉬기", s: `${g.regime} — ${g.need}이면 다시 삽니다`, href: "autotrade.html" });
+  eSell.forEach((x) => todo.push({ st: "매도", t: x.name, s: `30일 자동매매 · ${x.reason}`, href: "autotrade.html" }));
+  eBuy.forEach((x) => todo.push({ st: "매수", t: x.name, s: `30일 자동매매 · ${x.rank}위 · ${x.reason}`, href: "autotrade.html" }));
+  sOrders.forEach((o) => todo.push({ st: o.side === "buy" ? "매수" : "매도", t: o.name, s: `단기 모의 · ${o.session === "open" ? "시가" : "종가"} ${o.qty.toLocaleString("ko-KR")}주`, href: "short.html" }));
+  if (g && !g.open) todo.push({ st: "관망", t: "30일 자동매매 신규 매수 쉬기", s: `${g.regime} — ${g.need}이면 다시 삽니다`, href: "autotrade.html" });
   if (A && A.flags && A.flags.flow_stale) todo.push({ st: "관망", t: "수급 데이터 확인", s: `외국인 수급이 ${A.flags.flow_gap}거래일 낡아 매수를 보류합니다`, href: "autotrade.html" });
 
+  const nb = eBuy.length + sOrders.filter((o) => o.side === "buy").length, ns = eSell.length + sOrders.filter((o) => o.side === "sell").length;
   let head, lead;
-  if (exits.length) { head = `보유 종목 ${exits.length}개를 정리할 때입니다`; lead = `${exits.map((i) => i.name).join(", ")} — 미리 정한 손절·매도 규칙에 걸렸습니다. 규칙은 감정이 끼기 전에 정한 것이니 그대로 따르는 편이 낫습니다.`; }
-  else if (eSell.length || eBuy.length) { head = `자동매매가 오늘 ${eBuy.length ? `${eBuy.length}종목 매수` : ""}${eBuy.length && eSell.length ? " · " : ""}${eSell.length ? `${eSell.length}종목 매도` : ""}합니다`; lead = "모의 계좌에서 내일 아침 주문합니다."; }
-  else if (g && !g.open) { head = "지금은 새로 사지 않고 기다리는 구간입니다"; lead = `시장이 ${g.regime}입니다. ${g.need}하면 다시 사기 시작합니다. 그 전까지는 순위만 지켜보세요.`; }
-  else if (todo.length === 0) { head = "오늘은 할 일이 없습니다"; lead = "보유 종목은 규칙 안에 있고, 새로 살 신호도 없습니다."; }
-  else { head = "오늘 확인할 것이 있습니다"; lead = ""; }
+  if (nb || ns) { head = `내일 아침 ${nb ? `${nb}건 매수` : ""}${nb && ns ? " · " : ""}${ns ? `${ns}건 매도` : ""}를 자동으로 냅니다`; lead = "모두 모의 계좌 주문입니다. 따로 하실 일은 없습니다."; }
+  else if (g && !g.open) { head = "지금은 새로 사지 않고 기다리는 구간입니다"; lead = `시장이 ${g.regime}입니다. ${g.need}하면 자동으로 다시 사기 시작합니다.`; }
+  else { head = "오늘은 주문이 없습니다"; lead = "보유는 규칙 안에 있고, 새로 살 신호도 없습니다. 모델 학습·진화는 계속 돌고 있습니다."; }
   U.$("#headline").textContent = head;
   U.$("#lead").textContent = lead;
   U.$("#todo-n").textContent = todo.length ? `${todo.length}건` : "";
   U.$("#todo").innerHTML = todo.length
     ? todo.map((x) => `<a class="li" href="${x.href}"><span class="st st-${x.st} tag">${x.st === "관망" ? "대기" : x.st}</span>
         <span class="main"><span class="t">${U.esc(x.t)}</span><span class="s">${U.esc(x.s)}</span></span><span class="chev" aria-hidden="true"></span></a>`).join("")
-    : `<div class="empty">할 일이 없습니다. 내일 오후 5시에 다시 판단합니다.</div>`;
+    : `<div class="empty">내일 낼 주문이 없습니다. 오후 5시에 다시 판단합니다.</div>`;
 
   // ── 시장 ──
   const regCol = { "강세장": "var(--up)", "회복장": "var(--up)", "횡보장": "var(--watch)", "약세장": "var(--down)", "급락장": "var(--down)" };
@@ -211,26 +214,6 @@ U.nav("index.html");
     U.$("#news").innerHTML = news.map((n) => `<a href="${U.esc(n.link)}" target="_blank" rel="noopener"><b>${U.esc(n.title)}</b><span>${U.esc(n.src || "")} · ${U.esc((n.pub || "").slice(5))}</span></a>`).join("");
   }
 
-  // ── 내 계좌 ──
-  const ab = U.$("#acct-body");
-  if (pf.n > 0) {
-    const s10 = (pf.stress || []).find((x) => x.move === -10);
-    ab.innerHTML = `<div class="row" style="align-items:baseline;gap:8px;flex-wrap:wrap"><span class="big-num ${U.cls(pf.upnl)}">${pf.upnl > 0 ? "+" : ""}${U.won(pf.upnl)}</span>
-        <b class="${U.cls(pf.upnl_pct)}" style="font-size:16px">${U.pct(pf.upnl_pct)}</b></div>
-      <div class="acct-sub">투자 ${U.won(pf.invested)} → 지금 ${U.won(pf.value)} · ${pf.n}종목${pf.realized ? ` · 실현 ${U.won(pf.realized)}` : ""}</div>
-      <div>${held.map((i) => {
-        const sg = SIG[i.signal] || ["유지", "보유"];
-        return `<a class="li" href="${link(i.code)}"><span class="main"><span class="t">${U.esc(i.name)} ${sg[0] === "매도" ? `<span class="st st-매도">${sg[1]}</span>` : ""}</span>
-          <span class="s">${i.held}일째 · 평단 ${U.won(i.avgp)} · 지금 ${U.won(i.price)}</span></span>
-          <span class="r"><b class="${U.cls(i.pnl)}">${U.pct(i.pnl)}</b><span class="mut">종합 ${i.rank}위</span></span><span class="chev" aria-hidden="true"></span></a>`;
-      }).join("")}</div>
-      ${s10 ? `<div class="note">시장이 30일 안에 10% 빠지면 계좌는 <b class="neg">${U.won(s10.pnl - pf.upnl)}</b> 더 줄어듭니다 (과거 이런 달 ${s10.prob}%).</div>` : ""}
-      <div class="actions"><a class="btn ghost" href="trade.html">매매 기록하기</a><a class="btn ghost" href="journal.html">투자 논리 쓰기</a></div>`;
-  } else {
-    ab.innerHTML = `<div class="empty">기록된 보유 종목이 없습니다.<br>직접 사고판 내역을 적으면 손절·익절 시점을 알려드립니다.
-      <a class="btn ghost" href="trade.html">매매 기록하기</a></div>`;
-  }
-
   // ── 자동매매 ──
   if (A) {
     const eq0 = 10000000, eq = A.equity ?? eq0;
@@ -244,14 +227,27 @@ U.nav("index.html");
   } else U.$("#auto").hidden = true;
 
   // ── 단기 모의투자 ──
-  try {
-    const Sh = await U.j("short.json"), sa = Sh.account;
+  if (S) {
+    const sa = S.account;
     U.$("#short").hidden = false;
     U.$("#short-eq").textContent = U.won(sa.equity);
-    U.$("#short-ret").innerHTML = `<span class="${U.cls(sa.ret)}">${U.pct(sa.ret * 100, 2)}</span> · 지수 ETF ${U.pct(sa.bench_ret * 100, 2)} · ${U.esc(Sh.start)}부터`;
-    const no = (Sh.plan?.orders || []).length;
-    U.$("#short-note").textContent = `${Sh.model.desc} · 내일 주문 ${no}건${no ? "" : (sa.positions.length ? " (보유 유지)" : " (현금 대기)")}`;
-  } catch { /* 아직 첫 실행 전 */ }
+    U.$("#short-ret").innerHTML = `<span class="${U.cls(sa.ret)}">${U.pct(sa.ret * 100, 2)}</span> · 지수 ETF ${U.pct(sa.bench_ret * 100, 2)} · ${U.esc(S.start)}부터`;
+    U.$("#short-note").textContent = `${S.model.desc} · 내일 주문 ${sOrders.length}건${sOrders.length ? "" : (sa.positions.length ? " (보유 유지)" : " (현금 대기)")}`;
+  }
+
+  // ── 학습·진화 ──
+  if (EV || SE) {
+    U.$("#evo").hidden = false;
+    const cont = (EV && EV.continuous) || {};
+    U.$("#evo-minis").innerHTML = [
+      [cont.generations ?? "—", "30일 모델 세대"],
+      [EV ? (EV.challengers || []).length : "—", "시험 중 도전자"],
+      [SE ? SE.generations ?? "—" : "—", "단기 모델 세대"],
+      [SE ? (SE.candidates || []).length : "—", "단기 진화 후보"],
+    ].map(([v, k]) => `<div class="mini"><b>${v}</b><span>${k}</span></div>`).join("");
+    const last = [cont.updated, SE && SE.updated].filter(Boolean).sort().pop();
+    U.$("#evo-note").textContent = `마지막 진화 ${last || "—"} · 챔피언 ${EV ? EV.champion.id : "—"} · 새 모델은 등록 뒤 들어온 자료로만 시험해 통과하면 자동으로 바뀝니다.`;
+  }
 
   // ── 종목 순위 ──
   const sorted = items.slice().sort((a, b) => a.rank - b.rank);
@@ -261,14 +257,14 @@ U.nav("index.html");
   const row = (i) => {
     const dd = dmap[i.code];
     return `<a class="li" href="${link(i.code)}"><span class="rk">${i.rank}</span>
-      <span class="main"><span class="t">${U.esc(i.name)}${i.held ? '<span class="held-tag">보유</span>' : ""}${dd && dd.state !== "관망" ? `<span class="st st-${dd.state}">${dd.state}</span>` : ""}</span>
+      <span class="main"><span class="t">${U.esc(i.name)}${i.auto_held ? '<span class="held-tag">자동 보유</span>' : ""}${dd && dd.state !== "관망" ? `<span class="st st-${dd.state}">${dd.state}</span>` : ""}</span>
       <span class="s">${U.esc(i.sector || "")} · 점수 ${U.num(i.score, 1)}</span></span>
       <span class="r"><b>${U.num(i.price)}</b><span class="${U.cls(i.ret20)}">20일 ${U.pct(i.ret20)}</span></span></a>`;
   };
   function draw() {
     const q = U.$("#q").value.trim();
     let L = sorted;
-    if (mode === "held") L = L.filter((i) => i.held);
+    if (mode === "held") L = L.filter((i) => i.auto_held);
     if (mode === "up") L = L.filter((i) => U.ok(i.ret20)).sort((a, b) => b.ret20 - a.ret20);
     if (mode === "down") L = L.filter((i) => U.ok(i.ret20)).sort((a, b) => a.ret20 - b.ret20);
     if (q) L = L.filter((i) => (i.name + " " + (i.sector || "") + " " + i.code).toLowerCase().includes(q.toLowerCase()));

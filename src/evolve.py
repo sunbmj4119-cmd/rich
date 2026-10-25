@@ -22,6 +22,10 @@
   진화가 무학습 기준을 못 이기면 '적응'은 믿지 않고, 도전자 승격도 막는다.
   모든 분기는 현금에서 새로 시작한다(비교 대상 모두 같은 조건).
 
+쉬지 않는 진화 — 인구(data/evolve/population.json)를 저장해 두고 2시간마다 몇 세대씩 이어서 진화한다.
+  처음부터 다시 시작하지 않으므로 세대가 계속 쌓이고, 매일 새로 들어온 자료로 적합도를 다시 잰다.
+  밤마다(evolve.yml) 중첩 워크포워드로 '진화가 정말 도움이 되나'를 다시 재고 더 큰 진화를 한 번 돌린다.
+
 실제 적용 — 챔피언 · 도전자 · 전진 그림자 시험
   매주 전체 데이터로 진화해 나온 최선의 설정을 '도전자'로 등록한다. 성적은 등록일 '이후' 들어온
   데이터로만 매긴다 — 등록할 때는 존재하지 않던 데이터라 사후에 고르는 것이 불가능하다.
@@ -40,6 +44,7 @@
   python src/evolve.py check          # 빠른 시뮬레이터 = 엔진 대조
   python src/evolve.py meta           # 중첩 워크포워드 (수 분)
   python src/evolve.py weekly         # 진화 → 도전자 등록 → 전진 성적 → 승격 판단 → docs/evolve.json
+  python src/evolve.py step           # 연속 진화 한 번 (learn.yml 이 2시간마다) — 저장된 인구에서 이어서 몇 세대 더
   python src/evolve.py promote <ID>   # 도전자를 챔피언으로 (config/champion.yaml)
 """
 import os
@@ -52,6 +57,7 @@ sys.path.append(_SRC)
 
 import json  # noqa: E402
 import multiprocessing as mp  # noqa: E402
+import time  # noqa: E402
 from datetime import datetime  # noqa: E402
 from types import SimpleNamespace  # noqa: E402
 
@@ -74,6 +80,7 @@ OUT_DIR, OUT_UI = "data/evolve", "docs/evolve.json"
 REG = os.path.join(OUT_DIR, "registry.json")
 HIST = os.path.join(OUT_DIR, "history.csv")
 META = os.path.join(OUT_DIR, "meta.json")
+POPF = os.path.join(OUT_DIR, "population.json")      # 연속 진화: 세대를 넘겨 이어 가는 인구
 
 KEYS = F.RANK_KEYS
 BASE_W = {"s_value": .29, "s_profit": .20, "s_grow": .16, "s_flow": .18, "s_rmom": .10, "s_mom": .07}
@@ -379,9 +386,10 @@ def _eval(args):
     return fitness(g, a, b)
 
 
-def evolve(a, b, seeds, rng, pool, pop=POP, gens=GENS, log=None, mode=None):
+def evolve(a, b, seeds, rng, pool, pop=POP, gens=GENS, log=None, mode=None, out_pop=None):
     """[a, b) 데이터로만 진화. 반환: (최선 유전자, 그 성적, 평가한 수).
-    mode: MODES 항목 — lam(수축 강도) · k(합의할 상위 개수) · only(학습할 유전자)"""
+    mode: MODES 항목 — lam(수축 강도) · k(합의할 상위 개수) · only(학습할 유전자)
+    out_pop: 목록을 넘기면 마지막 인구(점수 순 상위 pop 개)를 채워 준다 — 다음 실행이 여기서 이어 간다."""
     mode = mode or {}
     lam, k_cons, only = float(mode.get("lam", 0)), int(mode.get("k", 0)), mode.get("only")
     adj = lambda g, r: r["fit"] - lam * dist(g, NAIVE)  # noqa: E731
@@ -417,6 +425,8 @@ def evolve(a, b, seeds, rng, pool, pop=POP, gens=GENS, log=None, mode=None):
                 kids.append(kid)
         popl = elites + kids
     allr = sorted(cache.values(), key=lambda x: -adj(*x))
+    if out_pop is not None:
+        out_pop.extend(x[0] for x in allr[:pop])
     if k_cons:
         g = consensus([x[0] for x in allr[:k_cons]])
         r = cache[gkey(g)][1] if gkey(g) in cache else fitness(g, a, b)
@@ -607,7 +617,16 @@ def forward(g, born):
     return r, len(r)
 
 
-def weekly(cfg, pool, seed=None):
+def load_pop():
+    try:
+        return json.load(open(POPF, encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"generations": 0, "runs": 0, "pop": []}
+
+
+def weekly(cfg, pool, seed=None, pop=48, gens=14, label="주간 진화"):
+    """진화 → 도전자 등록 → 전진 성적 → 승격. 저장된 인구에서 이어 간다(연속 진화).
+    step 은 같은 일을 2시간마다(인구 48 × 20세대) 이어서 한다."""
     os.makedirs(OUT_DIR, exist_ok=True)
     ev = cfg.get("evolve", {}) or {}
     min_fwd = int(ev.get("min_forward_days", 60))
@@ -616,21 +635,27 @@ def weekly(cfg, pool, seed=None):
     reg = load_reg(cfg)
     champ = reg["champion"]
     today = str(D.dates[-1].date())
-    rng = np.random.default_rng(seed if seed is not None else int(D.dates[-1].strftime("%Y%m%d")))
+    rng = np.random.default_rng(seed if seed is not None else int(time.time() * 1000) % (2 ** 32))
     meta_res = json.load(open(META, encoding="utf-8")) if os.path.exists(META) else None
     trusted = bool(meta_res and meta_res.get("trusted"))
     # 1) 전체 데이터로 진화. 방식은 중첩 워크포워드가 신뢰한 것, 없으면 가장 보수적인 '수축'
     mname = (meta_res or {}).get("trusted_mode") or "shrink"
     md = MODES[mname]
     lam = float(md.get("lam", 0))
-    seeds = [champ["genome"], NAIVE] + [c["genome"] for c in reg["challengers"]]
+    popst = load_pop()
+    seeds = [champ["genome"], NAIVE] + [c["genome"] for c in reg["challengers"]] + popst["pop"][:pop]
     glog = []
-    best, bf, ne = evolve(WARMUP, D.nD, seeds, rng, pool, pop=48, gens=14, log=glog, mode=md)
+    final = []
+    best, bf, ne = evolve(WARMUP, D.nD, seeds, rng, pool, pop=pop, gens=gens, log=glog, mode=md, out_pop=final)
     reg["n_evaluated"] = int(reg.get("n_evaluated", 0)) + ne
+    popst = {"generations": int(popst.get("generations", 0)) + gens, "runs": int(popst.get("runs", 0)) + 1,
+             "updated": datetime.now().strftime("%Y-%m-%d %H:%M"), "data_date": today, "mode": mname,
+             "best_adj": bf["adj"], "pop": final}
+    json.dump(popst, open(POPF, "w", encoding="utf-8"), ensure_ascii=False, default=_js)
     cf = fitness(champ["genome"], WARMUP, D.nD)
     cf["adj"] = round(cf["fit"] - lam * dist(champ["genome"], NAIVE), 4)
     champ["fit"] = cf
-    print(f"진화({MODES[mname]['label']}): {ne}개 평가 · 최선 {bf['adj']:.3f} (Sharpe {bf['sharpe']}) · 챔피언 {cf['adj']:.3f}")
+    print(f"{label}({MODES[mname]['label']}): {ne}개 평가 · 누적 {popst['generations']}세대 · 최선 {bf['adj']:.3f} (Sharpe {bf['sharpe']}) · 챔피언 {cf['adj']:.3f}")
     # 2) 도전자 등록 — 챔피언보다 HYST 이상 낫고, 이미 있는 도전자와 다를 때
     #    전진 시험은 끝까지 가야 의미가 있으므로, 자리가 차면 새 도전자를 받지 않는다(기존 도전자를 밀어내지 않음).
     #    챔피언·도전자·물러난 설정과 거의 같은 설정(거리 0.15 미만)도 받지 않는다.
@@ -641,9 +666,14 @@ def weekly(cfg, pool, seed=None):
     if full:
         print(f"도전자 자리 없음 ({len(reg['challengers'])}/{max_ch}) — 기존 도전자의 전진 시험을 계속합니다")
     elif bf["adj"] > cf["adj"] + HYST and near >= 0.15:
+        used = {c["id"] for c in reg["challengers"] + reg["retired"]} | {champ["id"]}
         new_id = "E" + today.replace("-", "")
+        k = 1
+        while new_id in used:                                   # 하루에 여러 번 돌 수 있다 (연속 진화)
+            k += 1
+            new_id = "E" + today.replace("-", "") + chr(ord("a") + k - 2)
         reg["challengers"].append({"id": new_id, "born": today, "genome": best, "fit_born": bf, "status": "관찰 중",
-                                   "source": f"주간 진화 · {MODES[mname]['label']}"})
+                                   "source": f"{label} · {MODES[mname]['label']}"})
         print(f"새 도전자 {new_id}: " + " · ".join(describe(best, champ["genome"])[:5]))
     # 3) 전진 그림자 시험 + 승격 판단
     #    길 A (적응을 신뢰할 때): 전진 60일 + 챔피언보다 Sharpe·수익 모두 높음 + 전체 적합도 유지
@@ -698,7 +728,7 @@ def weekly(cfg, pool, seed=None):
         row["새 도전자"] = next(c["id"] for c in reg["challengers"] if c["id"].startswith("E") and c["born"] == today)
     pd.concat([old, pd.DataFrame([row])], ignore_index=True).to_csv(wl, index=False)
     json.dump(reg, open(REG, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=_js)
-    write_ui(reg, meta_res, glog, proposals, promoted, cfg, mname)
+    write_ui(reg, meta_res, glog, proposals, promoted, cfg, mname, popst)
     return reg
 
 
@@ -733,7 +763,7 @@ def _js(o):
     return str(o)
 
 
-def write_ui(reg, meta_res, glog, proposals, promoted, cfg, mname="shrink"):
+def write_ui(reg, meta_res, glog, proposals, promoted, cfg, mname="shrink", popst=None):
     ch = reg["champion"]
     out = {
         "generated": datetime.now().strftime("%Y-%m-%d %H:%M"), "asof": str(D.dates[-1].date()),
@@ -753,6 +783,8 @@ def write_ui(reg, meta_res, glog, proposals, promoted, cfg, mname="shrink"):
                                               "trusted", "trusted_mode", "passed", "alpha", "modes", "seeds", "spread", "rule", "curve"]}
                  | {"log": meta_res["log"][-12:]}) if meta_res else None,
         "mode": {"key": mname, "label": MODES[mname]["label"]},
+        "continuous": {k: (popst or {}).get(k) for k in ("generations", "runs", "updated", "best_adj")}
+                      | {"pop": len((popst or {}).get("pop") or []), "every": "2시간"},
         "weekly": (pd.read_csv(os.path.join(OUT_DIR, "weekly.csv")).tail(26).to_dict("records")
                    if os.path.exists(os.path.join(OUT_DIR, "weekly.csv")) else []),
         "rules": {"hyst": HYST, "pop": 48, "gens": 14, "fitness": "해마다 Sharpe 평균 − 0.5 × 표준편차 (거래 20건 미만 제외)",
@@ -792,6 +824,8 @@ def main():
             print(f"  적응 신뢰: {m['trusted']} {m['passed']} · 문턱 P<{m['alpha']} · 평가 {m['n_eval']}개")
         if cmd in ("weekly", "all"):
             weekly(cfg, pool)
+        if cmd == "step":
+            weekly(cfg, pool, pop=48, gens=20, label="연속 진화")
 
 
 if __name__ == "__main__":

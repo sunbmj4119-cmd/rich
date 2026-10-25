@@ -1,11 +1,14 @@
 # 📈 주식 투자 매니저 (KOSPI 100)
 
-매 평일 장 마감 후 자동으로 데이터를 수집·채점하고, **다음 날 예약매매(지정가 매수 / 손절·매도)를 결정할 수 있는 대시보드**를 생성하는 개인용 시스템입니다.
+**완전 자동** 개인용 시스템입니다. 사람이 매매를 기록하거나 주문을 넣지 않습니다.
+매 평일 장 마감 뒤 데이터를 모아 채점하고, 두 자동매매 계좌(30일 · 단기)가 스스로 판단·주문(지금은 모의)하며,
+모델은 **2시간마다 쉬지 않고 진화**하고 매일 밤 그 진화 자체를 다시 검증합니다.
 
-- 홈: `docs/index.html` (GitHub Pages로 서빙 → 저녁에 휴대폰으로 확인). 이전 대시보드는 `docs/classic.html`
-- 매매 기록: `docs/trade.html` (매수/매도 입력 → CSV 복사 → `data/my_trades.csv`에 붙여넣기)
-- 투자 논리: `docs/journal.html` (진입 논리·반대 논리·무효화 조건 기록 → `data/journal.csv`)
-- **자동매매: `docs/autotrade.html`** (매일 모든 종목을 매수/유지/매도/관망으로 확정 → 모의계좌 또는 한국투자증권 API로 주문)
+- 홈: `docs/index.html` (GitHub Pages → 휴대폰으로 확인) — 자동매매가 할 일 · 시장 · 두 계좌 · 학습·진화 현황
+- **30일 자동매매: `docs/autotrade.html`** (매일 모든 종목을 매수/유지/매도/관망으로 확정 → 모의계좌 또는 증권사 API로 주문)
+- **단기 모의투자: `docs/short.html`** (매일 후보 모델 전부 재시뮬레이션 → 모델 선택 → 다음날 시가 주문)
+- **학습·진화: `docs/report.html#evo` · `docs/short.html`** (2시간마다 이어서 진화 · 등록 뒤 성적으로만 승격)
+- 수동 매매 기록(`my_trades.csv` · `trade.html` · `journal.html` · `signal.py`)과 이전 대시보드(`classic.html`)는 2026-10-25 완전 자동화로 없앴습니다.
 
 ## 🤖 자동매매 (2026-10 신규) — 자세한 근거는 [`docs/STRATEGY.md`](docs/STRATEGY.md)
 
@@ -114,14 +117,13 @@
 
 ---
 
-## 🗓 하루 사용 흐름
+## 🗓 하루 흐름 (모두 자동)
 
-1. **17:00** GitHub Actions(`daily.yml`)가 자동 실행 → 데이터 갱신·채점·리포트 생성·커밋.
-2. **저녁** 대시보드(`index.html`)를 열어 확인:
-   - 🔴 손절 / 🔵 매도 / 🟢 지금 사기 좋은 순서(BuyFit) / 💼 내 계좌
-   - 종목을 터치 → 그래프·점수근거·과거 유사사례 승률·매수밴드·기대손익
-3. 결정한 주문을 **증권사 앱에 예약**(지정가 매수, 손절가 매도).
-4. 실제 체결되면 `trade.html`로 기록 → CSV를 `data/my_trades.csv`에 반영(커밋).
+1. **17:00** `daily.yml` — 데이터 갱신 → 채점 → 30일 자동매매 판단·모의 체결 → 단기 모의투자 체결·모델 선택·내일 계획 → 커밋.
+2. **2시간마다** `learn.yml` — 30일 모델·단기 모델을 저장된 인구에서 이어서 진화 → 도전자/진화 후보 등록 → 등록 뒤 성적으로 승격.
+3. **매일 02:37** `evolve.yml` — 중첩 워크포워드로 '진화가 정말 도움이 되나' 재검증 + 단기매매 검증 전체.
+4. **다음날 08:40** `autotrade.yml` — 실계좌 설정 시 증권사로 주문 (지금은 모의라 할 일 없음).
+5. 사람이 할 일: 없음. 저녁에 홈 화면으로 확인만 하면 됩니다.
 
 ---
 
@@ -132,19 +134,18 @@
 | 1 | `src/update_prices.py` | KRX → `data/prices.csv` | 100종목 종가 append |
 | 2 | `src/collect_flows.py` | KRX → `flows/ohlcv/marketcap/shorts.csv` | 수급·시세·공매도(최근 7일) |
 | 3 | `src/score.py` | prices+financials+flows → `data/scores.csv` | 팩터 채점 → 종합점수 |
-| 4 | `src/signal.py` | scores+`my_trades.csv` → `signals_today.csv`+`account.json` | 매수/매도/보유 판정 · 주식수 회계(부분매도·실현손익) |
 | 4-2 | `src/regime.py` | prices+scores → `data/regime.json` | 시장국면 판정 · 국면별 전략성과 · 전이확률 · 종목별 베타 |
 | 4-3 | `src/refclass.py` | prices+scores → `data/refclass.json` | 기준집단(순위밴드×국면) 승률·기대·손절률 |
 | 4-4 | `src/verify_thesis.py` | scores+prices → `data/verify_thesis.json` | 등급·확률을 과거 시점 정보로 재계산해 실제와 대조 |
 | — | `src/strategy_lab.py` | scores+prices → `data/strategy_lab.json` | 손절·익절·가중치·종목수를 train/test로 검증 (수동 실행) |
-| 4-5 | `src/news.py` | Google News RSS + DART 공시 → `data/news.csv` | 최신 뉴스·공시 + 감성 (실패해도 무시) |
-| 5 | `src/build_data.py` | 위 전부 + `journal.csv` → `docs/data.json` | BuyFit·유사사례·**시나리오·확률·판단등급**·계좌 스트레스 |
-| 6 | `src/report.py` | data.json(+robust.json) → `docs/classic.html` | 이전 대시보드 렌더 (홈 `docs/index.html`은 정적 파일이 data.json·autotrade.json을 읽음) |
+| 4-5 | `src/news.py` | Google News RSS + DART 공시 → `data/news.csv` | 자동매매 계좌 보유 종목 + 점수 상위 종목의 뉴스·공시 (강제 매도 규칙이 읽음) |
+| 5 | `src/build_data.py` | 위 전부 → `docs/data.json` | 종목 순위·BuyFit·유사사례·시나리오·확률·판단등급 (홈·종목 화면이 읽음) |
 | 1-2 | `src/collect_etf.py` | KRX → `data/etf_ohlcv.csv` | KODEX 200·인버스 일봉 (단기 모의투자용, 처음엔 2018년부터 저절로) |
 | 7 | `src/autotrader.py --phase decide` | 위 전부 + `config/autotrade.yaml` → `data/autotrade/` + `docs/autotrade.json` | 4상태 판단 · 주문계획 · 모의체결 |
 | 8 | `src/short_trader.py` | 위 데이터 → `data/short/` + `docs/short.json` | **단기 모의투자**: 어제 계획 체결 → 후보 모델 전부 재시뮬레이션 → 주 1회 모델 선택 → 내일 계획 (`docs/short.html`) |
 | 다음날 08:40 | `src/autotrader.py --phase execute` (`autotrade.yml`) | `plan.json` → 증권사 | 한국투자증권 주문 (kis_* 설정 시) |
-| 토요일 | `src/short_lab.py` (`evolve.yml`) | 위 데이터 → `data/short/lab.json` | 단기매매·'매일 갈아타기' 검증 다시 재기 (전략서 3-6-5) |
+| 2시간마다 | `src/evolve.py step` · `src/short_evolve.py step` (`learn.yml`) | 저장된 인구 → `data/evolve/` · `data/short/evolved.json` | **쉬지 않는 진화**: 이어서 진화 → 도전자·진화 후보 등록 → 등록 뒤 성적으로 승격 (전략서 3-6-6) |
+| 매일 밤 | `src/evolve.py all` · `src/short_lab.py` (`evolve.yml`) | 위 데이터 → `data/evolve/meta.json` · `data/short/lab.json` | 진화 자체의 재검증 · 단기매매 검증 다시 재기 |
 
 `src/thesis.py`는 실행 스크립트가 아니라 `build_data.py`가 import하는 **판단 엔진**입니다
 (상승 시나리오 · 반대 논리 · 확률 · 시장 시나리오 · 등급).
@@ -153,7 +154,7 @@
 
 **검증 스크립트(수동/별도 워크플로우)**
 - `src/backtest.py` — 비중첩 리밸런싱 백테스트(정석)
-- `src/backtest_signal.py` — signal.py 로직 재현 백테스트(t점수→t+1체결)
+- `src/backtest_signal.py` — 옛 수동 매매 규칙(signal.py, 삭제됨) 재현 백테스트(t점수→t+1체결)
 - `src/robust_backtest.py` — 비용/생존편향 보정 시나리오 → `docs/robust.json`
 - `src/optimize_weights.py` — 워크포워드 가중치 탐색
 - `src/verify_factor.py` — 신규 팩터 IC/단조성/독립성 검증 (score.py 반영 **전** 필수)
@@ -180,7 +181,7 @@
 - **미래참조 차단**: 재무는 `사용가능일` 기준 as-of(backward) join.
 - 결측은 중립 50점으로 채움.
 
-## 📊 매매 전략 (`src/signal.py`)
+## 📊 매매 전략 (`src/decision_engine.py` — 30일 자동매매)
 
 - 종합점수 **상위 20 풀**, **10위 이내** 진입, 보유가 **20위 밖**으로 이탈 + **최소 30거래일** 보유 시 매도.
 - **손절 -10%**, **트레일링 스탑**(진입 후 고점 대비) — 둘 중 먼저 닿는 값이 감시가.
@@ -330,7 +331,7 @@ raw 모멘텀 IC −0.010 → **÷연변동성 하면 +0.041**. 같은 +30%라�
 
 > ⚠️ 부분 익절은 test 연수익을 약 3%p 낮춥니다. 대신 승률이 45%→53%로 올라
 > "계속 손절만 한다"는 체감이 크게 줄어듭니다. 수익 극대화만 원하시면
-> `signal.py`의 `TP1_FRACTION = 0` 으로 끄고 조임만 쓰세요.
+> `config/autotrade.yaml` 의 `take_profit_gain` 을 비우고 조임만 쓰세요.
 
 ## 📏 이격률 — 검증 결과 '규칙'이 아니라 '판단'에 넣었습니다
 
@@ -373,7 +374,7 @@ raw 모멘텀 IC −0.010 → **÷연변동성 하면 +0.041**. 같은 +30%라�
 
 | 항목 | 어디서 오나 | 대략의 무게 |
 |---|---|---|
-| **매매 규칙 트리거** | `signal.py` (손절·트레일·부분익절·순위이탈·매수) | 가장 큼 (최대 80점) |
+| **매매 규칙 트리거** | `decision_engine.py` (손절·트레일·부분익절·순위이탈·매수) | 가장 큼 (최대 80점) |
 | **추천 순위 밴드** | `position_lab.py` `by_rank` | 큼 (최대 26점) |
 | **지금 이 자리** | `position_lab.py` `cells` (수익률 × 고점대비) | 중간 (최대 24점) |
 | **이 순위·국면 구간** | `refclass.py` | 중간 (최대 16점) |
@@ -573,21 +574,9 @@ train(2019-01~2023-12)에서만 후보를 고르고 test(2024-01~)로 확인했�
 | 🌧 약세장 | 200일선 아래 | 53.9% (+1.7%p) |
 | ⛈ 급락장 | 고점대비 −15% 이하 | 65.1% (−0.1%p) |
 
-여기에 **국면 전이확률**(30일 뒤 어떤 국면일지 과거 빈도)과 **종목별 베타/하락베타**를 계산해,
-"시장이 −20%면 내 계좌는 얼마가 되고 몇 종목이 손절에 걸리는가"를 계좌 카드에 표로 띄웁니다.
+여기에 **국면 전이확률**(30일 뒤 어떤 국면일지 과거 빈도)과 **종목별 베타/하락베타**를 계산해
+종목 화면의 시장 시나리오에 씁니다. (수동 계좌 스트레스 표는 완전 자동화로 없앴습니다)
 ※ 베타는 과거 평균이라 **진짜 급락장에서는 상관이 1로 수렴해 표보다 나빠지는** 경향이 있습니다.
-
-## 📓 투자 논리 기록 (`docs/journal.html`)
-
-사기 **전에** 논리를 적어두지 않으면, 결과가 나온 뒤 기억이 조용히 그 결과에 맞춰 바뀝니다(사후과잉확신).
-
-- 대시보드 종목 화면 → **"✍️ 논리 기록하기"** → 상승·반대 논리·목표가·손절가·무효화 조건이 **자동 초안**으로 채워집니다 (그대로 두지 말고 본인 말로 고쳐 쓰는 것이 핵심).
-- 반대 논리를 비운 채 저장하려 하면 한 번 막습니다(확증편향 방어).
-- 기록 시점 주가가 함께 저장돼 **"내 판단 이후 실제로 어떻게 됐나"** 를 대조합니다.
-- **무효화 점검** 카드가 기록해둔 손절가·순위를 오늘 데이터와 자동 대조해 걸린 항목을 띄웁니다.
-- CSV를 `data/journal.csv`에 커밋하면 다음 날부터 종목 화면에 그 기록이 함께 표시됩니다.
-
----
 
 ## 🖥 로컬 실행
 
@@ -597,14 +586,16 @@ pip install pandas numpy pyyaml finance-datareader
 
 python src/collect_sectors.py  # 업종/섹터 → data/sectors.csv (주기적 1회)
 python src/score.py          # 점수 재계산
-python src/signal.py         # 신호 재생성 (+ account.json)
 python src/regime.py         # 시장국면·베타 → data/regime.json
 python src/refclass.py       # 기준집단 통계 → data/refclass.json
 python src/verify_thesis.py  # 등급·확률 검증 → data/verify_thesis.json
 python src/news.py           # 뉴스·공시 → data/news.csv (네트워크 필요, 실패해도 무해)
                              #  DART_API_KEY 있으면 공시도 함께 수집
 python src/build_data.py     # 대시보드 데이터 (시나리오·확률 포함)
-python src/report.py         # docs/classic.html (이전 대시보드)
+python src/autotrader.py --phase decide   # 30일 자동매매 판단·모의 체결
+python src/short_trader.py   # 단기 모의투자
+python src/evolve.py step    # 30일 모델 연속 진화 한 번
+python src/short_evolve.py step   # 단기 모델 연속 진화 한 번
 python src/robust_backtest.py  # 현실적 기대수익(느림) → docs/robust.json
 ```
 > Windows 콘솔에서 이모지 출력 오류가 나면 `set PYTHONIOENCODING=utf-8` 후 실행.
@@ -635,12 +626,8 @@ python src/robust_backtest.py  # 현실적 기대수익(느림) → docs/robust.
 | `flows.csv` | 날짜, 종목코드, 외국인·기관·개인 순매수 |
 | `marketcap.csv` | 날짜, 종목코드, 시가총액, 상장주식수 |
 | `financials.csv` | 종목코드, 연도, 분기, 사용가능일, 매출/영업이익/순이익, ROE, EPS, BPS … |
-| `my_trades.csv` | 날짜, 종목명, 구분(매수/매도), 금액, **수량**(선택) ← **사용자가 기록**. 매수는 수량·금액 중 하나 이상, 매도는 수량=부분매도·공란=전량 |
-| `signals_today.csv` | 구분, 종목코드/명, 순위, 점수, 보유일, 평단가, 현재가, 수익률%, 사유, 손절가, 트레일가, 감시가, 투자금액, 수량, 실현손익 |
 | `sectors.csv` | 종목코드, 종목명, 업종(KRX), 섹터(그룹) — `collect_sectors.py` 생성 |
-| `account.json` | 실현손익 합계, 투자원금, 보유종목수 — `signal.py` 생성 |
 | `regime.json` | 현재국면, 국면별 전략성과, 전이확률, 종목별 베타/하락베타/변동성 — `regime.py` 생성 |
 | `refclass.json` | (순위밴드×국면) 칸별 승률·기대수익·손절률·켈리 — `refclass.py` 생성 |
 | `verify_thesis.json` | 캘리브레이션·등급별 실제결과·전략 시뮬레이션 — `verify_thesis.py` 생성 |
 | `news.csv` | 종목코드(또는 MARKET), 종목명, 제목, 링크, 발행일, 출처, 감성(-5~+5), 키워드 — `news.py` 생성, 30일 보관 |
-| `journal.csv` | 날짜, 종목명, 구분(진입/점검/청산), 확신도, 상승논리, 반대논리, 목표가, 손절가, 무효화조건, 기록시점가, 메모 ← **사용자가 `journal.html`로 기록** |

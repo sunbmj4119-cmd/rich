@@ -49,6 +49,11 @@
       <p class="mut">매일 저녁 후보 모델 전부를 2018년부터 오늘까지 다시 돌려 최근 250일 위험조정 성적(샤프) 순으로 줄 세웁니다.</p>
       <div id="board"></div>
     </section>
+    <section class="card" id="evo-card" hidden>
+      <header><h2>쉬지 않고 진화 중인 후보</h2><span class="mut small" id="evo-sub"></span></header>
+      <p class="mut" id="evo-lead"></p>
+      <div id="evo-list"></div>
+    </section>
     <section class="card">
       <header><h2>고르는 방식 비교 (시작일부터)</h2></header>
       <p class="mut">'매일 1등으로 갈아타기'를 포함한 여러 방식을 같은 날부터 나란히 돌려, 앞으로 쌓이는 성적으로 비교합니다.</p>
@@ -101,8 +106,9 @@
 <script>
 (async () => {
   U.nav("autotrade.html");
-  let S = null, B = null;
+  let S = null, B = null, X = null;
   try { S = await U.j("short.json"); } catch { S = null; }
+  try { X = await U.j("short_evo.json"); } catch { X = null; }
   try { B = await U.j("short_lab.json"); } catch { B = null; }
   const pctv = (x, d = 1) => U.pct(U.ok(x) ? x * 100 : null, d);
   const sh = (x) => U.ok(x) ? (+x).toFixed(2) : "—";
@@ -169,6 +175,19 @@
       <span class="main"><span class="t">${U.esc(x["종목명"])}</span><span class="s">${U.esc(x["날짜"])} ${x["시점"] === "open" ? "시가" : "종가"} · ${(+x["수량"] || 0).toLocaleString("ko-KR")}주 · ${U.won(x["가격"])}</span></span>
       <span class="r"><b class="${U.cls(+x["손익"])}">${U.ok(x["손익"]) && x["손익"] !== "" ? U.won(x["손익"]) : U.won(x["금액"])}</b><span class="mut">${U.ok(x["손익"]) && x["손익"] !== "" ? "실현 손익" : "금액"}</span></span></div>`).join("")
       : `<div class="empty">아직 체결이 없습니다.</div>`;
+  }
+
+  // 진화 중인 후보
+  if (X) {
+    U.$("#evo-card").hidden = false;
+    U.$("#evo-sub").textContent = `누적 ${X.generations}세대 · 마지막 ${X.updated}`;
+    U.$("#evo-lead").textContent = `2시간마다 저장된 인구에서 이어서 진화합니다. 고정 후보 최고(적합도 ${(+X.bench.fit).toFixed(2)})보다 나은 모델만 후보로 등록하고, 등록 뒤 ${X.incubate_days}거래일 성적이 쌓여야 고를 수 있습니다. 지금 인구 최선은 ${(+X.best_fit).toFixed(2)}.`;
+    U.$("#evo-list").innerHTML = X.candidates.length ? X.candidates.map((c) => {
+      const f = c.forward || {};
+      return `<div class="li"><span class="main"><span class="t">${U.esc(c.desc.replace(/^진화 \S+ · /, ""))}</span>
+        <span class="s">${U.esc(c.id)} · ${U.esc(c.born)} 등록 · 과거 적합도 ${(+c.fit_born.fit).toFixed(2)} (샤프 ${c.fit_born.sharpe})</span></span>
+        <span class="r"><b class="${U.cls(f.ret)}">${f.days ? pctv(f.ret, 2) : "—"}</b><span class="mut">${c.eligible ? "선택 가능" : `시험 ${f.days || 0}/${X.incubate_days}일`}</span></span></div>`;
+    }).join("") : `<div class="empty">아직 등록된 진화 후보가 없습니다.</div>`;
   }
 
   // 검증 결과

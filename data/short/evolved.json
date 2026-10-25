@@ -1,0 +1,37 @@
+{
+ "candidates": [
+  {
+   "id": "X261023a",
+   "born": "2026-10-23",
+   "genome": {
+    "w": {
+     "rev_id": 0.5,
+     "hi52": 2.0,
+     "rev3": 0.5,
+     "mom120": 2.0
+    },
+    "K": 5,
+    "hold": "H10",
+    "gate": "crash"
+   },
+   "fit_born": {
+    "fit": 0.6795,
+    "sharpe": 1.229,
+    "cagr": 0.3735,
+    "mdd": -0.3063,
+    "buys": 717
+   },
+   "beat": {
+    "id": "S:REVC:5:H10:trend",
+    "fit": 0.5745
+   },
+   "forward": {
+    "days": 0,
+    "ret": 0.0,
+    "sharpe": null
+   },
+   "eligible": false
+  }
+ ],
+ "retired": []
+}

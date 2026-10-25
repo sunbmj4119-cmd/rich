@@ -238,6 +238,26 @@ def test_fastsim_matches_engine():
     assert abs(e["total"] - s["total"]) < 0.5 and abs(e["mdd"] - s["mdd"]) < 0.5
 
 
+def test_continuous_evolution_keeps_population():
+    """연속 진화: 저장된 인구에서 이어 가 세대가 쌓인다 (실제 파일·설정은 건드리지 않는다)."""
+    import evolve as EV
+    EV.D = EV.D or EV.load()
+    old = {k: getattr(EV, k) for k in ("OUT_DIR", "OUT_UI", "REG", "HIST", "META", "POPF")}
+    with tempfile.TemporaryDirectory() as tmp:
+        for k, f in (("OUT_DIR", ""), ("OUT_UI", "ui.json"), ("REG", "reg.json"), ("HIST", "h.csv"), ("META", "meta.json"), ("POPF", "pop.json")):
+            setattr(EV, k, os.path.join(tmp, f) if f else tmp)
+        try:
+            cfg = copy.deepcopy(CFG)
+            cfg["evolve"]["auto_promote"] = False
+            EV.weekly(cfg, None, seed=1, pop=6, gens=2, label="시험")
+            EV.weekly(cfg, None, seed=2, pop=6, gens=2, label="시험")
+            p = EV.load_pop()
+            assert p["generations"] == 4 and p["runs"] == 2 and 0 < len(p["pop"]) <= 6
+        finally:
+            for k, v in old.items():
+                setattr(EV, k, v)
+
+
 if __name__ == "__main__":
     for k, fn in list(globals().items()):
         if k.startswith("test_"):

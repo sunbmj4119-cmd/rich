@@ -19,8 +19,8 @@ import yaml
 
 import thesis
 
-SCORES="data/scores.csv"; SIGNALS="data/signals_today.csv"; WEIGHTS="config/weights.yaml"
-ACCOUNT="data/account.json"; REGIME="data/regime.json"; NEWS="data/news.csv"; JOURNAL="data/journal.csv"
+SCORES="data/scores.csv"; WEIGHTS="config/weights.yaml"
+REGIME="data/regime.json"; NEWS="data/news.csv"
 REFCLASS="data/refclass.json"; VERIFY="data/verify_thesis.json"; LAB="data/strategy_lab.json"
 POSLAB="data/position_lab.json"
 OUT="docs/data.json"; HOLD=30
@@ -191,26 +191,6 @@ def main():
         except Exception:
             pass
 
-    # ── 내가 기록한 투자 논리 (journal.html → data/journal.csv) ─
-    journal_map={}
-    if os.path.exists(JOURNAL):
-        try:
-            jr=pd.read_csv(JOURNAL,dtype=str).fillna("")
-            code_of=dict(zip(s["종목명"],s["종목코드"]))
-            for _,r in jr.iterrows():
-                code=code_of.get(str(r.get("종목명","")).strip())
-                if not code: continue
-                journal_map.setdefault(code,[]).append({
-                    "date":str(r.get("날짜","")),"kind":str(r.get("구분","")),
-                    "conv":str(r.get("확신도","")),"bull":str(r.get("상승논리","")),
-                    "bear":str(r.get("반대논리","")),"target":str(r.get("목표가","")),
-                    "stop":str(r.get("손절가","")),"inval":str(r.get("무효화조건","")),
-                    "px":str(r.get("기록시점가","")),"memo":str(r.get("메모",""))})
-            for k in journal_map:
-                journal_map[k]=sorted(journal_map[k],key=lambda x:x["date"],reverse=True)[:5]
-        except Exception:
-            pass
-
     last=s["날짜"].max()
     cur=s[s["날짜"]==last].copy()
     def z(col):
@@ -229,7 +209,7 @@ def main():
     cur["buyrank"]=cur["buyfit"].rank(ascending=False).astype(int)
     cur["buyfit_pct"]=cur["buyfit"].rank(pct=True)*100   # 100=가장 추천 (등급의 뼈대)
 
-    sig=pd.read_csv(SIGNALS,dtype={"종목코드":str}) if os.path.exists(SIGNALS) else pd.DataFrame()
+    sig=pd.DataFrame()   # 수동 매매 기록(my_trades.csv → signal.py)은 완전 자동화로 바뀌며 없앴다. 보유는 자동매매 계좌가 관리
     def _s(v):  # 빈칸/NaN → "" (data.json이 유효 JSON이 되도록; NaN 금지)
         return "" if (v is None or (isinstance(v,float) and pd.isna(v))) else v
     sigmap={r["종목코드"]:dict(구분=r["구분"],사유=r["사유"],보유일=_s(r.get("보유일",0)),수익률=_s(r.get("수익률%")),손절가=_s(r.get("손절가")),감시가=_s(r.get("감시가")),평단가=_s(r.get("평단가")),투자금액=_s(r.get("투자금액")),수량=_s(r.get("수량")),실현손익=_s(r.get("실현손익")),트레일가=_s(r.get("트레일가")),트레일폭=_s(r.get("트레일폭%")),익절가=_s(r.get("익절가")),익절수량=_s(r.get("익절수량"))) for _,r in sig.iterrows()} if len(sig) else {}
@@ -431,91 +411,7 @@ def main():
             "buyfit_pct":round(float(r["buyfit_pct"]),0),
             "beta":bt.get("beta"),"down_beta":bt.get("down"),
             "vol":bt.get("vol"),"vol_rank":bt.get("vol_rank"),
-            "news":news_map.get(code,[]),"journal":journal_map.get(code,[])})
-
-    # ── 계좌 요약 + 손익 추이(equity curve) ─────────────
-    realized_total=0
-    if os.path.exists(ACCOUNT):
-        try: realized_total=int(json.load(open(ACCOUNT,encoding="utf-8")).get("realized_total",0))
-        except Exception: realized_total=0
-    # 오늘 밤 실제 보유 = 유지/보유 + 내일 팔 예정(손절/매도)까지 포함 (아직 소유 중)
-    held_items=[i for i in items if i["signal"] in ("🟢유지","⏳보유","🟠부분익절","🔴손절","🔵매도") and i.get("shares") and i.get("invest")]
-    portfolio=None
-    if held_items:
-        trading_dates=sorted(s["날짜"].unique())
-        # 각 보유 종목 진입 거래일 = last 기준 보유일 만큼 이전 거래일
-        for i in held_items:
-            idx=max(0,len(trading_dates)-1-int(i["held"]))
-            i["_entry"]=trading_dates[idx]
-        start=min(i["_entry"] for i in held_items)
-        codes=[i["code"] for i in held_items]
-        sub=s[(s["종목코드"].isin(codes))&(s["날짜"]>=start)]
-        piv=sub.pivot_table(index="날짜",columns="종목코드",values="종가")
-        # 평가액 = 원금×(현재가/평단가) → signal.py 수익률%와 정확히 일치(정수주 반올림 왜곡 제거)
-        def _val(i, px): return i["invest"]*(px/i["avgp"]) if i.get("avgp") else (i["shares"] or 0)*px
-        curve=[]
-        for d,row in piv.iterrows():
-            val=cost=0.0
-            for i in held_items:
-                c=i["code"]
-                if d>=i["_entry"] and c in row.index and pd.notna(row[c]):
-                    val+=_val(i,float(row[c])); cost+=i["invest"]
-            if cost>0:
-                curve.append({"date":d.strftime("%m/%d"),
-                              "pnl":round((val/cost-1)*100,2),"value":int(round(val))})
-        invested=sum(i["invest"] for i in held_items)
-        value=sum(_val(i,i["price"]) for i in held_items)
-        # 오늘 전 종목 손절 동시 발동 시 현 시점 대비 추가손실(원): 감시가 없으면 -10% 근사
-        wc=sum(_val(i,i["price"])*((i["guard_gap"]/100) if i.get("guard_gap") is not None else -0.10)
-               for i in held_items)
-        # 섹터 편중 (평가액 기준)
-        sec_val={}
-        for i in held_items:
-            sec=i.get("sector") or "기타"
-            sec_val[sec]=sec_val.get(sec,0)+_val(i,i["price"])
-        sectors=sorted(({"name":k,"pct":round(v/value*100,1)} for k,v in sec_val.items()),
-                       key=lambda x:-x["pct"]) if value else []
-        # ── 시장 상황별 계좌 스트레스 테스트 (베타 기반) ──────────
-        # 시장이 m% 움직이면 각 종목은 대략 beta×m% (내릴 땐 하락베타). 손절 발동 여부까지 센다.
-        stress=[]
-        if value:
-            probs=(regime or {}).get("mkt_probs_now") or (regime or {}).get("mkt_probs_all")
-            for k2,m in enumerate([-20,-10,-5,0,5,10]):
-                pv=0.0; hits=0
-                for i in held_items:
-                    b0=betas.get(i["code"],{})
-                    b=(b0.get("down") or b0.get("beta") or 1.0) if m<0 else (b0.get("beta") or 1.0)
-                    mv=b*m/100.0
-                    pv+=_val(i,i["price"])*(1+mv)
-                    gap=(i.get("guard_gap") if i.get("guard_gap") is not None else -10.0)/100.0
-                    if mv<=gap: hits+=1
-                # 확률: mkt_probs 버킷(-99~-10,-10~-5,-5~0,0~5,5~10,10~99)의 대표값에 맞춰 매핑
-                pmap={-20:0,-10:1,-5:2,0:3,5:4,10:5}
-                stress.append({"move":m,"value":int(round(pv)),
-                               "pnl":int(round(pv-invested)),
-                               "pnl_pct":round((pv/invested-1)*100,1) if invested else 0.0,
-                               "chg_pct":round((pv/value-1)*100,1),
-                               "stops":hits,
-                               "prob":(probs[pmap[m]] if probs else None)})
-        portfolio=dict(
-            n=len(held_items),invested=int(round(invested)),value=int(round(value)),
-            upnl=int(round(value-invested)),
-            upnl_pct=round((value/invested-1)*100,2) if invested else 0.0,
-            worst=int(round(wc)),worst_pct=round(wc/value*100,2) if value else 0.0,
-            realized=realized_total,
-            total_pnl=int(round(value-invested))+realized_total,
-            sectors=sectors,
-            top_sector=sectors[0]["name"] if sectors else "",
-            top_sector_pct=sectors[0]["pct"] if sectors else 0.0,
-            equity=curve,stress=stress,
-            beta=round(sum(_val(i,i["price"])*(betas.get(i["code"],{}).get("beta") or 1.0)
-                           for i in held_items)/value,2) if value else None)
-        for i in held_items:
-            i.pop("_entry",None)
-    elif realized_total:   # 보유는 없지만 과거 실현손익이 있는 경우
-        portfolio=dict(n=0,invested=0,value=0,upnl=0,upnl_pct=0.0,worst=0,worst_pct=0.0,
-                       realized=realized_total,total_pnl=realized_total,equity=[],
-                       stress=[],beta=None)
+            "news":news_map.get(code,[])})
 
     # BuyFit 순 추천: 점수 상위20 풀 안에서 buyfit 높은 순
     pool=cur.head(20)
@@ -537,20 +433,18 @@ def main():
                    "new":{k:plab["rank_cells"][f"{k}|0~+5%"] for k in ("1-10","11-20","21-100")
                           if f"{k}|0~+5%" in plab.get("rank_cells",{})}}
                   if plab else None)}
-    # allow_nan=False → 유효 JSON 보장(trade.html의 JSON.parse 및 표준 준수). NaN 있으면 즉시 실패.
-    json.dump({"market":market,"items":items,"portfolio":portfolio,"regime":regime,
+    # allow_nan=False → 유효 JSON 보장(브라우저 JSON.parse 및 표준 준수). NaN 있으면 즉시 실패.
+    json.dump({"market":market,"items":items,"regime":regime,
                "refclass":refc,"verify":verify,"meta":meta},
               open(OUT,"w",encoding="utf-8"),ensure_ascii=False,allow_nan=False)
-    pf=(f" · 계좌 원금 {portfolio['invested']:,}→평가 {portfolio['value']:,} ({portfolio['upnl_pct']:+.1f}%)"
-        if portfolio else " · 보유없음")
     gr={}
     for i in items: gr[i["verdict"]["grade"]]=gr.get(i["verdict"]["grade"],0)+1
     rg=f" · 국면 {regime['current']['name']}" if regime else " · 국면 미계산"
     nn=sum(len(i["news"]) for i in items)
     print(f"data.json: {len(items)}종목 · BuyFit 추천순 상위3 {buylist[:3]} · "
-          f"통계 {sum(1 for i in items if i['analog'])}건{pf}{rg}")
+          f"통계 {sum(1 for i in items if i['analog'])}건{rg}")
     print(f"  판단등급 " + " ".join(f"{k}:{gr.get(k,0)}" for k in "ABCD") +
-          f" · 뉴스 {nn}건 · 논리기록 {sum(len(i['journal']) for i in items)}건")
+          f" · 뉴스 {nn}건")
 
 
 if __name__=="__main__":

@@ -37,10 +37,11 @@ strategy:
   cooldown_days: 0
 
 # ── 모델 진화 (src/evolve.py · 매주 토요일 evolve.yml) ──
-#   매주 전체 데이터로 설정을 진화시켜 '도전자'로 등록하고, 등록일 이후 새 데이터로만 챔피언과 맞붙인다.
+#   2시간마다(learn.yml) 저장된 인구에서 이어서 진화 → 챔피언보다 확실히 나으면 '도전자'로 등록,
+#   등록일 이후 새 데이터로만 챔피언과 맞붙인다. 밤마다(evolve.yml) 중첩 워크포워드로 진화 자체를 다시 검증.
 #   승격된 설정은 config/champion.yaml 에 쓰이고 위 strategy 를 덮어쓴다 (지우면 원래대로).
 evolve:
-  auto_promote: false      # false = 승격 '제안'만 (autotrade-control → promote 로 승인). true = 조건 통과 시 자동 적용
+  auto_promote: true       # 완전 자동: 전진 시험 조건을 통과하면 사람 승인 없이 챔피언 교체 (false = 제안만)
   min_forward_days: 60     # 길 A: 적응을 신뢰할 때 필요한 전진 시험 기간 (거래일)
   long_forward_days: 250   # 길 B: 적응을 신뢰하지 못해도, 약 1년 전진 시험에서 확실히 이기면 승격 후보
   max_challengers: 6

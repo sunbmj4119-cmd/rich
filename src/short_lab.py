@@ -96,6 +96,9 @@ def etf_models():
 def describe(m):
     if m["kind"] == "etf":
         return ETF_RULES[m["rule"]]
+    if m.get("combo"):                                   # short_evolve 가 만든 모델
+        sig = "+".join(SP.SIGNAL_INFO.get(k, k).split(" (")[0] for k, _ in m["combo"])
+        return f"진화 {m['id']} · {sig} · {m['K']}종목 · {HOLD_NAME[m['hold']]} · {GATES[m['gate']]}"
     return f"{SEL_NAME[m['sel']]} · {m['K']}종목 · {HOLD_NAME[m['hold']]} · {GATES[m['gate']]}"
 
 
@@ -119,11 +122,27 @@ class Data:
                      "trend": np.nan_to_num(self.M["m_trend120"], nan=1) > 0,
                      "crash": ~mk["crash_off"]}
         self._rk = {}
+        self._pr = {}
 
-    def ranks(self, sel):
-        if sel not in self._rk:
-            self._rk[sel] = SP.rank_score(self.S, self.P["U"], SELECTORS[sel])
-        return self._rk[sel]
+    def pr(self, name):
+        """신호 하나의 유니버스 안 백분위 (값이 없으면 0.5) — 조합 순위의 재료. 한 번만 계산."""
+        if name not in self._pr:
+            x = np.where(self.P["U"], self.S[name], np.nan)
+            p = pd.DataFrame(x).rank(axis=1, pct=True).to_numpy(copy=True)
+            self._pr[name] = np.nan_to_num(p, nan=0.5)
+        return self._pr[name]
+
+    def ranks(self, sel, combo=None):
+        """순위(1=최고, 유니버스 밖 inf). sel = SELECTORS 이름, 또는 combo=[(신호, 가중치)…] (진화 모델)."""
+        combo = combo or SELECTORS[sel]
+        key = tuple((k, float(w)) for k, w in combo)
+        if key not in self._rk:
+            tot = sum(w * self.pr(k) for k, w in combo)
+            tot = np.where(self.P["U"], tot, np.nan)
+            rk = pd.DataFrame(-tot).rank(axis=1, method="first").to_numpy(copy=True)
+            rk[np.isnan(rk)] = np.inf
+            self._rk[key] = rk
+        return self._rk[key]
 
 
 # ══════════════════════════════════════════════════════════════
@@ -152,7 +171,7 @@ def stock_params(m):
 
 def run_stock(D, m, stress=1.0, record=False, t0=1):
     """종목 모델: 순위 상위 K를 시가에 사고, 보유 규칙대로 시가에 판다. 반환: 종가 기준 자산곡선 등."""
-    R = D.ranks(m["sel"])
+    R = D.ranks(m["sel"], m.get("combo"))
     K, X, mn, mx = stock_params(m)
     ok = D.gate[m["gate"]]
     cb, cs = costs("stock", stress)
@@ -194,7 +213,7 @@ def stock_next(D, m, res):
     """마지막 날 저녁 기준, 이 모델이 내일 시가 거래 뒤 들고 있을 종목 (모두 거래 가능하다고 가정)."""
     K, X, mn, mx = stock_params(m)
     T = D.T
-    sell, buys = stock_decide(res["units"], res["since"], D.ranks(m["sel"])[T - 1], D.gate[m["gate"]][T - 1],
+    sell, buys = stock_decide(res["units"], res["since"], D.ranks(m["sel"], m.get("combo"))[T - 1], D.gate[m["gate"]][T - 1],
                               T, K, X, mn, mx, np.ones(D.N, bool))
     keep = np.where((res["units"] > 0) & ~sell)[0]
     return sorted(set(keep.tolist()) | set(buys.tolist()))
@@ -476,14 +495,21 @@ def follow(D, models, choice, records, stress=1.0, t0=1):
 
 
 def trailing_score(R, t, L, how):
-    """R: (T×S) 일별 수익률. t일까지 최근 L일 성적."""
+    """R: (T×S) 일별 수익률. t일까지 최근 L일 성적.
+    NaN = 아직 성적으로 치지 않는 날 (진화 모델은 태어나기 전 날들이 NaN) — 유효한 날이 L/2(최소 20)보다 적으면 NaN."""
     x = R[max(1, t - L + 1): t + 1]
-    if len(x) < max(20, L // 2):
+    need = max(20, L // 2)
+    if len(x) < need:
         return None
-    if how == "ret":
-        return np.prod(1 + x, 0) - 1
-    mu, sd = x.mean(0), x.std(0)
-    return mu / np.where(sd > 0, sd, np.inf) * np.sqrt(252)
+    n = (~np.isnan(x)).sum(0)
+    with np.errstate(all="ignore"), warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        if how == "ret":
+            out = np.prod(1 + np.nan_to_num(x), 0) - 1
+        else:
+            mu, sd = np.nanmean(x, 0), np.nanstd(x, 0)
+            out = mu / np.where(sd > 0, sd, np.inf) * np.sqrt(252)
+    return np.where(n >= need, out, np.nan)
 
 
 # 선택 규칙 = (몇 거래일마다 다시 고르나, 최근 며칠 성적으로, 무엇으로(ret=수익·sharpe=위험조정), 몇 개를 섞나, 끈기)
