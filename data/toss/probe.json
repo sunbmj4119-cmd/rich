@@ -1,0 +1,36 @@
+{
+ "time": "2026-10-25 11:07:20 UTC",
+ "base": "https://openapi.tossinvest.com",
+ "egress_ip": "129.225.178.181",
+ "spec": {
+  "url": "https://openapi.tossinvest.com/openapi-docs/latest/openapi.json",
+  "version": "1.2.24",
+  "n_ops": 41
+ },
+ "token": {
+  "status": 200,
+  "expires_in": 86399,
+  "token_type": "Bearer",
+  "fields": [
+   "access_token",
+   "expires_in",
+   "token_type"
+  ]
+ },
+ "accounts": {
+  "path": "/api/v1/accounts",
+  "status": 200,
+  "count": 1,
+  "item_keys": [
+   "accountNo",
+   "accountSeq",
+   "accountType"
+  ],
+  "top_keys": [
+   "result"
+  ],
+  "id_field": "accountNo",
+  "id_masked": "***6834",
+  "saved_to_secrets": true
+ }
+}
