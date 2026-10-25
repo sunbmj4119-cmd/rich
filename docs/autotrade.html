@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>자동매매 판단</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="ui.css">
 <style>
-.gate-pill { font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px }
+.gate-pill { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; letter-spacing: -0.02em }
 .gate-pill i { width: 10px; height: 10px; border-radius: 50%; background: var(--watch) }
-.gate-pill.open i { background: var(--buy) } .gate-pill.shut i { background: var(--sell) }
+.gate-pill.open i { background: var(--green) } .gate-pill.shut i { background: var(--orange) }
 .cnt { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px }
 .cnt button { border: 0; background: var(--soft); color: var(--fg); font: inherit; border-radius: 12px; padding: 8px 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; min-height: 52px }
 .cnt button b { font-size: 20px; font-variant-numeric: tabular-nums; line-height: 1.2 }
@@ -22,6 +23,8 @@
 .ck:last-child { border-bottom: 0 }
 .ck > span:last-child { text-align: right; color: var(--mut); min-width: 0 }
 .ck i { font-style: normal; font-size: 11px; color: var(--faint); margin-left: 4px }
+.ck .ic { display: inline-flex; width: 18px; height: 18px; border-radius: 50%; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; margin-right: 6px; vertical-align: -3px }
+.ck .ic.y { background: var(--pos-bg); color: var(--green) } .ck .ic.n { background: var(--warn-bg); color: var(--orange) }
 .sec td:first-child { max-width: 120px; white-space: normal }
 </style>
 </head>
@@ -77,7 +80,7 @@ U.nav("autotrade.html");
   U.$("#status").innerHTML = `
     <div class="row" style="justify-content:space-between;flex-wrap:wrap">
       <div class="gate-pill ${g.open ? "open" : "shut"}"><i></i>신규 매수 ${g.open ? "열림" : "닫힘"}</div><span class="badge b-mut">${U.esc(g.regime)}</span></div>
-    ${g.need ? `<p class="small" style="color:var(--orange)">열리는 조건: ${U.esc(g.need)}</p>` : `<p class="small mut">${U.esc(g.reason)}</p>`}
+    ${g.need ? `<p style="font-size:14px">다시 열리는 조건: <b>${U.esc(g.need)}</b></p>` : `<p class="small mut">${U.esc(g.reason)}</p>`}
     <div class="cnt" id="cnt" data-feat="market_score">${ORDER.map((s) => `<button type="button" data-s="${s}"><b>${d.counts[s]}</b><span>${s}</span></button>`).join("")}</div>`;
 
   // ── 경고: 접어서 한 줄 ──
@@ -88,7 +91,7 @@ U.nav("autotrade.html");
   if (d.plan_status === "승인 대기") w.push(`주문 ${d.orders.length}건이 승인을 기다립니다. Actions → autotrade-control → approve (뺄 종목코드는 skip 칸에)`);
   if (w.length) {
     U.$("#warnbox").hidden = false;
-    U.$("#warn-title").textContent = `⚠️ 확인할 것 ${w.length}건`;
+    U.$("#warn-title").textContent = `확인할 것 ${w.length}건`;
     U.$("#warn-first").textContent = w[0];
     U.$("#warns").innerHTML = w.map((x) => `<div class="warn">${U.esc(x)}</div>`).join("");
   }
@@ -133,7 +136,7 @@ U.nav("autotrade.html");
     const x = d.decisions.find((y) => y.code === b.dataset.code);
     const o = d.orders.find((y) => y.code === x.code);
     const band = A && A.stocks[x.code] && A.stocks[x.code].band;
-    const ck = (x.checks || []).map((c) => `<div class="ck"><span>${c.ok ? "✅" : "❌"} ${U.esc(c.label)}<i>${U.esc(c.tier)}</i></span><span>${U.esc(c.value)}</span></div>`).join("");
+    const ck = (x.checks || []).map((c) => `<div class="ck"><span><b class="ic ${c.ok ? "y" : "n"}" aria-label="${c.ok ? "충족" : "미충족"}">${c.ok ? "✓" : "✕"}</b>${U.esc(c.label)}<i>${U.esc(c.tier)}</i></span><span>${U.esc(c.value)}</span></div>`).join("");
     const rf = (x.ref?.items || []).map((r) => `<div class="ck"><span>${r.good ? "＋" : "－"} ${U.esc(r.label)}<i>${U.esc(r.source)}</i></span><span>${U.esc(r.value)}</span></div>`).join("");
     U.sheet(`${x.name} · ${x.state}`, `
       <div class="row" style="flex-wrap:wrap;gap:8px"><span class="st st-${x.state}">${x.state}${x.action ? " · " + U.esc(x.action) : ""}</span>

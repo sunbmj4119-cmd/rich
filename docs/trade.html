@@ -1,105 +1,85 @@
-<!doctype html><html lang="ko"><head>
+<!doctype html>
+<html lang="ko">
+<head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="매매기록">
-<title>매매 기록 · 내 포트폴리오</title>
+<title>매매 기록</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="ui.css">
 <style>
-*{box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;padding:14px;background:#f2f2f7;color:#1d1d1f;-webkit-text-size-adjust:100%}
-h1{font-size:20px;margin:4px 0 12px}
-.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-label{display:block;font-size:13px;color:#666;margin:10px 0 4px;font-weight:600}
-input,select{width:100%;padding:12px;font-size:16px;border:1px solid #ddd;border-radius:10px;background:#fff}
-.row2{display:flex;gap:8px}.row2>div{flex:1}
-.seg{display:flex;gap:8px;margin-top:4px}
-.seg button{flex:1;padding:12px;font-size:15px;border:1px solid #ddd;border-radius:10px;background:#fff;font-weight:600}
-.seg button.on-buy{background:#ffecec;border-color:#d70015;color:#d70015}
-.seg button.on-sell{background:#e8f0fe;border-color:#0071e3;color:#0071e3}
-.big{width:100%;padding:15px;font-size:17px;font-weight:700;border:0;border-radius:12px;background:#0071e3;color:#fff;margin-top:16px}
-.big:active{opacity:.7}
-.rec{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #f0f0f0;font-size:14px}
-.rec:last-child{border:0}
-.del{color:#d70015;background:none;border:0;font-size:13px;padding:4px 8px}
-.tag-b{color:#d70015;font-weight:700} .tag-s{color:#0071e3;font-weight:700}
-.copy{width:100%;padding:14px;font-size:15px;font-weight:700;border:0;border-radius:12px;background:#34c759;color:#fff;margin-top:8px}
-.copy:active{opacity:.7}
-.hint{font-size:12px;color:#999;line-height:1.6;margin-top:8px}
-.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:12px 22px;border-radius:24px;font-size:14px;opacity:0;transition:.3s;pointer-events:none;z-index:99}
-.toast.show{opacity:1}
-.empty{color:#aaa;text-align:center;padding:20px;font-size:14px}
-.sumrow{display:flex;gap:8px;margin-bottom:10px}
-.sumrow>div{flex:1;background:#f7f7fa;border-radius:11px;padding:11px 6px;text-align:center}
-.sumrow .v{font-size:19px;font-weight:800}.sumrow .k{font-size:10px;color:#888;margin-top:2px}
-.hd{display:flex;align-items:center;padding:11px 4px;border-bottom:1px solid #f0f0f0}
-.hd:last-child{border:0}
-.hd .nm{font-weight:700;font-size:15px;flex:1}
-.hd .sub{font-size:11px;color:#999;margin-top:2px}
-.hd .rt{text-align:right;flex-shrink:0;min-width:96px}
-.pp{color:#d70015;font-weight:700}.pn{color:#0071e3;font-weight:700}
-.mini{font-size:11px;color:#888}
-a.back{display:inline-block;color:#0071e3;text-decoration:none;font-size:14px;margin-bottom:8px}
-</style></head><body>
-<a href="index.html" class="back">← 신호 대시보드</a>
-<h1>📝 매매 기록 · 내 포트폴리오</h1>
+label { display: block; font-size: 13.5px; color: var(--mut); margin: 4px 0 6px; font-weight: 600 }
+input, select { width: 100%; padding: 13px 14px; font: inherit; font-size: 16px; border: 0; border-radius: 12px; background: var(--soft); color: var(--fg); max-width: none }
+input:focus-visible, select:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px }
+.form { display: flex; flex-direction: column; gap: 14px }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.side { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.side button { padding: 13px; font: inherit; font-size: 16px; font-weight: 700; border: 0; border-radius: 12px; background: var(--soft); color: var(--mut); cursor: pointer; min-height: 50px }
+.side button.on-buy { background: var(--up-bg); color: var(--up); box-shadow: inset 0 0 0 1.5px var(--up) }
+.side button.on-sell { background: var(--down-bg); color: var(--down); box-shadow: inset 0 0 0 1.5px var(--down) }
+.btn.wide { width: 100% }
+.rec { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-block: 12px; border-bottom: 1px solid var(--line); font-size: 15px }
+.rec:last-child { border: 0 }
+.rec .meta { color: var(--mut); font-size: 13px }
+.del { color: var(--mut); background: var(--soft); border: 0; font: inherit; font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 10px; cursor: pointer; flex-shrink: 0 }
+.tag-b { color: var(--up); font-weight: 700 } .tag-s { color: var(--down); font-weight: 700 }
+.toast { position: fixed; bottom: calc(var(--nav-h) + 24px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--bg);
+  padding: 12px 22px; border-radius: 24px; font-size: 14px; font-weight: 600; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 99; white-space: nowrap }
+.toast.show { opacity: 1 }
+.hd { display: flex; align-items: center; gap: 10px; padding-block: 12px; border-bottom: 1px solid var(--line) }
+.hd:last-child { border: 0 }
+.hd .nm { font-weight: 600; font-size: 16px }
+.hd .sub { font-size: 13px; color: var(--mut); margin-top: 1px }
+.hd .rt { text-align: right; flex-shrink: 0; min-width: 96px; font-variant-numeric: tabular-nums }
+.pp { color: var(--up); font-weight: 700 } .pn { color: var(--down); font-weight: 700 }
+.minitxt { font-size: 12.5px; color: var(--mut) }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav" id="topnav" aria-label="페이지"></nav>
+  <header class="phead">
+    <a href="index.html" class="mut" style="font-size:14px;font-weight:600">‹ 홈</a>
+    <h1>매매 기록</h1>
+    <p class="mut" style="font-size:14px">직접 사고판 내역을 적으면 홈의 '내 계좌'에 손익과 손절·익절 시점이 나옵니다.</p>
+  </header>
 
-<!-- 실시간 보유 현황 -->
-<div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-    <b style="font-size:15px">💼 내 보유 (실시간 추정)</b>
-    <span id="asof" class="mini"></span>
-  </div>
-  <div class="sumrow">
-    <div><div class="v" id="sUpnl">-</div><div class="k">평가손익</div></div>
-    <div><div class="v" id="sVal">-</div><div class="k">평가액</div></div>
-    <div><div class="v" id="sReal">-</div><div class="k">실현손익</div></div>
-  </div>
-  <div id="holdings"></div>
-  <div class="hint">현재가는 대시보드 데이터(data.json)에서 가져옵니다. 정확한 평단을 보려면 매수 시 <b>수량과 금액을 함께</b> 입력하세요. 공식 수치는 대시보드 <b>💼 내 계좌</b> 카드가 기준입니다.</div>
-</div>
-
-<!-- 매매 입력 -->
-<div class="card">
-  <label>종목</label>
-  <select id="stock"></select>
-
-  <label>구분</label>
-  <div class="seg">
-    <button id="bBuy" class="on-buy" onclick="setType('매수')">매수</button>
-    <button id="bSell" onclick="setType('매도')">매도</button>
-  </div>
-
-  <label>날짜</label>
-  <input type="date" id="date">
-
-  <div class="row2">
-    <div>
-      <label>수량 (주)</label>
-      <input type="number" id="qty" inputmode="numeric" placeholder="예: 10">
+  <section class="card">
+    <header><h2>지금 보유 <span class="mut" style="font-weight:500;font-size:14px">(이 기기 기록 기준)</span></h2><span id="asof" class="mut small"></span></header>
+    <div class="facts" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+      <div class="fact"><span>평가손익</span><b id="sUpnl">—</b></div>
+      <div class="fact"><span>평가액</span><b id="sVal">—</b></div>
+      <div class="fact"><span>실현손익</span><b id="sReal">—</b></div>
     </div>
-    <div>
-      <label id="amtLabel">금액 (원)</label>
-      <input type="number" id="amount" inputmode="numeric" placeholder="예: 1000000">
+    <div id="holdings"></div>
+    <p class="guide">현재가는 매일 오후 5시에 갱신되는 데이터에서 가져옵니다. 매수할 때 <b>수량과 금액을 함께</b> 적어야 평단이 정확합니다. 홈의 '내 계좌'는 저장소의 data/my_trades.csv 기준입니다.</p>
+  </section>
+
+  <section class="card form">
+    <h2>새 기록</h2>
+    <div><label for="stock">종목</label><select id="stock"></select></div>
+    <div><label>구분</label>
+      <div class="side"><button id="bBuy" type="button" class="on-buy" onclick="setType('매수')">매수</button>
+        <button id="bSell" type="button" onclick="setType('매도')">매도</button></div></div>
+    <div><label for="date">날짜</label><input type="date" id="date"></div>
+    <div class="row2">
+      <div><label for="qty">수량 (주)</label><input type="number" id="qty" inputmode="numeric" placeholder="예: 10"></div>
+      <div><label for="amount" id="amtLabel">금액 (원)</label><input type="number" id="amount" inputmode="numeric" placeholder="예: 1000000"></div>
     </div>
-  </div>
-  <div class="hint" id="hint">매수: 수량·금액 함께 적으면 평단이 정확합니다. 매도: 수량만 적으면 부분매도, 둘 다 비우면 전량매도.</div>
+    <p class="guide" id="hint">매수: 수량·금액 함께 적으면 평단이 정확합니다. 매도: 수량만 적으면 부분매도, 둘 다 비우면 전량매도.</p>
+    <button class="btn primary wide" type="button" onclick="addRecord()">기록 추가</button>
+  </section>
 
-  <button class="big" onclick="addRecord()">기록 추가</button>
+  <section class="card">
+    <header><h2>기록 목록</h2><span id="count" class="mut small"></span></header>
+    <div id="list"></div>
+    <button class="btn ghost wide" type="button" onclick="copyCSV()">GitHub용 CSV 전체 복사</button>
+    <p class="guide">복사한 뒤 GitHub 저장소의 <b>data/my_trades.csv</b> 내용을 통째로 바꾸면 다음 정기 실행부터 홈에 반영됩니다. (머리줄: 날짜,종목명,구분,금액,수량)</p>
+  </section>
 </div>
-
-<!-- 기록 목록 -->
-<div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center">
-    <b style="font-size:15px">기록 목록</b>
-    <span id="count" style="font-size:12px;color:#999"></span>
-  </div>
-  <div id="list"></div>
-  <button class="copy" onclick="copyCSV()">📋 GitHub용 CSV 전체 복사</button>
-  <div class="hint">복사 후 GitHub의 <b>data/my_trades.csv</b> 전체를 이걸로 교체하세요. (헤더: 날짜,종목명,구분,금액,수량)</div>
-</div>
-
-<div class="toast" id="toast"></div>
-
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="ui.js"></script>
 <script>
 const FALLBACK_NAMES = ["CJ제일제당","DB손해보험","DB하이텍","DL이앤씨","GS","GS리테일","HD현대","HD현대일렉트릭","HD현대중공업","HMM","KB금융","KCC","KT","KT&G","LG","LG생활건강","LG에너지솔루션","LG이노텍","LG전자","LG화학","NAVER","NC","OCI","POSCO홀딩스","S-Oil","SK","SK바이오팜","SK스퀘어","SK이노베이션","SK텔레콤","SK하이닉스","고려아연","금양","기아","기업은행","넷마블","녹십자","두산","두산밥캣","롯데지주","롯데케미칼","리노공업","메리츠금융지주","미래에셋증권","삼성SDI","삼성물산","삼성바이오로직스","삼성생명","삼성에스디에스","삼성전기","삼성전자","삼성전자우","삼성중공업","삼성카드","삼성화재","셀트리온","솔브레인","신세계","신한지주","아모레퍼시픽","아모레퍼시픽홀딩스","알체라","에코프로머티","영원무역","오리온","우리금융지주","유한양행","이마트","종근당","카카오","카카오뱅크","케어젠","코오롱인더","코웨이","크래프톤","포스코인터내셔널","포스코퓨처엠","하나금융지주","한국금융지주","한국전력","한국타이어앤테크놀로지","한국항공우주","한미사이언스","한미약품","한전기술","한화생명","한화솔루션","한화시스템","한화에어로스페이스","한화오션","현대건설","현대로템","현대모비스","현대백화점","현대제철","현대차","현대차2우B","현대해상","호텔신라","후성"];
 let NAMES = FALLBACK_NAMES.slice();
@@ -155,7 +135,7 @@ function addRecord(){
   save(recs);
   document.getElementById('amount').value=''; document.getElementById('qty').value='';
   renderAll();
-  toast('✅ '+stock+' '+type+' 기록됨');
+  toast(stock+' '+type+' 기록했습니다');
 }
 function delRecord(i){ const recs=load(); recs.splice(i,1); save(recs); renderAll(); }
 
@@ -213,7 +193,7 @@ function renderHoldings(){
           <div class="nm">${n}</div>
           <div class="sub">${shTxt} · 평단 ${won(avg)} · 현재 ${won(px)}</div></div>
           <div class="rt"><div class="${colOf(upnl)}">${sign(upnl)}</div>
-          <div class="mini ${colOf(rt)}">${rt>=0?'+':''}${rt.toFixed(1)}%</div></div></div>`;
+          <div class="minitxt ${colOf(rt)}">${rt>=0?'+':''}${rt.toFixed(1)}%</div></div></div>`;
       } else {
         // 추정 포지션: 손익%를 지어내지 않는다. 대시보드를 기준으로 안내.
         anyEst=true;
@@ -221,15 +201,15 @@ function renderHoldings(){
         html+=`<div class="hd"><div style="flex:1;min-width:0">
           <div class="nm">${n}</div>
           <div class="sub">${shTxt} · 평단 ≈${won(avg)}(추정) · ${pxTxt}</div></div>
-          <div class="rt"><div class="mini" style="color:#aaa">손익 대시보드 확인</div></div></div>`;
+          <div class="rt"><div class="minitxt">손익은 홈에서 확인</div></div></div>`;
       }
     });
-    if(anyEst) html+=`<div class="hint" style="margin-top:4px">‘추정’ 표시 종목은 매수 시 <b>수량·금액을 함께</b> 적으면 평단·손익이 정확해집니다. 공식 손익은 대시보드 <b>내 계좌</b> 참고.</div>`;
-    if(warns.length) html+=`<div class="hint" style="color:#c60">⚠ ${warns.join(' · ')}</div>`;
+    if(anyEst) html+=`<p class="guide" style="margin-top:6px">‘추정’ 표시 종목은 매수 시 <b>수량·금액을 함께</b> 적으면 평단·손익이 정확해집니다. 공식 손익은 홈의 <b>내 계좌</b>를 보세요.</p>`;
+    if(warns.length) html+=`<div class="warn" style="margin-top:6px">${warns.join(' · ')}</div>`;
     box.innerHTML=html;
   }
   const upnl=exactVal-exactCost;
-  const set=(id,v,cls)=>{const e=document.getElementById(id);e.textContent=v;e.className='v '+(cls||'');};
+  const set=(id,v,cls)=>{const e=document.getElementById(id);e.textContent=v;e.className=(cls||'');};
   set('sUpnl', exactCost?sign(upnl):'—', exactCost?colOf(upnl):'');
   set('sVal', exactCost?won(exactVal):'—', '');
   set('sReal', Math.abs(realized)>=1?(sign(realized)+(realizedExact?'':'≈')):'0', Math.abs(realized)>=1?colOf(realized):'');
@@ -248,8 +228,8 @@ function renderList(){
     const tag = r.type==='매수'?'tag-b':'tag-s';
     const d=document.createElement('div'); d.className='rec';
     d.innerHTML='<span><b>'+r.stock+'</b> <span class="'+tag+'">'+r.type+'</span>'+
-      ' <span style="color:#999;font-size:12px">'+r.date+' · '+parts.join(' · ')+'</span></span>'+
-      '<button class="del" onclick="delRecord('+i+')">삭제</button>';
+      '<br><span class="meta">'+r.date+' · '+parts.join(' · ')+'</span></span>'+
+      '<button class="del" type="button" onclick="delRecord('+i+')">삭제</button>';
     list.appendChild(d);
   });
 }
@@ -259,11 +239,11 @@ function copyCSV(){
   const recs=load();
   let csv='날짜,종목명,구분,금액,수량\n';
   recs.forEach(r=>{csv+=r.date+','+r.stock+','+r.type+','+(r.amount||'')+','+(r.qty||'')+'\n';});
-  navigator.clipboard.writeText(csv).then(()=>toast('📋 복사됨! GitHub에 붙여넣으세요'))
+  navigator.clipboard.writeText(csv).then(()=>toast('복사했습니다 · GitHub에 붙여넣으세요'))
     .catch(()=>{
       const ta=document.createElement('textarea');ta.value=csv;document.body.appendChild(ta);
       ta.select();document.execCommand('copy');document.body.removeChild(ta);
-      toast('📋 복사됨! GitHub에 붙여넣으세요');
+      toast('복사했습니다 · GitHub에 붙여넣으세요');
     });
 }
 function toast(m){
@@ -271,5 +251,6 @@ function toast(m){
   setTimeout(()=>t.className='toast',1800);
 }
 setType('매수'); fillStocks(); renderAll();
+U.nav("index.html");
 </script>
 </body></html>

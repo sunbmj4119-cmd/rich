@@ -1,116 +1,92 @@
-<!doctype html><html lang="ko"><head>
+<!doctype html>
+<html lang="ko">
+<head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="투자논리">
-<title>투자 논리 기록 · 판단 근거</title>
+<title>투자 논리 기록</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="ui.css">
 <style>
-*{box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;padding:14px;background:#f2f2f7;color:#1d1d1f;-webkit-text-size-adjust:100%}
-h1{font-size:20px;margin:4px 0 4px}
-.sub{font-size:12.5px;color:#888;line-height:1.6;margin-bottom:12px}
-.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-label{display:block;font-size:13px;color:#666;margin:12px 0 4px;font-weight:600}
-input,select,textarea{width:100%;padding:12px;font-size:16px;border:1px solid #ddd;border-radius:10px;background:#fff;font-family:inherit}
-textarea{min-height:74px;resize:vertical;line-height:1.6}
-.row2{display:flex;gap:8px}.row2>div{flex:1}
-.seg{display:flex;gap:6px;margin-top:4px}
-.seg button{flex:1;padding:11px 4px;font-size:14px;border:1px solid #ddd;border-radius:10px;background:#fff;font-weight:600;color:#666}
-.seg button.on{background:#5856d6;border-color:#5856d6;color:#fff}
-.conv{display:flex;gap:6px;margin-top:4px}
-.conv button{flex:1;padding:12px 0;font-size:16px;border:1px solid #ddd;border-radius:10px;background:#fff;font-weight:800;color:#bbb}
-.conv button.on{background:#ff9500;border-color:#ff9500;color:#fff}
-.big{width:100%;padding:15px;font-size:17px;font-weight:700;border:0;border-radius:12px;background:#5856d6;color:#fff;margin-top:16px}
-.big:active{opacity:.7}
-.copy{width:100%;padding:14px;font-size:15px;font-weight:700;border:0;border-radius:12px;background:#34c759;color:#fff;margin-top:8px}
-.copy:active{opacity:.7}
-.hint{font-size:12px;color:#999;line-height:1.65;margin-top:8px}
-.empty{color:#aaa;text-align:center;padding:20px;font-size:14px}
-.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:12px 22px;border-radius:24px;font-size:14px;opacity:0;transition:.3s;pointer-events:none;z-index:99}
-.toast.show{opacity:1}
-a.back{display:inline-block;color:#0071e3;text-decoration:none;font-size:14px;margin-bottom:8px}
-.ent{border-bottom:1px solid #f0f0f0;padding:13px 0}
-.ent:last-child{border:0}
-.eh{display:flex;align-items:center;gap:8px}
-.tag{font-size:10.5px;font-weight:800;color:#fff;border-radius:6px;padding:3px 7px;flex-shrink:0}
-.t진입{background:#5856d6}.t점검{background:#0071e3}.t청산{background:#8e8e93}
-.enm{font-weight:800;font-size:15.5px;flex:1;min-width:0}
-.del{color:#d70015;background:none;border:0;font-size:12px;padding:4px 6px}
-.eb{font-size:12.5px;line-height:1.7;margin-top:6px;color:#444}
-.up{color:#1a8b38}.dn{color:#d70015}
-.pp{color:#d70015;font-weight:700}.pn{color:#0071e3;font-weight:700}
-.alarm{background:#fff0f0;border:1.5px solid #ffc9c9;border-radius:10px;padding:10px;font-size:12.5px;line-height:1.65;margin-top:8px;color:#c00}
-.okbox{background:#f2fbf4;border-radius:10px;padding:10px;font-size:12.5px;line-height:1.6;margin-top:8px;color:#1a8b38}
-.pre{background:#f7f7fa;border-radius:10px;padding:11px;font-size:12.5px;line-height:1.7;margin-top:6px;color:#555}
-.pre b{color:#1d1d1f}
-</style></head><body>
-<a href="index.html" class="back">← 신호 대시보드</a>
-<h1>📓 투자 논리 기록</h1>
-<div class="sub">
-왜 샀는지를 <b>사기 전에</b> 적어두는 곳입니다. 기억은 결과에 맞춰 조용히 바뀝니다(사후과잉확신).
-적어둔 논리와 <b>무효화 조건</b>이 있어야, 한 달 뒤 "운이 좋았나 판단이 옳았나"를 구분할 수 있습니다.
+label { display: block; font-size: 13.5px; color: var(--mut); margin: 4px 0 6px; font-weight: 600 }
+input, select, textarea { width: 100%; padding: 13px 14px; font: inherit; font-size: 16px; border: 0; border-radius: 12px; background: var(--soft); color: var(--fg); max-width: none }
+textarea { min-height: 84px; resize: vertical; line-height: 1.6 }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px }
+.form { display: flex; flex-direction: column; gap: 14px }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.opts { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px }
+.opts button { padding: 12px 4px; font: inherit; font-size: 15px; font-weight: 600; border: 0; border-radius: 12px; background: var(--soft); color: var(--mut); cursor: pointer; min-height: 48px }
+.opts button.on { background: var(--fg); color: var(--bg) }
+.btn.wide { width: 100% }
+.toast { position: fixed; bottom: calc(var(--nav-h) + 24px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--bg);
+  padding: 12px 22px; border-radius: 24px; font-size: 14px; font-weight: 600; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 99; white-space: nowrap }
+.toast.show { opacity: 1 }
+.ent { border-bottom: 1px solid var(--line); padding-block: 14px }
+.ent:last-child { border: 0 }
+.eh { display: flex; align-items: center; gap: 8px }
+.tag { font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 8px; flex-shrink: 0; background: var(--soft); color: var(--hold) }
+.enm { font-weight: 600; font-size: 16px; flex: 1; min-width: 0 }
+.del { color: var(--mut); background: var(--soft); border: 0; font: inherit; font-size: 13px; font-weight: 600; padding: 6px 11px; border-radius: 10px; cursor: pointer }
+.eb { font-size: 14px; line-height: 1.7; margin-top: 6px }
+.eb .k { color: var(--mut); font-size: 13px }
+.bullx { color: var(--up) } .bearx { color: var(--down) }
+.pp { color: var(--up); font-weight: 700 } .pn { color: var(--down); font-weight: 700 }
+.alarm { background: var(--warn-bg); border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.65 }
+.okbox { background: var(--soft); border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.6; color: var(--mut) }
+.okbox b, .alarm b { color: var(--fg) }
+.pre { background: var(--soft); border-radius: 14px; padding: 12px 14px; font-size: 13.5px; line-height: 1.7; color: var(--mut); margin-top: 8px }
+.pre b { color: var(--fg) }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav" id="topnav" aria-label="페이지"></nav>
+  <header class="phead">
+    <a href="index.html" class="mut" style="font-size:14px;font-weight:600">‹ 홈</a>
+    <h1>투자 논리 기록</h1>
+    <p class="mut" style="font-size:14px;line-height:1.65">왜 사는지를 <b>사기 전에</b> 적어 두는 곳입니다. 기억은 결과에 맞춰 조용히 바뀌기 때문에, 적어 둔 논리와 <b>무효화 조건</b>이 있어야 한 달 뒤 "운이었나, 판단이 맞았나"를 가를 수 있습니다.</p>
+  </header>
+
+  <section class="card" id="checkCard" style="display:none">
+    <h2>무효화 조건 점검</h2>
+    <div id="checks" style="display:flex;flex-direction:column;gap:8px"></div>
+    <p class="guide">적어 둔 손절가·목표가를 <b>오늘 데이터</b>와 대조합니다. 걸린 항목은 감정이 아니라 <b>규칙</b>이 보내는 신호입니다.</p>
+  </section>
+
+  <section class="card form">
+    <h2>새 기록</h2>
+    <div><label for="stock">종목</label><select id="stock" onchange="prefill()"></select><div id="snap" class="pre"></div></div>
+    <div><label>구분</label>
+      <div class="opts"><button id="k진입" type="button" onclick="setKind('진입')">진입 논리</button>
+        <button id="k점검" type="button" onclick="setKind('점검')">중간 점검</button>
+        <button id="k청산" type="button" onclick="setKind('청산')">청산 회고</button></div></div>
+    <div><label>확신도 <span style="font-weight:400">(1 거의 모름 · 5 매우 확신)</span></label><div class="opts" id="convBtns"></div></div>
+    <div><label for="date">날짜</label><input type="date" id="date"></div>
+    <div><label for="bull">오를 이유</label>
+      <textarea id="bull" placeholder="예: PER·PBR 하위권 저평가 + ROE 개선. 외국인 20일 순매수 지속."></textarea></div>
+    <div><label for="bear">틀릴 수 있는 이유</label>
+      <textarea id="bear" placeholder="예: 성장률 하위권이라 밸류트랩 가능. 하락베타 1.3으로 시장 하락에 취약."></textarea></div>
+    <div class="row2">
+      <div><label for="target">목표가 (원)</label><input type="number" id="target" inputmode="numeric"></div>
+      <div><label for="stop">손절가 (원)</label><input type="number" id="stop" inputmode="numeric"></div>
+    </div>
+    <div><label for="inval">무효화 조건 — 여기 닿으면 논리와 상관없이 정리</label>
+      <textarea id="inval" placeholder="예: 손절가 이탈 / 종합 20위 밖 이탈 / 외국인 순매도 전환"></textarea></div>
+    <div><label for="memo">메모 (선택)</label><input id="memo" placeholder="예: 실적발표 8/28 확인"></div>
+    <button class="btn primary wide" type="button" onclick="addEntry()">기록하기</button>
+    <p class="guide">기록하는 순간의 <b>주가</b>가 함께 저장돼, 나중에 "그때 판단 이후 얼마나 움직였나"를 비교합니다.</p>
+  </section>
+
+  <section class="card">
+    <header><h2>기록 목록</h2><span id="count" class="mut small"></span></header>
+    <div id="list"></div>
+    <button class="btn ghost wide" type="button" onclick="copyCSV()">GitHub용 CSV 전체 복사</button>
+    <p class="guide">복사한 뒤 GitHub 저장소의 <b>data/journal.csv</b> 내용을 통째로 바꾸세요(없으면 새로 만들기). 다음 정기 실행부터 종목 화면에 이 기록이 함께 뜹니다.</p>
+  </section>
 </div>
-
-<!-- 무효화 점검 -->
-<div class="card" id="checkCard" style="display:none">
-  <b style="font-size:15px">🚨 무효화 조건 점검</b>
-  <div id="checks"></div>
-  <div class="hint">기록해둔 손절가·목표가를 <b>오늘 데이터</b>와 대조합니다. 걸린 항목은 감정이 아니라 <b>규칙</b>이 말하는 신호입니다.</div>
-</div>
-
-<!-- 입력 -->
-<div class="card">
-  <label>종목</label>
-  <select id="stock" onchange="prefill()"></select>
-  <div id="snap" class="pre"></div>
-
-  <label>구분</label>
-  <div class="seg">
-    <button id="k진입" onclick="setKind('진입')">진입 논리</button>
-    <button id="k점검" onclick="setKind('점검')">중간 점검</button>
-    <button id="k청산" onclick="setKind('청산')">청산 회고</button>
-  </div>
-
-  <label>확신도 (1=거의 모름 · 5=매우 확신)</label>
-  <div class="conv" id="convBtns"></div>
-
-  <label>날짜</label>
-  <input type="date" id="date">
-
-  <label>▲ 상승 논리 — 왜 오른다고 보나</label>
-  <textarea id="bull" placeholder="예: PER·PBR 하위권 저평가 + ROE 개선. 외국인 20일 순매수 지속."></textarea>
-
-  <label>▼ 반대 논리 — 뭐가 틀릴 수 있나</label>
-  <textarea id="bear" placeholder="예: 성장률 하위권이라 밸류트랩 가능. 하락베타 1.3으로 시장 하락에 취약."></textarea>
-
-  <div class="row2">
-    <div><label>목표가 (원)</label><input type="number" id="target" inputmode="numeric"></div>
-    <div><label>손절가 (원)</label><input type="number" id="stop" inputmode="numeric"></div>
-  </div>
-
-  <label>🚨 무효화 조건 — 여기 닿으면 논리와 무관하게 실행</label>
-  <textarea id="inval" placeholder="예: 손절가 이탈 / 종합 20위 밖 이탈 / 외국인 순매도 전환"></textarea>
-
-  <label>메모 (선택)</label>
-  <input id="memo" placeholder="예: 실적발표 8/28 확인">
-
-  <button class="big" onclick="addEntry()">📓 논리 기록</button>
-  <div class="hint">기록 시점의 <b>주가</b>가 자동 저장돼, 나중에 "그때 판단 이후 얼마나 움직였나"를 대조합니다.</div>
-</div>
-
-<!-- 기록 목록 -->
-<div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center">
-    <b style="font-size:15px">기록 목록</b><span id="count" style="font-size:12px;color:#999"></span>
-  </div>
-  <div id="list"></div>
-  <button class="copy" onclick="copyCSV()">📋 GitHub용 CSV 전체 복사</button>
-  <div class="hint">복사 후 GitHub의 <b>data/journal.csv</b> 전체를 이걸로 교체하세요(없으면 새로 만들기).
-  커밋하면 다음 날부터 <b>대시보드 종목 화면</b>에도 이 기록이 함께 뜹니다.</div>
-</div>
-
-<div class="toast" id="toast"></div>
-
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="ui.js"></script>
 <script>
 let NAMES=[], ITEM={}, ASOF="";
 let kind='진입', conv=3;
@@ -141,7 +117,7 @@ function fillStocks(){
 
 function setKind(k){kind=k;['진입','점검','청산'].forEach(x=>$('k'+x).className=(x===k?'on':''));}
 (function(){const b=$('convBtns');for(let n=1;n<=5;n++){
-  const el=document.createElement('button');el.textContent=n;
+  const el=document.createElement('button');el.type='button';el.textContent=n;
   el.onclick=()=>{conv=n;[...b.children].forEach((c,k)=>c.className=(k+1===n?'on':''));};
   b.appendChild(el);} [...b.children][2].className='on';})();
 setKind('진입');
@@ -152,9 +128,9 @@ function prefill(){
   if(!i){$('snap').textContent='';return;}
   const v=i.verdict||{}, pr=i.prob;
   let s=`<b>${esc(i.name)}</b> · ${won(i.price)}원 · 종합 ${i.score.toFixed(0)}점(${i.rank}위) · 판단 <b>${v.grade||'-'}</b>(${v.conf||0}/100)`;
-  if(pr)s+=`<br>승률 ${pr.win}% <span style="color:#999">(기준선 ${pr.base_win}%)</span> · 손절확률 ${pr.p_stop}% · 기대 ${pr.ev>=0?'+':''}${pr.ev}%`;
-  if(i.signal)s+=`<br>오늘 신호: <b>${esc(i.signal)}</b> ${esc(i.reason||'')}`;
-  s+=`<br><span style="color:#999">기준일 ${ASOF} · 아래 칸은 자동 초안입니다. <b>내 말로 고쳐 쓰세요</b> — 남의 논리는 흔들릴 때 버티지 못합니다.</span>`;
+  if(pr)s+=`<br>과거 승률 ${pr.win}% (기준선 ${pr.base_win}%) · 손절확률 ${pr.p_stop}% · 기대 ${pr.ev>=0?'+':''}${pr.ev}%`;
+  if(i.signal)s+=`<br>오늘 신호: <b>${esc(i.signal.replace(/^[^가-힣]+/,''))}</b> ${esc(i.reason||'')}`;
+  s+=`<br>기준일 ${ASOF} · 아래 칸은 자동 초안입니다. <b>내 말로 고쳐 쓰세요</b> — 남의 논리는 흔들릴 때 버티지 못합니다.`;
   $('snap').innerHTML=s;
 
   const meta=window.__META||{};
@@ -189,7 +165,7 @@ function addEntry(){
   save(recs);
   ['bull','bear','target','stop','inval','memo'].forEach(k=>$(k).value='');
   renderAll();
-  toast('📓 '+name+' '+kind+' 논리 기록됨');
+  toast(name+' '+kind+' 논리를 기록했습니다');
 }
 function delEntry(i){if(!confirm('이 기록을 삭제할까요?'))return;const r=load();r.splice(i,1);save(r);renderAll();}
 
@@ -207,7 +183,7 @@ function renderChecks(){
     const px=it.price, stop=parseFloat(r.stop)||0, tgt=parseFloat(r.target)||0;
     const why=[];
     if(stop&&px<=stop)why.push(`현재가 ${won(px)}원이 <b>기록한 손절가 ${won(stop)}원 아래</b>`);
-    if(it.signal&&(it.signal.indexOf('손절')>=0||it.signal.indexOf('매도')>=0))why.push(`오늘 신호 <b>${esc(it.signal)}</b>`);
+    if(it.signal&&(it.signal.indexOf('손절')>=0||it.signal.indexOf('매도')>=0))why.push(`오늘 신호 <b>${esc(it.signal.replace(/^[^가-힣]+/,''))}</b>`);
     if(it.rank>20)why.push(`종합 <b>${it.rank}위</b>로 20위 밖 이탈`);
     if(why.length)hits.push({n,why,px,r});
     else oks.push({n,px,tgt,r});
@@ -216,7 +192,7 @@ function renderChecks(){
   hits.forEach(x=>{
     const chg=parseFloat(x.r.px)?((x.px/parseFloat(x.r.px)-1)*100):null;
     h+=`<div class="alarm"><b>${esc(x.n)}</b> — ${x.why.join(' · ')}
-      <div style="margin-top:4px;color:#a00">${x.r.date} 기록 논리: ${esc((x.r.bull||'').slice(0,70))}
+      <div style="margin-top:4px;color:var(--mut)">${x.r.date} 기록 논리: ${esc((x.r.bull||'').slice(0,70))}
       ${chg!=null?` (기록 후 ${chg>=0?'+':''}${chg.toFixed(1)}%)`:''}</div></div>`;
   });
   oks.forEach(x=>{
@@ -240,14 +216,14 @@ function renderList(){
     return `<div class="ent">
       <div class="eh"><span class="tag t${r.kind}">${r.kind}</span>
         <span class="enm">${esc(r.name)}</span>
-        <span style="font-size:11.5px;color:#999">확신 ${esc(r.conv)}/5</span>
-        <button class="del" onclick="delEntry(${i})">삭제</button></div>
-      <div class="eb"><span style="color:#999">${esc(r.date)}${px0?' · '+won(px0)+'원':''}${chg}</span>
-        ${r.bull?`<br><span class="up">▲ ${esc(r.bull)}</span>`:''}
-        ${r.bear?`<br><span class="dn">▼ ${esc(r.bear)}</span>`:''}
-        ${(r.target||r.stop)?`<br>🎯 목표 ${r.target?won(r.target)+'원':'-'} · 🛑 손절 ${r.stop?won(r.stop)+'원':'-'}`:''}
-        ${r.inval?`<br>🚨 ${esc(r.inval)}`:''}
-        ${r.memo?`<br>📝 ${esc(r.memo)}`:''}</div></div>`;
+        <span class="mut small">확신 ${esc(r.conv)}/5</span>
+        <button class="del" type="button" onclick="delEntry(${i})">삭제</button></div>
+      <div class="eb"><span class="k">${esc(r.date)}${px0?' · '+won(px0)+'원':''}${chg}</span>
+        ${r.bull?`<br><span class="k">오를 이유</span> ${esc(r.bull)}`:''}
+        ${r.bear?`<br><span class="k">틀릴 이유</span> ${esc(r.bear)}`:''}
+        ${(r.target||r.stop)?`<br><span class="k">목표</span> ${r.target?won(r.target)+'원':'-'} · <span class="k">손절</span> ${r.stop?won(r.stop)+'원':'-'}`:''}
+        ${r.inval?`<br><span class="k">무효화</span> ${esc(r.inval)}`:''}
+        ${r.memo?`<br><span class="k">메모</span> ${esc(r.memo)}`:''}</div></div>`;
   }).join('');
 }
 function renderAll(){renderChecks();renderList();}
@@ -261,7 +237,7 @@ function copyCSV(){
   let csv=cols.join(',')+'\n';
   recs.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(r=>{
     csv+=[r.date,r.name,r.kind,r.conv,r.bull,r.bear,r.target,r.stop,r.inval,r.px,r.memo].map(q).join(',')+'\n';});
-  const done=()=>toast('📋 복사됨! data/journal.csv에 붙여넣으세요');
+  const done=()=>toast('복사했습니다 · data/journal.csv에 붙여넣으세요');
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(csv).then(done).catch(()=>fallback(csv,done));
   } else fallback(csv,done);
@@ -272,5 +248,6 @@ function fallback(csv,done){
 }
 function toast(m){const t=$('toast');t.textContent=m;t.className='toast show';setTimeout(()=>t.className='toast',2000);}
 renderAll();
+U.nav("index.html");
 </script>
 </body></html>

@@ -1,12 +1,12 @@
 """
-일일 리포트 (매수적합도 BuyFit 중심) -> docs/index.html
+일일 리포트 (매수적합도 BuyFit 중심) -> docs/classic.html  (이전 대시보드 — 새 홈은 docs/index.html, 정적 파일)
 - 핵심: '지금 사기 좋은 순서'(BuyFit)로 추천 재정렬, 점수순위와 나란히 표시
 - 종목 터치 -> 큰 그래프 + 팩터 + 타이밍 분해 + 과거 유사사례 승률 + 예상 매도
 docs/data.json 선행 필요 (build_data.py)
 """
 import os, json
 
-DATA="docs/data.json"; OUT="docs/index.html"
+DATA="docs/data.json"; OUT="docs/classic.html"
 
 
 BNAV = """<style>
@@ -26,7 +26,7 @@ body{padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}
 .dtabs button[aria-selected="true"]{background:#1d1d1f;color:#fff}
 </style>
 <nav class="bnav" aria-label="페이지 이동">
-<a href="index.html" class="on" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg><span>대시보드</span></a>
+<a href="index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg><span>홈</span></a>
 <a href="autotrade.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5"/></svg><span>자동매매</span></a>
 <a href="stock.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M7 15l4-4 3 3 5-6"/></svg><span>종목</span></a>
 <a href="report.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></svg><span>성과</span></a>
@@ -68,6 +68,10 @@ body{padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}
   bar.addEventListener("click",function(e){var b=e.target.closest("button[data-t]"); if(b) show(b.dataset.t,true);});
   var orig=window.setLv; window.setLv=function(x){orig(x); show(cur);};
   show(cur);
+  // 이전 화면 표시 — 새 홈(index.html)으로 돌아가는 길
+  var cb=document.createElement("a"); cb.href="index.html"; cb.textContent="이전 대시보드입니다 · 새 홈으로 ›";
+  cb.style.cssText="display:block;margin:0 0 12px;padding:11px 14px;border-radius:12px;background:#fff6e6;color:#191f28;font-size:14px;font-weight:600;text-decoration:none";
+  document.body.insertBefore(cb,document.body.firstChild);
   // 자동매매 엔진의 오늘 판단을 '오늘' 탭 맨 위에 한 줄로 — 이 화면의 매수 후보와 엔진 판단이 다를 때 헷갈리지 않게
   fetch("autotrade.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(d){
     if(!d||!d.gate) return;

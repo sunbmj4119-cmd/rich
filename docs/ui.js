@@ -170,7 +170,7 @@ const U = (() => {
       o.values.forEach((v, i) => {
         if (!ok(v)) return;
         const x0 = L + i * bw + bw * 0.16, w = bw * 0.68, y0 = y(Math.max(v, 0)), h = Math.abs(y(v) - y(0));
-        const c = o.color ? o.color(v, i) : (v >= 0 ? "var(--green)" : "var(--red)");
+        const c = o.color ? o.color(v, i) : (v >= 0 ? "var(--up)" : "var(--down)");
         s += `<rect x="${x0}" y="${y0}" width="${w}" height="${Math.max(h, 1)}" rx="3" style="fill:${c}"><title>${esc(o.labels[i])} ${esc(yf(v))}</title></rect>`;
         if (bw > 30) s += T(x0 + w / 2, v >= 0 ? y0 - 4 : y0 + h + 12, yf(v), "middle");
         const lab = o.labels[i];
@@ -229,15 +229,15 @@ const U = (() => {
         <div style="width:92px;flex-shrink:0">${esc(i.label)}${i.sub ? `<div class="small mut">${esc(i.sub)}</div>` : ""}</div>
         <div class="grow" style="position:relative;height:16px;background:var(--soft);border-radius:4px">
           <div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--faint)"></div>
-          <div style="position:absolute;left:${left}%;width:${w}%;top:3px;bottom:3px;border-radius:3px;background:${i.value >= 0 ? "var(--green)" : "var(--red)"}"></div>
+          <div style="position:absolute;left:${left}%;width:${w}%;top:3px;bottom:3px;border-radius:3px;background:${i.value >= 0 ? "var(--up)" : "var(--down)"}"></div>
         </div>
         <div class="num" style="width:48px;text-align:right">${esc(fmt(i.value))}</div></div>`;
     }).join("");
   }
 
-  /* 히트맵 셀 배경 — 값의 부호·크기로 초록/빨강 농도 */
+  /* 히트맵 셀 배경 — 값의 부호·크기로 빨강(상승)/파랑(하락) 농도 */
   const heatBg = (v, cap = 10) => ok(v)
-    ? `background:color-mix(in srgb, ${v >= 0 ? "var(--green)" : "var(--red)"} ${Math.min(70, (Math.abs(v) / cap) * 70).toFixed(0)}%, transparent)`
+    ? `background:color-mix(in srgb, ${v >= 0 ? "var(--up)" : "var(--down)"} ${Math.min(55, (Math.abs(v) / cap) * 55).toFixed(0)}%, transparent)`
     : "";
 
   async function copy(text, btn) {
@@ -253,7 +253,7 @@ const U = (() => {
     report: '<rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/>',
     pick: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
   };
-  const PAGES = [["index.html", "대시보드", "home"], ["autotrade.html", "자동매매", "bot"], ["stock.html", "종목", "stock"],
+  const PAGES = [["index.html", "홈", "home"], ["autotrade.html", "자동매매", "bot"], ["stock.html", "종목", "stock"],
                  ["report.html", "성과", "report"], ["features.html", "기능", "pick"]];
   function nav(active) {
     const top = document.getElementById("topnav");

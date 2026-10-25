@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>엔진 성과 보고서</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="ui.css">
 <style>
 .label-bt { font: 700 11.5px/1 var(--mono); letter-spacing: .06em; color: var(--orange); background: var(--warn-bg); padding: 5px 8px; border-radius: 6px }
@@ -166,9 +167,9 @@ U.nav("report.html");
     U.$("#plab-tbl").innerHTML = `<tr><th>시도</th><th>~2023</th><th>2024~</th><th></th></tr>
       <tr><td><b>현재 엔진</b></td><td>${sh(b.pre.sharpe)}</td><td>${sh(b.post.sharpe)}</td><td></td></tr>` +
       rows.map((x) => `<tr><td>${U.esc(x.group)}<br><span class="mut small">${U.esc(x.desc)}</span></td>
-        <td class="${x.pre.sharpe > b.pre.sharpe ? "pos" : ""}">${sh(x.pre.sharpe)}</td>
-        <td class="${x.post.sharpe > b.post.sharpe ? "pos" : ""}">${sh(x.post.sharpe)}</td><td>${tag(x.verdict)}</td></tr>`).join("");
-    U.$("#plab-rule").textContent = `숫자는 Sharpe (${L.periods.pre[0]}~2023 / 2024~${L.periods.post[1]}), 초록은 현재 엔진보다 나은 칸. ` +
+        <td class="${x.pre.sharpe > b.pre.sharpe ? "good" : ""}">${sh(x.pre.sharpe)}</td>
+        <td class="${x.post.sharpe > b.post.sharpe ? "good" : ""}">${sh(x.post.sharpe)}</td><td>${tag(x.verdict)}</td></tr>`).join("");
+    U.$("#plab-rule").textContent = `숫자는 Sharpe (${L.periods.pre[0]}~2023 / 2024~${L.periods.post[1]}), 초록 숫자는 현재 엔진보다 나은 칸. ` +
       `채택 규칙: ${L.rule} (문턱 ${L.alpha}). ${L.power.note}. 판단 엔진을 그대로 돌렸고 비용은 편도 ${(L.cost_oneway * 100).toFixed(2)}%.`;
     U.$("#plab-fold").hidden = false;
   }).catch(() => {});
@@ -179,7 +180,7 @@ U.nav("report.html");
     series: [{ name: "시장", data: ser.bench, color: "var(--faint)", width: 1.5 }, { name: "엔진", data: ser.eq, color: "var(--blue)", width: 2, end: true }],
     vline: { i: ser.split_i, label: "검증" }, aria: "자산 곡선" });
   U.line(U.$("#c-dd"), { labels: ser.d, h: 130, xfmt: yy, yfmt: (v) => `${Math.round(v)}%`, zero: true,
-    series: [{ name: "시장", data: ser.bdd, color: "var(--faint)", width: 1 }, { name: "엔진", data: ser.dd, color: "var(--red)", width: 1.5, area: true, areaBase: 0 }], aria: "낙폭" });
+    series: [{ name: "시장", data: ser.bdd, color: "var(--faint)", width: 1 }, { name: "엔진", data: ser.dd, color: "var(--down)", width: 1.5, area: true, areaBase: 0 }], aria: "낙폭" });
   U.line(U.$("#c-roll"), { labels: ser.d, h: 160, xfmt: yy, yfmt: (v) => `${Math.round(v)}%`, zero: true,
     series: [{ name: "시장", data: ser.broll, color: "var(--faint)", width: 1 }, { name: "엔진", data: ser.roll, color: "var(--blue)", width: 1.5 }], aria: "6개월 수익" });
   function heat(rows) {
@@ -206,7 +207,7 @@ U.nav("report.html");
   const deep = mm.filter((p) => p[0] <= -8), deepWin = deep.filter((p) => p[2] > 0).length;
   U.$("#mae-sum").textContent = `−8% 넘게 밀린 ${deep.length}건 중 ${deepWin}건이 이익으로 끝남`;
   U.scatter(U.$("#c-mae"), { pts: mm.map((p) => [p[0], p[2]]), h: 220, xfmt: (v) => `${Math.round(v)}%`, yfmt: (v) => `${Math.round(v)}%`,
-    xlab: "보유 중 최대 역행 →", ylab: "최종 수익", color: (p) => (p[1] >= 0 ? "var(--green)" : "var(--red)"), aria: "MAE 산점도" });
+    xlab: "보유 중 최대 역행 →", ylab: "최종 수익", color: (p) => (p[1] >= 0 ? "var(--up)" : "var(--down)"), aria: "MAE 산점도" });
   U.$("#mae-text").textContent = "오른쪽 위에 점이 많으면 손절이 너무 좁고, 왼쪽 아래에 몰리면 손절이 제 역할을 하는 것입니다.";
   const whys = [...new Set(B.trade_list.map((x) => x.why))];
   U.$("#tf").innerHTML = `<option value="">전체</option>` + whys.map((w) => `<option>${U.esc(w)}</option>`).join("");
@@ -262,7 +263,7 @@ U.nav("report.html");
     const drawSim = () => {
       U.$("#sim-ctl").querySelectorAll(".seg").forEach((sg) => sg.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === J(sel[sg.dataset.ax]))));
       const r = find(sel);
-      const cell = (a, b, f, better) => `<td>${f(a)}</td><td class="${better == null || a === b ? "" : better ? "pos" : "neg"}">${f(b)}</td>`;
+      const cell = (a, b, f, better) => `<td>${f(a)}</td><td class="${better == null || a === b ? "" : better ? "good" : "bad"}">${f(b)}</td>`;
       U.$("#sim-cmp").innerHTML = `<tr><th></th><th>현재</th><th>고른 것</th></tr>
         <tr><td>Sharpe 2019~23</td>${cell(baseRow.train.sharpe, r.train.sharpe, (v) => U.num(v, 2), r.train.sharpe > baseRow.train.sharpe)}</tr>
         <tr><td>Sharpe 2024~</td>${cell(baseRow.test.sharpe, r.test.sharpe, (v) => U.num(v, 2), r.test.sharpe > baseRow.test.sharpe)}</tr>

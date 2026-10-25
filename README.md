@@ -2,7 +2,7 @@
 
 매 평일 장 마감 후 자동으로 데이터를 수집·채점하고, **다음 날 예약매매(지정가 매수 / 손절·매도)를 결정할 수 있는 대시보드**를 생성하는 개인용 시스템입니다.
 
-- 대시보드: `docs/index.html` (GitHub Pages로 서빙 → 저녁에 휴대폰으로 확인)
+- 홈: `docs/index.html` (GitHub Pages로 서빙 → 저녁에 휴대폰으로 확인). 이전 대시보드는 `docs/classic.html`
 - 매매 기록: `docs/trade.html` (매수/매도 입력 → CSV 복사 → `data/my_trades.csv`에 붙여넣기)
 - 투자 논리: `docs/journal.html` (진입 논리·반대 논리·무효화 조건 기록 → `data/journal.csv`)
 - **자동매매: `docs/autotrade.html`** (매일 모든 종목을 매수/유지/매도/관망으로 확정 → 모의계좌 또는 한국투자증권 API로 주문)
@@ -139,7 +139,7 @@
 | — | `src/strategy_lab.py` | scores+prices → `data/strategy_lab.json` | 손절·익절·가중치·종목수를 train/test로 검증 (수동 실행) |
 | 4-5 | `src/news.py` | Google News RSS + DART 공시 → `data/news.csv` | 최신 뉴스·공시 + 감성 (실패해도 무시) |
 | 5 | `src/build_data.py` | 위 전부 + `journal.csv` → `docs/data.json` | BuyFit·유사사례·**시나리오·확률·판단등급**·계좌 스트레스 |
-| 6 | `src/report.py` | data.json(+robust.json) → `docs/index.html` | 대시보드 렌더 |
+| 6 | `src/report.py` | data.json(+robust.json) → `docs/classic.html` | 이전 대시보드 렌더 (홈 `docs/index.html`은 정적 파일이 data.json·autotrade.json을 읽음) |
 | 7 | `src/autotrader.py --phase decide` | 위 전부 + `config/autotrade.yaml` → `data/autotrade/` + `docs/autotrade.json` | 4상태 판단 · 주문계획 · 모의체결 |
 | 다음날 08:40 | `src/autotrader.py --phase execute` (`autotrade.yml`) | `plan.json` → 증권사 | 한국투자증권 주문 (kis_* 설정 시) |
 
@@ -601,7 +601,7 @@ python src/verify_thesis.py  # 등급·확률 검증 → data/verify_thesis.json
 python src/news.py           # 뉴스·공시 → data/news.csv (네트워크 필요, 실패해도 무해)
                              #  DART_API_KEY 있으면 공시도 함께 수집
 python src/build_data.py     # 대시보드 데이터 (시나리오·확률 포함)
-python src/report.py         # docs/index.html
+python src/report.py         # docs/classic.html (이전 대시보드)
 python src/robust_backtest.py  # 현실적 기대수익(느림) → docs/robust.json
 ```
 > Windows 콘솔에서 이모지 출력 오류가 나면 `set PYTHONIOENCODING=utf-8` 후 실행.

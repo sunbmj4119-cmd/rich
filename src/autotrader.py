@@ -350,10 +350,10 @@ def alert_decide(cfg, plan, decisions, gate, issues, fills):
     sells = [d for d in decisions if d["state"] == SELL]
     if sells:
         notify.send(cfg, "sell", "\n".join(f"{d['action']} {d['name']} — {d['reason']}" for d in sells),
-                    "🔴 매도 판단", urgent=True)
+                    "🔵 매도 판단", urgent=True)
     buys = [d for d in decisions if d["state"] == BUY]
     if buys:
-        notify.send(cfg, "buy", "\n".join(f"{d['name']} {d['rank']}위" for d in buys), "🟢 매수 판단")
+        notify.send(cfg, "buy", "\n".join(f"{d['name']} {d['rank']}위" for d in buys), "🔴 매수 판단")
     if plan.get("status") == "승인 대기":
         notify.send(cfg, "approval", f"주문 {len(plan['orders'])}건 승인 대기 — GitHub Actions "
                     f"'autotrade-control' 에서 approve (빼고 싶은 종목코드는 skip 칸에)", "✋ 승인 필요",
@@ -473,7 +473,7 @@ def report(decisions, gate, plan, flags, issues, equity, fills):
         print(f"\n  ■ 체결 (모의, {plan['date']} 종가)")
         for f in fills:
             print(f"     {f['side']} {f['code']} {f['qty']}주 @ {f.get('fill') or '-'}  {f['status']}")
-    for s, icon in [(SELL, "🔴"), (BUY, "🟢"), (HOLD, "🔵"), (WATCH, "⚪")]:
+    for s, icon in [(SELL, "🔵"), (BUY, "🔴"), (HOLD, "⚫"), (WATCH, "⚪")]:
         sub = [d for d in decisions if d["state"] == s]
         print(f"\n  {icon} {s} ({len(sub)})")
         for d in sub[:15]:

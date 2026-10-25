@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>종목 분석</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="ui.css">
 <style>
 .picker { display: flex; gap: 6px; align-items: center }
@@ -20,8 +21,8 @@
 .g-A { color: var(--green) } .g-B { color: var(--blue) } .g-C { color: var(--orange) } .g-D, .g-F { color: var(--red) } .g-x { color: var(--faint) }
 .freq { font-size: 15px; line-height: 1.6 }
 .bandbar { position: relative; height: 26px; background: var(--soft); border-radius: 8px; margin-top: 4px }
-.bandbar .o { position: absolute; top: 4px; bottom: 4px; background: color-mix(in srgb, var(--blue) 22%, transparent); border-radius: 5px }
-.bandbar .i { position: absolute; top: 4px; bottom: 4px; background: color-mix(in srgb, var(--blue) 45%, transparent); border-radius: 5px }
+.bandbar .o { position: absolute; top: 4px; bottom: 4px; background: color-mix(in srgb, var(--fg) 12%, transparent); border-radius: 5px }
+.bandbar .i { position: absolute; top: 4px; bottom: 4px; background: color-mix(in srgb, var(--fg) 30%, transparent); border-radius: 5px }
 .bandbar .now { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--fg) }
 .bandlab { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--mut); font-variant-numeric: tabular-nums }
 .goto { align-self: flex-start }
@@ -60,7 +61,7 @@
       <header><h2>가격과 30일 범위</h2><span id="band-badge2"></span></header>
       <div class="chart" id="c-band"></div>
       <div class="legend"><span><i style="background:var(--fg)"></i>종가</span><span><i style="background:var(--orange)"></i>20일선</span>
-        <span><i style="background:var(--purple)"></i>200일선</span><span><i style="background:var(--blue);opacity:.4;height:8px"></i>50%·80% 범위</span></div>
+        <span><i style="background:var(--purple)"></i>200일선</span><span><i style="background:var(--fg);opacity:.25;height:8px"></i>50%·80% 범위</span></div>
       <p class="freq" id="band-text"></p>
     </section>
     <details class="fold" data-feat="forecast_band"><summary><div class="sum"><b>이 범위는 어떻게 만들었나</b><span>과거 같은 순위·국면 · 실제 적중률</span></div></summary>
@@ -96,7 +97,7 @@
       <header><h2>엔진의 이 종목 매매 기록</h2><span class="badge b-ref">가설 성과</span></header>
       <div id="record"></div>
     </section>
-    <details class="fold" data-feat="similar_patterns"><summary><div class="sum"><b>비슷했던 과거 차트</b><span style="color:var(--red)">검증 탈락 — 예측력 없음</span></div></summary>
+    <details class="fold" data-feat="similar_patterns"><summary><div class="sum"><b>비슷했던 과거 차트</b><span style="color:var(--orange)">검증 탈락 — 예측력 없음</span></div></summary>
       <div class="body" id="analog"></div></details>
   </div>
 </div>
@@ -127,22 +128,30 @@ U.nav("stock.html");
   const calBadge = U.ok(cal.cover80) && Math.abs(cal.cover80 - 80) < 5
     ? `<span class="badge b-ok">검증됨 · 적중 ${Math.round(cal.cover80)}%</span>` : `<span class="badge b-ref">참고</span>`;
   let rtKey = "test";
+  // 내가 직접 들고 있는 종목(data/my_trades.csv)은 손절·익절 규칙이 자동매매 판단보다 먼저다 — 홈 '내 계좌'와 같은 값
+  let MY = {};
+  const SIG = { "🔴손절": "손절선 넘음", "🔵매도": "매도 신호", "🟠부분익절": "일부 익절", "🟢유지": "보유 유지", "⏳보유": "최소 보유기간" };
+  U.j("data.json").then((D) => { MY = Object.fromEntries((D.items || []).filter((i) => i.held).map((i) => [i.code, i])); if (MY[pick.value]) show(pick.value); }).catch(() => {});
 
   function show(code) {
     pick.value = code;
-    const s = stocks[code], d = decisions[code];
+    const s = stocks[code], d = decisions[code], my = MY[code];
+    const mySell = my && /손절|매도|익절/.test(my.signal || "");
     document.title = `${s.name} 분석`;
 
     // ── 요약: 머리 ──
-    const state = d ? `<span class="st st-${d.state}">${d.state}${d.action ? " · " + U.esc(d.action) : ""}</span>` : `<span class="badge b-mut">판단 대상 아님 (21위 이하)</span>`;
+    const state = d ? `<span class="st st-${d.state}">자동매매 ${d.state}${d.action ? " · " + U.esc(d.action) : ""}</span>` : `<span class="badge b-mut">자동매매 판단 대상 아님 (21위 이하)</span>`;
+    const mine = my ? `<div class="${mySell ? "warn" : "note"}" style="color:var(--fg)"><b>내 계좌 보유</b> · ${my.held}일째 · 평단 ${U.won(my.avgp)} → <b class="${U.cls(my.pnl)}">${U.pct(my.pnl)}</b>
+        ${mySell ? `<br><b>${U.esc(SIG[my.signal] || "매도 검토")}</b> — ${U.esc(my.reason || "")}. 내 보유분은 이 손절·매도 규칙이 아래 자동매매 판단보다 먼저입니다.` : `<br>${U.esc(SIG[my.signal] || "보유 중")} · 손절선 ${U.won(my.stop_price)}`}</div>` : "";
     U.$("#head").innerHTML = `
       <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><h1 style="font-size:21px">${U.esc(s.name)}</h1>${state}</div>
       <div class="row" style="align-items:baseline;gap:10px;flex-wrap:wrap"><span class="big">${U.won(s.close)}</span><span class="${U.cls(s.ret20)}">20일 ${U.pct(s.ret20)}</span></div>
       <div class="facts"><div class="fact"><span>종합 순위</span><b>${s.rank}위 · ${U.num(s.score, 1)}점</b></div>
         <div class="fact"><span>섹터</span><b>${U.esc(s.sector)}</b></div>
         ${U.ok(s.beta) ? `<div class="fact"><span>시장 베타</span><b>${U.num(s.beta, 2)}</b></div><div class="fact"><span>연 변동성</span><b>${U.num(s.vol, 0)}%</b></div>` : ""}</div>
-      ${d ? `<p class="small mut">${U.esc(d.reason)}</p>` : ""}
-      ${d && d.need && d.need.length ? `<div class="warn">매수로 넘어가려면: ${d.need.map(U.esc).join(" / ")}</div>` : ""}`;
+      ${mine}
+      ${d ? `<p class="small mut">자동매매 판단 근거: ${U.esc(d.reason).replace(/ ✗/g, " 미충족")}</p>` : ""}
+      ${d && d.need && d.need.length && !my ? `<div class="note">자동매매가 사려면: ${d.need.map(U.esc).join(" / ")}</div>` : ""}`;
 
     // ── 요약: 범위 막대 ──
     const b = s.band;
@@ -166,8 +175,8 @@ U.nav("stock.html");
       U.line(U.$("#c-band"), {
         labels, h: 230, aria: "가격과 30일 범위",
         series: [{ name: "종가", data: pad(h.c), color: "var(--fg)", width: 2 }, { name: "20일선", data: pad(h.ma20), color: "var(--orange)", width: 1.5 },
-                 { name: "200일선", data: pad(h.ma200), color: "var(--purple)", width: 1.5 }, { name: "범위 가운데", data: fut(b.ret[2]), color: "var(--blue)", width: 1.5, dash: "4 3" }],
-        bands: [{ name: "80% 범위", lo: fut(b.ret[0]), hi: fut(b.ret[4]), color: "var(--blue)", opacity: 0.13 }, { name: "50% 범위", lo: fut(b.ret[1]), hi: fut(b.ret[3]), color: "var(--blue)", opacity: 0.2 }],
+                 { name: "200일선", data: pad(h.ma200), color: "var(--purple)", width: 1.5 }, { name: "범위 가운데", data: fut(b.ret[2]), color: "var(--mut)", width: 1.5, dash: "4 3" }],
+        bands: [{ name: "80% 범위", lo: fut(b.ret[0]), hi: fut(b.ret[4]), color: "var(--fg)", opacity: 0.08 }, { name: "50% 범위", lo: fut(b.ret[1]), hi: fut(b.ret[3]), color: "var(--fg)", opacity: 0.14 }],
         yfmt: (v) => U.num(v), xfmt: (x) => (x.startsWith("+") ? x : x.slice(2, 7)),
       });
     } else {
@@ -223,9 +232,9 @@ U.nav("stock.html");
     const rows = A.rank_track[rtKey];
     const mine = Math.min(9, Math.floor((s.rank - 1) / 10));
     U.bars(U.$("#c-rank"), { labels: rows.map((r) => r.bucket.replace("위", "")), values: rows.map((r) => r.excess), h: 180, aria: "순위 구간별 시장 대비 수익",
-      yfmt: (v) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`, color: (v, i) => (i === mine ? "var(--blue)" : v >= 0 ? "var(--green)" : "var(--red)") });
+      yfmt: (v) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`, color: (v, i) => (i === mine ? "var(--fg)" : v >= 0 ? "color-mix(in srgb, var(--up) 55%, transparent)" : "color-mix(in srgb, var(--down) 55%, transparent)") });
     const r = rows[mine];
-    U.$("#rt-text").innerHTML = `<b>${r.bucket}</b>(파란 막대)는 30거래일 뒤 시장보다 평균 <b class="${U.cls(r.excess)}">${U.pct(r.excess)}p</b>,
+    U.$("#rt-text").innerHTML = `<b>${r.bucket}</b>(진한 막대)는 30거래일 뒤 시장보다 평균 <b class="${U.cls(r.excess)}">${U.pct(r.excess)}p</b>,
       <b>${U.num(r.n)}건 중 ${U.num(Math.round(r.n * r.beat / 100))}건</b>이 시장을 이겼습니다.`;
     U.$("#rt-guide").textContent = `이긴 비율이 50%보다 낮은데 평균이 플러스면, 소수의 큰 상승이 평균을 끌어올린 것입니다. 독립 표본(겹치지 않는 30일 묶음) ${r.n_eff}개. ` +
       `순위 순서가 수익 순서와 맞는 정도: 2019~2023 ${A.rank_track.train_spearman}, 2024~ ${A.rank_track.test_spearman}. 두 기간 모두 확실한 건 1~10위뿐입니다.`;
