@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>자동매매 해설</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="ui.css">
+<style>
+.sumlist { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px }
+.sumlist li { display: flex; gap: 10px; font-size: 15px; line-height: 1.6 }
+.sumlist li::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--fg); margin-top: 10px; flex-shrink: 0 }
+.funnel { display: flex; flex-direction: column; gap: 8px }
+.fstep { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; font-size: 14px }
+.fstep .bar { grid-column: 1 / -1; height: 8px; border-radius: 999px; background: var(--soft); overflow: hidden }
+.fstep .bar i { display: block; height: 100%; border-radius: 999px; background: var(--fg) }
+.fstep.zero .bar i { background: var(--orange) }
+.fstep b { font-variant-numeric: tabular-nums }
+.wrow { display: grid; grid-template-columns: 92px 1fr 44px; gap: 10px; align-items: center; padding-block: 8px; border-bottom: 1px solid var(--line) }
+.wrow:last-child { border-bottom: 0 }
+.wrow .n { font-weight: 700; font-size: 14.5px }
+.wrow .w { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums }
+.wrow .d { font-size: 12.5px; color: var(--mut); line-height: 1.5 }
+.wbar { height: 6px; border-radius: 999px; background: var(--soft); margin-top: 4px; overflow: hidden }
+.wbar i { display: block; height: 100%; background: var(--blue); border-radius: 999px }
+.ck2 { display: flex; gap: 10px; padding-block: 9px; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.55 }
+.ck2:last-child { border-bottom: 0 }
+.ck2 .ic { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; margin-top: 1px }
+.ck2 .ic.y { background: var(--pos-bg); color: var(--green) } .ck2 .ic.n { background: var(--warn-bg); color: var(--orange) }
+.ck2 small { display: block; color: var(--faint); font-size: 11.5px }
+.stack { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--soft) }
+.stack i { display: block; height: 100% }
+.legend2 { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12.5px; color: var(--mut); margin-top: 6px }
+.legend2 span::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; background: var(--c); vertical-align: -1px }
+.rule { padding-block: 10px; border-bottom: 1px solid var(--line) }
+.rule:last-child { border-bottom: 0 }
+.rule b { font-size: 15px } .rule p { font-size: 14px; color: var(--mut); line-height: 1.6; margin-top: 2px }
+.rule .badge { margin-left: 6px; vertical-align: 1px }
+.story { padding-block: 11px; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.65 }
+.story:last-child { border-bottom: 0 }
+.story .top { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 2px }
+.story .top b { font-size: 15px }
+.itab td:first-child { white-space: normal; min-width: 120px }
+.itab td.how { white-space: normal; min-width: 160px; text-align: left; color: var(--mut) }
+.chipgood { display: inline-block; font-size: 12px; border-radius: 6px; padding: 2px 7px; margin: 2px 4px 2px 0; background: var(--soft) }
+.chipgood.y { color: var(--green) } .chipgood.n { color: var(--orange) }
+.irow { padding-block: 11px; border-bottom: 1px solid var(--line) }
+.irow:last-child { border-bottom: 0 }
+.irow .ih { display: flex; justify-content: space-between; align-items: baseline; gap: 10px }
+.irow .ih b { font-size: 15px }
+.irow .iw { flex-shrink: 0; font-weight: 700; font-variant-numeric: tabular-nums; background: var(--soft); border-radius: 8px; padding: 2px 9px; font-size: 13.5px }
+.irow p { font-size: 14px; color: var(--mut); line-height: 1.6; margin-top: 3px }
+.irow .ir { font-size: 12px; color: var(--faint) }
+.term { padding-block: 10px; border-bottom: 1px solid var(--line) }
+.term:last-child { border-bottom: 0 }
+.term b { font-size: 15px } .term p { font-size: 14px; color: var(--mut); line-height: 1.6 }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav" id="topnav" aria-label="페이지"></nav>
+  <header class="phead"><h1>자동매매 해설</h1><div class="mut small" id="sub">불러오는 중…</div></header>
+
+  <section class="card" id="sum"><div class="skeleton" style="height:120px"></div></section>
+
+  <div class="stick"><div class="tabs" id="tabs">
+    <button data-t="eng">30일 자동매매</button><button data-t="short">단기 모의투자</button><button data-t="info">무엇을 얼마나 보나</button><button data-t="words">용어</button>
+  </div></div>
+
+  <div class="tabpane" data-tab="eng">
+    <section class="card">
+      <header><h2>오늘 어떻게 걸렀나</h2><span class="mut small">100종목 → 매수</span></header>
+      <p class="mut">매일 장 마감 뒤 100종목 모두 점수를 매기고, 아래 조건을 차례로 통과한 종목만 다음 날 아침 삽니다.</p>
+      <div class="funnel" id="funnel"></div>
+      <p class="note" id="funnel-note"></p>
+    </section>
+    <section class="card">
+      <header><h2>순위는 이렇게 매깁니다</h2></header>
+      <p class="mut" id="w-src"></p>
+      <div id="weights"></div>
+    </section>
+    <section class="card">
+      <header><h2>종목별 오늘 판단</h2><span class="mut small">누르면 이유·숫자</span></header>
+      <div class="chips scroll-x" id="sfilt"></div>
+      <div id="today"></div>
+    </section>
+    <section class="card" id="holds"></section>
+    <section class="card">
+      <header><h2>규칙집</h2><span class="mut small">이대로만 사고팝니다</span></header>
+      <details class="fold" open><summary><div class="sum"><b>살 때</b><span>모두 통과해야 삼</span></div></summary><div class="body" id="r-buy"></div></details>
+      <details class="fold"><summary><div class="sum"><b>팔 때</b><span>하나라도 걸리면 팖</span></div></summary><div class="body" id="r-sell"></div></details>
+      <details class="fold"><summary><div class="sum"><b>안전장치</b><span>사고를 막는 규칙</span></div></summary><div class="body" id="r-safe"></div></details>
+    </section>
+    <section class="card">
+      <header><h2>이 규칙으로 이렇게 사고팔았습니다</h2><span class="mut small">과거 자료로 돌린 기록</span></header>
+      <p class="note" id="stats"></p>
+      <div class="chips" id="exfilt"></div>
+      <div id="examples"></div>
+      <p class="mut small">실제 계좌가 아니라 같은 규칙을 과거 자료에 그대로 돌린 결과입니다(다음 날 종가 체결, 비용 포함). 손절선이 −10%여도 급락한 날은 다음 날 팔리므로 손실이 더 클 수 있습니다.</p>
+    </section>
+  </div>
+
+  <div class="tabpane" data-tab="short">
+    <section class="card" id="s-model"></section>
+    <section class="card" id="s-today"></section>
+    <section class="card" id="s-hold"></section>
+    <section class="card">
+      <header><h2>이 모델이 최근 이렇게 사고팔았습니다</h2><span class="mut small">같은 규칙을 과거 자료에 돌린 기록</span></header>
+      <div id="s-ex"></div>
+    </section>
+  </div>
+
+  <div class="tabpane" data-tab="info">
+    <section class="card">
+      <header><h2>결정에 직접 쓰는 것</h2><span class="mut small">30일 자동매매</span></header>
+      <div id="i-direct"></div>
+    </section>
+    <section class="card">
+      <header><h2>안전장치 — 막기만 하는 것</h2></header>
+      <p class="mut">사라고 밀어 주지는 않고, 문제가 있으면 매수를 막거나 바로 팝니다.</p>
+      <div id="i-safe"></div>
+    </section>
+    <section class="card">
+      <header><h2>보여 주기만 하는 것 (영향 0%)</h2></header>
+      <p class="mut">화면에는 있지만 사고파는 결정에는 쓰지 않습니다. 넣어 봤더니 과거 성과가 나아지지 않았기 때문입니다.</p>
+      <div id="i-ref"></div>
+    </section>
+    <section class="card">
+      <header><h2>단기 모의투자가 보는 것</h2></header>
+      <div id="i-short"></div>
+    </section>
+  </div>
+
+  <div class="tabpane" data-tab="words">
+    <section class="card"><header><h2>용어 풀이</h2></header><div id="words"></div></section>
+  </div>
+
+  <p class="foot">분석과 문장은 매일 저녁 자동으로 다시 씁니다 · <a href="autotrade.html">30일 자동매매</a> · <a href="short.html">단기 모의투자</a> · <a href="report.html#evo">모델 진화</a> · <a href="features.html">화면 설정</a></p>
+</div>
+<script src="ui.js"></script>
+<script>
+(async () => {
+  U.nav("explain.html");
+  let X;
+  try { X = await U.j("explain.json"); }
+  catch (e) { U.$("#sum").innerHTML = `<div class="empty">해설을 아직 만들지 않았습니다. 매일 저녁 자동으로 만들어집니다.</div>`; U.tabs(U.$("#tabs"), "explain"); return; }
+  const pc = (x, d = 1) => U.pct(U.ok(x) ? x * 100 : null, d);
+  const E = X.engine, S = X.short;
+  U.$("#sub").textContent = `${X.data_date} 장 마감 기준 · ${X.updated} 작성`;
+  U.$("#sum").innerHTML = `<span class="eyebrow">오늘 한눈에</span>
+    <ul class="sumlist">${X.summary.map((s) => `<li>${U.esc(s)}</li>`).join("")}</ul>
+    <div class="note">${U.esc(X.market.plain)}</div>`;
+
+  // ── 30일: 거름망 ──
+  const f = E.funnel, n0 = f[0].n || 100;
+  U.$("#funnel").innerHTML = f.map((s) => `<div class="fstep ${s.n === 0 ? "zero" : ""}"><span>${U.esc(s.label)}</span><b>${s.n}개</b>
+    <div class="bar"><i style="width:${Math.max(s.n ? 2 : 0, (s.n / n0) * 100)}%"></i></div></div>`).join("");
+  const stop = f.find((s, i) => i > 1 && s.n === 0);
+  U.$("#funnel-note").textContent = stop ? `오늘은 '${stop.label}' 단계에서 모두 걸렸습니다. ${E.headline}` : E.headline;
+
+  // ── 30일: 순위 비중 ──
+  U.$("#w-src").textContent = `종목마다 아래 점수(0~100)를 매겨 이 비중으로 더한 값이 '종합점수'이고, 그 순서가 순위입니다. 비중 출처: ${E.weights_src}.`;
+  const wmax = Math.max(...E.weights.map((w) => w.w));
+  U.$("#weights").innerHTML = E.weights.map((w) => `<div class="wrow"><span class="n">${U.esc(w.name)}</span>
+    <div><div class="d">${U.esc(w.what)}</div><div class="wbar"><i style="width:${(w.w / wmax) * 100}%"></i></div></div><span class="w">${Math.round(w.w * 100)}%</span></div>`).join("");
+
+  // ── 30일: 종목별 ──
+  const COL = ["var(--blue)", "var(--purple)", "var(--green)", "var(--orange)", "var(--up)", "var(--faint)", "var(--hold)", "var(--down)", "var(--red)"];
+  const states = ["전체", "매수", "매도", "유지", "관망"];
+  let flt = "전체";
+  const tagOf = (s) => `<span class="st st-${s}">${s}</span>`;
+  function drawToday() {
+    const L = E.today.filter((d) => flt === "전체" || d.state === flt);
+    U.$("#sfilt").innerHTML = states.map((s) => `<button class="chip ${s === flt ? "on" : ""}" type="button" data-s="${s}">${s} ${s === "전체" ? E.today.length : E.today.filter((d) => d.state === s).length}</button>`).join("");
+    if (!L.length) { U.$("#today").innerHTML = `<div class="empty">해당 종목이 없습니다.</div>`; return; }
+    U.more(U.$("#today"), L, (d) => `<button class="li" type="button" data-i="${E.today.indexOf(d)}"><span class="rk">${d.rank ?? "—"}</span>
+      <span class="main"><span class="t">${U.esc(d.name)} ${tagOf(d.state)}</span><span class="s" style="white-space:normal">${U.esc(d.line)}</span></span><span class="chev" aria-hidden="true"></span></button>`, 6, 14);
+  }
+  U.$("#sfilt").addEventListener("click", (e) => { const b = e.target.closest("[data-s]"); if (b) { flt = b.dataset.s; drawToday(); } });
+  U.$("#today").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-i]"); if (!b) return;
+    const d = E.today[+b.dataset.i];
+    const tot = d.contrib.reduce((a, c) => a + (c.pts || 0), 0) || 1;
+    const html = `<div class="note" style="color:var(--fg)">${U.esc(d.line)}</div>
+      <h3>조건 점검</h3><div>${d.checks.map((c) => `<div class="ck2"><span class="ic ${c.ok ? "y" : "n"}">${c.ok ? "✓" : "✕"}</span><span>${U.esc(c.plain)}<small>${U.esc(c.label)} · ${U.esc(c.tier || "")}</small></span></div>`).join("")}</div>
+      ${d.need && d.need.length ? `<div class="warn"><b>이렇게 되면 삽니다</b><br>${d.need.map(U.esc).join("<br>")}</div>` : ""}
+      ${d.contrib.length ? `<h3>종합점수 ${U.num(d.score, 1)}점은 이렇게 나왔습니다</h3>
+        <div class="stack">${d.contrib.map((c, k) => `<i style="width:${(c.pts / tot) * 100}%;background:${COL[k % COL.length]}" title="${U.esc(c.name)}"></i>`).join("")}</div>
+        <div class="legend2">${d.contrib.map((c, k) => `<span style="--c:${COL[k % COL.length]}">${U.esc(c.name)} ${U.num(c.val, 0)}점×${Math.round(c.w * 100)}% = ${U.num(c.pts, 1)}</span>`).join("")}</div>` : ""}
+      ${d.ref && d.ref.items && d.ref.items.length ? `<h3>참고 지표 (결정에는 안 씀) — 좋음 ${d.ref.good} · 나쁨 ${d.ref.bad}</h3>
+        <div>${d.ref.items.map((x) => `<span class="chipgood ${x.good ? "y" : "n"}">${U.esc(x.label)} ${U.esc(x.value)}</span>`).join("")}</div>` : ""}
+      <a class="btn ghost" href="stock.html?code=${encodeURIComponent(d.code)}">종목 분석 열기</a>`;
+    U.sheet(`${d.rank ?? ""}위 ${d.name}`, html);
+  });
+  drawToday();
+
+  // ── 30일: 보유 ──
+  const H = E.today.filter((d) => d.hold);
+  U.$("#holds").innerHTML = `<header><h2>보유 중</h2><span class="mut small">${H.length}종목</span></header>` + (H.length ? H.map((d) => {
+    const h = d.hold;
+    return `<div class="story"><div class="top"><b>${U.esc(d.name)}</b><b class="${U.cls(h.ret)}">${pc(h.ret)}</b></div>
+      ${h.held_days}일째 · 산 가격 ${U.won(h.avg)} · 지금 ${U.won(d.price)} · 감시가 ${U.won(h.guard_price)} (이 아래로 내려가면 팝니다)</div>`;
+  }).join("") : `<div class="empty">보유 종목이 없습니다 (현금 100%).</div>`);
+
+  // ── 30일: 규칙집 ──
+  const rl = (L) => L.map((r) => `<div class="rule"><b>${U.esc(r.rule)}</b>${r.tier ? `<span class="badge ${r.tier === "검증됨" ? "b-ok" : "b-mut"}">${U.esc(r.tier)}</span>` : ""}<p>${U.esc(r.plain)}</p></div>`).join("");
+  U.$("#r-buy").innerHTML = rl(E.rules.buy);
+  U.$("#r-sell").innerHTML = rl(E.rules.sell);
+  U.$("#r-safe").innerHTML = rl(E.rules.safety);
+
+  // ── 30일: 사고판 예시 ──
+  U.$("#stats").textContent = E.stats ? E.stats.plain : "";
+  const EXS = { "최근": E.examples, "가장 잘된 거래": E.best, "가장 나빴던 거래": E.worst };
+  let ek = "최근";
+  function drawEx() {
+    U.$("#exfilt").innerHTML = Object.keys(EXS).map((k) => `<button class="chip ${k === ek ? "on" : ""}" type="button" data-k="${k}">${k}</button>`).join("");
+    U.$("#examples").innerHTML = (EXS[ek] || []).map((x) => `<div class="story"><div class="top"><b>${U.esc(x.name)}</b><b class="${U.cls(x.ret)}">${U.pct(x.ret)}</b></div>${U.esc(x.story)}</div>`).join("") || `<div class="empty">기록이 없습니다.</div>`;
+  }
+  U.$("#exfilt").addEventListener("click", (e) => { const b = e.target.closest("[data-k]"); if (b) { ek = b.dataset.k; drawEx(); } });
+  drawEx();
+
+  // ── 단기 ──
+  if (S) {
+    const m = S.model;
+    U.$("#s-model").innerHTML = `<header><h2>지금 따라가는 모델</h2><span class="mut small">${U.esc(m.selected_at || "")}부터</span></header>
+      <div class="note" style="color:var(--fg)"><b>${U.esc(m.desc)}</b><br>${U.esc(m.plain || "")}</div>
+      <h3>왜 이 모델인가</h3><p style="font-size:14px;line-height:1.65">${U.esc(m.why)}</p>
+      ${S.signals && S.signals.length ? `<h3>이 모델이 보는 것</h3><div>${S.signals.map((s) => `<div class="wrow"><span class="n">${Math.round(s.share * 100)}%</span><div><div class="d" style="color:var(--fg);font-size:14px">${U.esc(s.name)}</div></div><span></span></div>`).join("")}</div>` : ""}`;
+    U.$("#s-today").innerHTML = `<header><h2>오늘 점검 → 내일 할 일</h2></header>
+      <div>${S.checks.map((c) => `<div class="ck2"><span class="ic ${c.ok ? "y" : "n"}">${c.ok ? "✓" : "✕"}</span><span>${U.esc(c.plain)}<small>${U.esc(c.label)}</small></span></div>`).join("") || `<p class="mut">점검 항목 없음</p>`}</div>
+      ${S.orders.length ? `<h3>내일 주문</h3>${S.orders.map((o) => `<div class="ck2"><span class="st ${o.side === "buy" ? "st-매수" : "st-매도"}">${o.side === "buy" ? "매수" : "매도"}</span><span>${U.esc(o.plain)}</span></div>`).join("")}`
+        : `<div class="note">${U.esc(S.headline)}</div>`}
+      ${(S.notes || []).length ? `<div class="warn">${S.notes.map(U.esc).join("<br>")}</div>` : ""}`;
+    U.$("#s-hold").innerHTML = `<header><h2>보유 중</h2><span class="mut small">${S.holdings.length}개</span></header>` + (S.holdings.length
+      ? S.holdings.map((h) => `<div class="story"><div class="top"><b>${U.esc(h.name)}</b><b class="${U.cls(h.ret)}">${pc(h.ret)}</b></div>${U.esc(h.plain)}</div>`).join("")
+      : `<div class="empty">보유 없음 (현금 100%)</div>`);
+    U.$("#s-ex").innerHTML = S.examples.map((x) => `<div class="story"><div class="top"><b>${U.esc(x.name)}</b><b class="${U.cls(x.ret)}">${U.pct(x.ret, 2)}</b></div>${U.esc(x.story)}</div>`).join("") || `<div class="empty">기록이 없습니다.</div>`;
+  } else {
+    U.$("#s-model").innerHTML = `<div class="empty">단기 모의투자 해설이 아직 없습니다.</div>`;
+  }
+
+  // ── 무엇을 얼마나 ──
+  const tb = (rows, el) => { U.$(el).innerHTML = rows.map((r) => `<div class="irow"><div class="ih"><b>${U.esc(r.what)}</b><span class="iw">${U.esc(r.weight)}</span></div>
+    <p>${U.esc(r.how)}</p><span class="ir">${U.esc(r.role)}</span></div>`).join(""); };
+  tb(X.info.direct, "#i-direct"); tb(X.info.safety, "#i-safe"); tb(X.info.ref, "#i-ref"); tb(X.info.short || [], "#i-short");
+  U.$("#words").innerHTML = X.glossary.map((g) => `<div class="term"><b>${U.esc(g.term)}</b><p>${U.esc(g.plain)}</p></div>`).join("");
+
+  U.tabs(U.$("#tabs"), "explain");
+})();
+</script>
+</body>
+</html>

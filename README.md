@@ -8,6 +8,9 @@
 - **30일 자동매매: `docs/autotrade.html`** (매일 모든 종목을 매수/유지/매도/관망으로 확정 → 모의계좌 또는 증권사 API로 주문)
 - **단기 모의투자: `docs/short.html`** (매일 후보 모델 전부 재시뮬레이션 → 모델 선택 → 다음날 시가 주문)
 - **학습·진화: `docs/report.html#evo` · `docs/short.html`** (2시간마다 이어서 진화 · 등록 뒤 성적으로만 승격)
+- **쉬운 해설: `docs/explain.html`** (하단 '해설' 탭) — 오늘 무엇을 어떤 기준으로 걸렀나(100종목→매수 거름망) · 종목마다 왜 샀나/기다렸나/팔았나와 그 숫자 ·
+  순위 점수의 구성 · 규칙집 · 같은 규칙으로 과거에 사고판 예시 · 단기 모델의 오늘 조건 점검 · 무엇을 얼마나 참고하나(직접/안전장치/참고만 0%) · 용어.
+  `src/explain.py` 가 매일 저녁 판단 기록을 읽어 문장으로 씁니다.
 - 수동 매매 기록(`my_trades.csv` · `trade.html` · `journal.html` · `signal.py`)과 이전 대시보드(`classic.html`)는 2026-10-25 완전 자동화로 없앴습니다.
 
 ## 🤖 자동매매 (2026-10 신규) — 자세한 근거는 [`docs/STRATEGY.md`](docs/STRATEGY.md)
@@ -142,6 +145,7 @@
 | 5 | `src/build_data.py` | 위 전부 → `docs/data.json` | 종목 순위·BuyFit·유사사례·시나리오·확률·판단등급 (홈·종목 화면이 읽음) |
 | 1-2 | `src/collect_etf.py` | KRX → `data/etf_ohlcv.csv` | KODEX 200·인버스 일봉 (단기 모의투자용, 처음엔 2018년부터 저절로) |
 | 7 | `src/autotrader.py --phase decide` | 위 전부 + `config/autotrade.yaml` → `data/autotrade/` + `docs/autotrade.json` | 4상태 판단 · 주문계획 · 모의체결 |
+| 9 | `src/explain.py` | autotrade.json · data.json · backtest.json · short.json → `docs/explain.json` | **자동매매 해설**: 판단·규칙·참고 비중을 사람이 읽는 문장으로 (`docs/explain.html`) |
 | 8 | `src/short_trader.py` | 위 데이터 → `data/short/` + `docs/short.json` | **단기 모의투자**: 어제 계획 체결 → 후보 모델 전부 재시뮬레이션 → 주 1회 모델 선택 → 내일 계획 (`docs/short.html`) |
 | 다음날 08:40 | `src/autotrader.py --phase execute` (`autotrade.yml`) | `plan.json` → 증권사 | 한국투자증권 주문 (kis_* 설정 시) |
 | 2시간마다 | `src/evolve.py step` · `src/short_evolve.py step` (`learn.yml`) | 저장된 인구 → `data/evolve/` · `data/short/evolved.json` | **쉬지 않는 진화**: 이어서 진화 → 도전자·진화 후보 등록 → 등록 뒤 성적으로 승격 (전략서 3-6-6) |

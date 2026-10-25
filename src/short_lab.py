@@ -70,9 +70,9 @@ ETF_RULES = {
     "overnight_rev": "밤사이 보유, 전날 지수가 내렸을 때만",
     "overnight_for": "밤사이 보유, 전날 외국인 순매수일 때만",
     "day_rev": "장중만 보유 (시가→종가), 전날 지수가 내렸을 때만",
-    "oo_rev": "하루 보유 (시가→다음 시가), 전날 지수가 내렸을 때만",
-    "oo_revid": "하루 보유, 전날 장중에 내렸을 때만",
-    "ls_rev": "전날 내렸으면 지수, 올랐으면 인버스 (하루)",
+    "oo_rev": "전날 지수가 내렸으면 지수 ETF 보유, 오르면 다음 날 시가에 팔고 현금",
+    "oo_revid": "전날 장중에 지수가 내렸으면 지수 ETF 보유, 아니면 현금 (시가에 사고팖)",
+    "ls_rev": "전날 내렸으면 지수 ETF, 올랐으면 인버스 보유 (시가에 바꿈)",
     "trend_hold": "지수 120일선 위면 보유, 아래면 현금",
     "trend_overnight": "120일선 위면 계속 보유, 아래면 밤사이만",
 }
@@ -169,8 +169,9 @@ def stock_params(m):
     return m["K"], m["K"] * xm, mn, mx
 
 
-def run_stock(D, m, stress=1.0, record=False, t0=1):
-    """종목 모델: 순위 상위 K를 시가에 사고, 보유 규칙대로 시가에 판다. 반환: 종가 기준 자산곡선 등."""
+def run_stock(D, m, stress=1.0, record=False, t0=1, log=None):
+    """종목 모델: 순위 상위 K를 시가에 사고, 보유 규칙대로 시가에 판다. 반환: 종가 기준 자산곡선 등.
+    log 에 목록을 넘기면 매매마다 {t, j, side, px, rank, why} 를 남긴다 (해설 화면용)."""
     R = D.ranks(m["sel"], m.get("combo"))
     K, X, mn, mx = stock_params(m)
     ok = D.gate[m["gate"]]
@@ -188,6 +189,12 @@ def run_stock(D, m, stress=1.0, record=False, t0=1):
         po = O[t]
         trad = ~np.isnan(po)
         sell, buys = stock_decide(units, since, R[t - 1], ok[t - 1], t, K, X, mn, mx, trad)
+        if log is not None:
+            for j in np.where(sell)[0]:
+                rk_j = R[t - 1, j]
+                log.append({"t": t, "j": int(j), "side": "sell", "px": float(po[j]), "entry_t": int(since[j]),
+                            "entry_px": None, "rank": None if not np.isfinite(rk_j) else int(rk_j),
+                            "why": "rank" if rk_j > X and t - since[j] >= mn else "max_hold"})
         if sell.any():
             v = (units[sell] * po[sell]).sum()
             cash += v * (1 - cs)
@@ -200,6 +207,9 @@ def run_stock(D, m, stress=1.0, record=False, t0=1):
             if amt > 0:
                 units[buys] = amt / po[buys]
                 since[buys] = t
+                if log is not None:
+                    for j in buys:
+                        log.append({"t": t, "j": int(j), "side": "buy", "px": float(po[j]), "rank": int(R[t - 1, j]), "why": "rank"})
                 cash -= amt * len(buys) * (1 + cb)
                 traded += amt * len(buys)
                 nb += len(buys)
@@ -264,7 +274,7 @@ def etf_targets(D, rule, pad=0):
     return wo, wc
 
 
-def run_etf(D, m, stress=1.0, record=False, t0=1, band=0.05):
+def run_etf(D, m, stress=1.0, record=False, t0=1, band=0.05, log=None):
     wo, wc = etf_targets(D, m["rule"])
     cb, cs = costs("etf", stress)
     Op, Cp = D.Op, D.Cp
@@ -275,7 +285,7 @@ def run_etf(D, m, stress=1.0, record=False, t0=1, band=0.05):
     nb = 0
     hold = [None] * D.T if record else None
 
-    def reb(px, tgt):
+    def reb(px, tgt, t=None, session=None):
         nonlocal cash, traded, nb
         eq = cash + (units * px).sum()
         cur = units * px / eq
@@ -288,6 +298,8 @@ def run_etf(D, m, stress=1.0, record=False, t0=1, band=0.05):
                 units[j] -= v / px[j]
                 cash += v * (1 - cs)
                 traded += v
+                if log is not None:
+                    log.append({"t": t, "j": j, "side": "sell", "px": float(px[j]), "session": session})
         eq = cash + (units * px).sum()
         cur = units * px / eq
         for j in range(2):
@@ -298,12 +310,14 @@ def run_etf(D, m, stress=1.0, record=False, t0=1, band=0.05):
                 cash -= v * (1 + cb)
                 traded += v
                 nb += 1
+                if log is not None:
+                    log.append({"t": t, "j": j, "side": "buy", "px": float(px[j]), "session": session})
 
     for t in range(t0, D.T):
         if not np.isnan(wo[t, 0]):
-            reb(Op[t], wo[t])
+            reb(Op[t], wo[t], t, "open")
         if not np.isnan(wc[t, 0]):
-            reb(Cp[t], wc[t])
+            reb(Cp[t], wc[t], t, "close")
         E[t] = cash + (units * Cp[t]).sum()
         if record:
             hold[t] = units.copy()

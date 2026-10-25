@@ -88,6 +88,9 @@ jobs:
           python src/short_trader.py 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY || echo "단기 모의투자 실패(무시하고 계속)"
           echo '```' >> $GITHUB_STEP_SUMMARY
 
+      - name: 8) 자동매매 해설 (무엇을 왜 했나 · 무엇을 얼마나 봤나 → docs/explain.json)
+        run: python src/explain.py 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY || echo "해설 실패(무시하고 계속)"
+
       - name: 5) 커밋
         run: |
           git config user.name "github-actions"

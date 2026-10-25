@@ -180,6 +180,24 @@ def test_evolved_model_runs_like_fixed():
     assert abs(L.run_stock(D, fixed)["E"][-1] - L.run_stock(D, evo)["E"][-1]) < 1e-12
 
 
+def test_explain_has_plain_answers():
+    """해설: 오늘 판단마다 사람이 읽는 한 줄 · 조건 점검 문장 · 규칙집 · 참고 정보 비중이 있다."""
+    import explain as X
+    cfg = X.settings.load()
+    A = {"asof": "2026-10-23", "gate": {"open": False, "regime": "급락장", "rebound": 0.01, "reason": "급락장 · 바닥 미확인", "need": "반등"},
+         "decisions": [{"code": "000001", "name": "가", "rank": 3, "state": "관망", "price": 1000.0, "checks": [
+             {"label": "종합순위 10위 이내", "ok": True, "value": "3위"}, {"label": "시장 게이트 (급락장 바닥확인)", "ok": False, "value": "급락장"}],
+             "need": ["지수 반등"]},
+             {"code": "000002", "name": "나", "rank": 15, "state": "관망", "price": 1000.0, "checks": [
+             {"label": "종합순위 10위 이내", "ok": False, "value": "15위"}]}]}
+    e = X.engine_section(cfg, A, {"items": [], "market": {"weights": {"s_value": 0.5, "s_flow": 0.5}}}, None)
+    assert "급락장" in e["today"][0]["line"] and "후보" in e["today"][1]["line"]
+    assert e["funnel"][2]["n"] == 1 and e["funnel"][3]["n"] == 0
+    assert e["rules"]["buy"] and e["rules"]["sell"] and abs(sum(w["w"] for w in e["weights"]) - 1) < 1e-9
+    info = X.info_table(cfg, e, None)
+    assert any(r["weight"] == "0%" for r in info["ref"]) and info["direct"][0]["weight"] == "50%"
+
+
 if __name__ == "__main__":
     for k, fn in list(globals().items()):
         if k.startswith("test_"):
