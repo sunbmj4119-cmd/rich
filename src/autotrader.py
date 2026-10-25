@@ -48,6 +48,7 @@ import yaml
 
 sys.path.insert(0, "src")
 import features as F                                     # noqa: E402
+import settings                                # noqa: E402
 from decision_engine import decide, load_news, BUY, SELL, HOLD, WATCH   # noqa: E402
 from brokers import make_broker, round_tick, PaperBroker  # noqa: E402
 import notify                                             # noqa: E402
@@ -276,6 +277,7 @@ def send(plan, broker, cfg, dry):
 # ══════════════════════════════════════════════════════════════
 def phase_decide(cfg, dry):
     panel, feats = F.build_all()
+    feats = F.apply_strategy(panel, feats, cfg["strategy"])   # 진화 모델이 고른 순위 가중치 (없으면 종합점수)
     t = len(panel["dates"]) - 1
     asof = panel["dates"][t]
     asof_s = str(asof.date())
@@ -490,7 +492,7 @@ def main():
     ap.add_argument("--approve", action="store_true", help="승인 모드에서 오늘 계획을 승인")
     ap.add_argument("--skip", default="", help="승인할 때 뺄 종목코드 (쉼표 구분)")
     a = ap.parse_args()
-    cfg = yaml.safe_load(open(CFG, encoding="utf-8"))
+    cfg = settings.load(CFG)
     if a.broker:
         cfg["broker"] = a.broker
     if a.phase in ("decide", "all"):

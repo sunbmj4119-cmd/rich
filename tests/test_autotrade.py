@@ -192,6 +192,52 @@ def test_notify_disabled_is_silent():
                        "sell", "x") == []
 
 
+def test_take_profit_off():
+    """부분익절을 끈 설정(take_profit_gain: null)에선 +30%여도 부분익절하지 않는다."""
+    cfg = copy.deepcopy(CFG)
+    cfg["strategy"]["take_profit_gain"] = None
+    c = top(1)[0]
+    px = PANEL["close"].iloc[T][c]
+    pos = {c: {"shares": 10, "avg": px / 1.30, "entry_t": T - 5, "peak": px, "partial_done": False}}
+    dec, _ = decide(T, PANEL, FEATS, pos, cfg, flags={"flow_stale": False})
+    assert {d["code"]: d for d in dec}[c]["state"] == HOLD
+
+
+def test_champion_overrides_strategy():
+    """config/champion.yaml 의 strategy 가 기본 설정을 덮어쓰고, 없으면 원래대로."""
+    import settings
+    with tempfile.TemporaryDirectory() as d:
+        ch = os.path.join(d, "champion.yaml")
+        yaml.safe_dump({"id": "E1", "strategy": {"max_positions": 7, "rank_weights": {"s_value": 1.0}}}, open(ch, "w"))
+        cfg = settings.load(champion=ch)
+        assert cfg["strategy"]["max_positions"] == 7 and cfg["champion"]["id"] == "E1"
+        assert cfg["strategy"]["stop_loss"] == CFG["strategy"]["stop_loss"]
+        assert settings.load(champion=os.path.join(d, "none.yaml"))["strategy"]["max_positions"] == CFG["strategy"]["max_positions"]
+
+
+def test_genome_rank_and_roundtrip():
+    """진화 유전자 ↔ 설정 왕복, 가중치 순위는 1부터 빈틈없이."""
+    import evolve as EV
+    g = EV.NAIVE
+    st = EV.strategy_from_genome(g)
+    back = EV.genome_from_cfg(st)
+    assert {k: back[k] for k in EV.CHOICES} == {k: g[k] for k in EV.CHOICES}
+    rk = F.genome_rank(PANEL, FEATS, {"s_value": 1.0}).iloc[T].dropna().sort_values().values
+    assert rk[0] == 1 and list(rk) == list(range(1, len(rk) + 1))
+
+
+def test_fastsim_matches_engine():
+    """빠른 시뮬레이터(evolve.fastsim)는 엔진 백테스트(engine_backtest.run)와 같은 결과를 낸다."""
+    import evolve as EV
+    from engine_backtest import run
+    EV.D = EV.load()
+    a, b = EV.D.nD - 260, EV.D.nD
+    e = run(PANEL, FEATS, CFG, a, b)
+    r, _ = EV.fastsim(EV.genome_from_cfg(CFG["strategy"]), a, b)
+    s = EV.stats(r)
+    assert abs(e["total"] - s["total"]) < 0.5 and abs(e["mdd"] - s["mdd"]) < 0.5
+
+
 if __name__ == "__main__":
     for k, fn in list(globals().items()):
         if k.startswith("test_"):

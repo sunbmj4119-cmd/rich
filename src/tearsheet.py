@@ -33,10 +33,10 @@ from concurrent.futures import ProcessPoolExecutor   # noqa: E402
 
 import numpy as np
 import pandas as pd
-import yaml
 
 sys.path.insert(0, "src")
 import features as F                         # noqa: E402
+import settings                                # noqa: E402
 from engine_backtest import run, WARMUP, SPLIT, CFG   # noqa: E402
 
 OUT = "docs/backtest.json"
@@ -228,15 +228,17 @@ _CACHE = {}
 
 
 def _init():
-    _CACHE["pf"] = F.build_all()
+    p, f = F.build_all()
+    _CACHE["pf"] = (p, F.apply_strategy(p, f, settings.load(CFG)["strategy"]))
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-grid", action="store_true")
     a = ap.parse_args()
-    cfg = yaml.safe_load(open(CFG, encoding="utf-8"))
+    cfg = settings.load(CFG)
     panel, feats = F.build_all()
+    feats = F.apply_strategy(panel, feats, cfg["strategy"])
     dates = panel["dates"]
     nD = len(dates)
     print("본 보고서 계산…")

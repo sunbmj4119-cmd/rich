@@ -192,7 +192,8 @@ def decide(t, panel, feats, positions, cfg, news=None, flags=None):
         d.update(held_days=held, ret=ret, peak=peak, avg=q["avg"], shares=q["shares"],
                  guard_price=max(stop_px, trail_px), trail_width=tw, checks=checks)
         # 순서 = signal.py / strategy_lab.simulate 와 동일 (부분익절 → 손절 → 트레일 → 이탈)
-        tp_due = ret >= st["take_profit_gain"] and not q.get("partial_done")
+        tpg = st.get("take_profit_gain")                 # 없으면(null) 부분익절 끔
+        tp_due = bool(tpg) and ret >= tpg and not q.get("partial_done")
         if ret <= -st["stop_loss"]:
             d.update(state=SELL, action="전량매도", fraction=1.0,
                      reason=f"손절 {ret*100:+.1f}% (기준 -{st['stop_loss']*100:.0f}%)")

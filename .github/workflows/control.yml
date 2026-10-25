@@ -6,16 +6,22 @@ name: autotrade-control
 #   kill    : 모든 주문 중단 (매도 포함)                   → config/KILL
 #   unkill  : kill 해제
 #   status  : 현재 계획·상태만 출력
+#   promote : 모델 진화의 도전자를 챔피언으로 (challenger 칸에 ID, 예: E20261031) → config/champion.yaml
+#   demote  : 챔피언 설정을 지우고 config/autotrade.yaml 원래 설정으로
 on:
   workflow_dispatch:
     inputs:
       action:
         description: "무엇을 할까요"
         type: choice
-        options: [status, approve, pause, resume, kill, unkill]
+        options: [status, approve, pause, resume, kill, unkill, promote, demote]
         default: status
       skip:
         description: "approve 때 뺄 종목코드 (쉼표 구분, 예: 005930,000660)"
+        required: false
+        default: ""
+      challenger:
+        description: "promote 때 도전자 ID (성과 화면 '모델 진화' 탭에 표시, 예: E20261031)"
         required: false
         default: ""
 concurrency:
@@ -43,6 +49,7 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           A: ${{ inputs.action }}
           SKIP: ${{ inputs.skip }}
+          CH: ${{ inputs.challenger }}
         run: |
           # 입력값은 환경변수로만 받는다 (스크립트에 직접 끼워 넣으면 명령 주입 위험)
           echo "## 🎛 autotrade-control: $A" >> $GITHUB_STEP_SUMMARY
@@ -53,6 +60,11 @@ jobs:
             unkill) rm -f config/KILL ;;
             approve)
               python src/autotrader.py --phase execute --approve --skip "$SKIP" 2>&1 | tee -a $GITHUB_STEP_SUMMARY ;;
+            promote)
+              case "$CH" in (*[!A-Za-z0-9]*|"") echo "도전자 ID 형식 오류: $CH"; exit 1;; esac
+              python src/evolve.py promote "$CH" 2>&1 | tee -a $GITHUB_STEP_SUMMARY ;;
+            demote)
+              rm -f config/champion.yaml; echo "챔피언 설정 해제 → config/autotrade.yaml 원래 설정" | tee -a $GITHUB_STEP_SUMMARY ;;
           esac
           echo '```' >> $GITHUB_STEP_SUMMARY
           python -c "import json;p=json.load(open('data/autotrade/plan.json'));print('계획',p['date'],p.get('status',''),'주문',len(p['orders']));[print(' ',o['side'],o['name'],o['code'],o['qty']) for o in p['orders']]" | tee -a $GITHUB_STEP_SUMMARY
@@ -64,7 +76,7 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add -A config/ data/autotrade/ || true
+          git add -A config/ data/autotrade/ data/evolve/ || true
           git commit -m "autotrade-control $A $(date +%Y-%m-%d)" || echo "no changes"
           git pull --rebase
           git push
