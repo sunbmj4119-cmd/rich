@@ -1,7 +1,7 @@
 {
  "made": "2026-10-23",
  "model": "E:oo_rev",
- "model_desc": "하루 보유 (시가→다음 시가), 전날 지수가 내렸을 때만",
+ "model_desc": "전날 지수가 내렸으면 지수 ETF 보유, 오르면 다음 날 시가에 팔고 현금",
  "orders": [],
  "notes": [],
  "equity_est": 10000000

@@ -404,6 +404,7 @@ GitHub Secrets `KRX_PW`를 새 값으로 고쳐 주세요. 그 전까지 엔진�
 | `src/short_trader.py` → `data/short/`, `docs/short.json` | 단기 모의투자: 체결 · 매일 재시뮬레이션 · 주 1회 모델 선택 · 내일 계획 |
 | `src/collect_etf.py` → `data/etf_ohlcv.csv` | KODEX 200·인버스 일봉 (KRX) |
 | `deploy/oracle/toss_collect.py` · `toss_lab.py` · `collect.sh` | 서버: 토스 이력 수집(원본은 서버에만) · 예측력 통계 → `data/toss/` |
+| `src/explain.py` → `docs/explain.json` · `docs/explain.html` | 자동매매 해설 — 오늘 판단·조건 점검·점수 구성·규칙집·과거 거래 예시·참고 비중을 문장으로 |
 | `src/short_evolve.py` → `data/short/evolved.json`, `docs/short_evo.json` | 단기 모델 연속 진화 · 진화 후보 등록·시험·퇴장 (3-6-6) |
 | `.github/workflows/learn.yml` | 2시간마다 연속 진화 (30일 모델 + 단기 모델) |
 | `tests/test_autotrade.py` · `tests/test_short.py` | 회귀 테스트 |
