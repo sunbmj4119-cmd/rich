@@ -9,6 +9,7 @@
 #          bash setup.sh --check    점검만
 #          bash setup.sh --keys     증권사 키 입력 (붙여넣기만, 화면에 안 보임 — 휴대폰에서 편집기 없이)
 #          bash setup.sh --token    GitHub 쓰기 권한을 토큰으로 (휴대폰처럼 화면 글자를 복사하기 어려울 때)
+#          bash setup.sh --probe    토스 연결 점검: 공식 명세 요약 + 토큰 발급 + 계좌 목록(조회만) → 결과를 GitHub 에 올림
 #          bash setup.sh --cron     평일 08:40 자동 실행 등록 (증권사 연결이 끝난 뒤에만)
 #
 #   이 스크립트는 비밀 값을 화면에 출력하지 않는다. 키는 ~/.rich/secrets.env 에만 저장한다.
@@ -207,6 +208,18 @@ set_token() {
   else no "쓰기 실패 — 저장소 선택($REPO)과 Contents: Read and write 권한을 확인한 뒤 다시 --token"; fi
 }
 
+run_probe() {
+  step "토스 연결 점검 — 조회만 하고 주문·잔고는 건드리지 않습니다"
+  git -C "$DIR" pull -q --ff-only || true
+  "$DIR/.venv/bin/python" "$DIR/deploy/oracle/toss_probe.py" || true
+  git -C "$DIR" add data/toss/ 2>/dev/null || true
+  if git -C "$DIR" diff --cached --quiet; then no "올릴 결과 없음"
+  else
+    git -C "$DIR" commit -q -m "toss probe $(date +%F)" && git -C "$DIR" pull -q --rebase && git -C "$DIR" push -q \
+      && ok "결과를 GitHub 에 올렸습니다 — 이제 채팅으로 '점검 끝'이라고만 알려 주세요" || no "GitHub 에 올리기 실패 (--check 로 쓰기 권한 확인)"
+  fi
+}
+
 install_cron() {
   # 서버 시간대와 상관없이: 매시 40분에 깨어나고, run.sh 가 '한국 시간 평일 08시'일 때만 실제로 일한다
   line="40 * * * * bash $DIR/deploy/oracle/run.sh >> $STATE/logs/cron.log 2>&1"
@@ -218,6 +231,7 @@ case "$MODE" in
   --check) check ;;
   --keys)  set_keys; check ;;
   --token) set_token; check ;;
+  --probe) run_probe ;;
   --cron)  install_cron; check ;;
   *)       install_packages; tune_system; get_code; deploy_key; secrets_file; check
            echo; echo "다음 단계: 위 ✗ 항목을 해결한 뒤 'bash ~/rich/deploy/oracle/setup.sh --check' 로 다시 확인하세요." ;;
