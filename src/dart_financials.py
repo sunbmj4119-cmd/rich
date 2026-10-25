@@ -9,7 +9,7 @@ DART 분기 재무 수집 (1회 백필) — EPS/BPS/주식수 포함 버전
 - 고정 컬럼 스키마(COLS)로 저장 → resume 시 컬럼 어긋남 방지
 
 [갱신 모드] python src/dart_financials.py --update
-  이미 받은 종목도 최근 2개년 중 '공시 마감이 지났는데 아직 없는 분기'만 다시 받는다 (financials.yml 이 주기 실행).
+  점수 대상 종목(우선주 제외)은 최근 2개년 중 '공시 마감이 지났는데 아직 없는 분기'만 다시 받는다 (financials.yml 이 주기 실행).
   같은 (종목, 연도, 분기) 행은 새로 받은 값으로 교체.
 
 [테스트 모드] 환경변수로 범위 축소 (없으면 전체 수집):
@@ -29,6 +29,7 @@ dart = OpenDartReader(API_KEY)
 os.makedirs("data", exist_ok=True)
 OUT = "data/financials.csv"
 PRICES = "data/prices.csv"
+SCORES = "data/scores.csv"
 
 REPRTS = {"11013": "1Q", "11012": "2Q", "11014": "3Q", "11011": "4Q"}
 AVAIL = {"1Q": "-05-15", "2Q": "-08-15", "3Q": "-11-15", "4Q": "-04-01"}
@@ -189,16 +190,35 @@ def flush(buffer):
     df.to_csv(OUT, mode="a", header=header, index=False)
 
 
+def scored_universe():
+    """갱신 대상 = 점수를 매기는 종목(scores.csv 최근일). 우선주(코드 끝자리가 0이 아님)는 DART 재무가 없어 뺀다."""
+    if not os.path.exists(SCORES):
+        return get_universe()
+    s = pd.read_csv(SCORES, dtype={"종목코드": str}, usecols=["날짜", "종목코드", "종목명"])
+    s["종목코드"] = s["종목코드"].str.zfill(6)
+    last = s[s["날짜"] == s["날짜"].max()].drop_duplicates("종목코드")
+    return [(c, n) for c, n in zip(last["종목코드"], last["종목명"]) if c.endswith("0")]
+
+
+def save_merged(old, new):
+    df = pd.concat([old, pd.DataFrame(new, columns=COLS)], ignore_index=True)
+    df = df.drop_duplicates(["종목코드", "연도", "분기"], keep="last").sort_values(["종목코드", "연도", "분기"])
+    df.to_csv(OUT, index=False)
+    return df
+
+
 def update():
-    """이미 받은 종목의 빠진 최근 분기만 채운다. 새로 편입된 종목은 전체 이력을 받는다."""
-    universe = get_universe()
+    """점수 대상 종목의 빠진 최근 분기만 채운다. 새로 편입된 종목은 전체 이력을 받는다.
+    10종목마다 저장하므로 시간 초과로 끊겨도 받은 만큼은 남는다."""
+    universe = scored_universe()
     if TEST_LIMIT > 0:
         universe = universe[:TEST_LIMIT]
     old = pd.read_csv(OUT, dtype={"종목코드": str}) if os.path.exists(OUT) else pd.DataFrame(columns=COLS)
     old["종목코드"] = old["종목코드"].astype(str).str.zfill(6)
     have = set(zip(old["종목코드"], old["연도"].astype(int), old["분기"]))
     due = due_quarters(datetime.now().year - 1)
-    new, filled = [], 0
+    print(f"대상 {len(universe)}종목 (점수 대상 · 우선주 제외) · 확인 분기 {due[0]}~{due[-1]}")
+    new, done = [], 0
     for i, (code, name) in enumerate(universe):
         mine = old[old["종목코드"] == code]
         if mine.empty:
@@ -210,15 +230,15 @@ def update():
             sh = pd.to_numeric(mine.sort_values(["연도", "분기"])["주식수"], errors="coerce").dropna()
             rows = collect_one(code, name, want, float(sh.iloc[-1]) if len(sh) else None)
         new.extend(rows)
-        filled += len(rows)
+        done += 1
         print(f"[{i+1}/{len(universe)}] {name} +{len(rows)}분기")
+        if new and done % 10 == 0:
+            save_merged(old, new)
     if not new:
         print("새로 받을 분기 없음 (아직 공시 전이거나 이미 최신)")
         return
-    df = pd.concat([old, pd.DataFrame(new, columns=COLS)], ignore_index=True)
-    df = df.drop_duplicates(["종목코드", "연도", "분기"], keep="last").sort_values(["종목코드", "연도", "분기"])
-    df.to_csv(OUT, index=False)
-    print(f"DART 재무 갱신 완료: +{filled}분기 · 최신 사용가능일 {df['사용가능일'].max()}")
+    df = save_merged(old, new)
+    print(f"DART 재무 갱신 완료: +{len(new)}분기 · 최신 사용가능일 {df['사용가능일'].max()}")
 
 
 def main():
