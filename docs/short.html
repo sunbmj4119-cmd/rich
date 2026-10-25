@@ -145,7 +145,7 @@
       <div class="kv"><span>후보</span><b>${S.pool_size}개 모델</b></div>
       <div class="kv"><span>지금 모델을 고른 날</span><b>${U.esc(S.model.selected_at)}</b></div>
       <div class="kv"><span>최근 250일 샤프</span><b>${sh(S.model.sh250)}${top && !top.chosen ? ` (1등 ${sh(top.sh250)} — 재선택일에 바뀔 수 있음)` : ""}</b></div>
-      <p class="note">매일 1등으로 바꾸면 교체 비용과 '우연히 잘 된 모델 쫓기' 때문에 과거 288가지 방식 중 15~23%만 지수 보유를 이겼습니다.
+      <p class="note">매일 1등으로 바꾸면 교체 비용과 '우연히 잘 된 모델 쫓기' 때문에 과거 288가지 방식 중 열에 두세 개만 지수 보유를 이겼습니다.
         그래서 일주일에 한 번, 1년 성적의 위험 대비 효율로 고릅니다. 선택된 모델이 '급락장 제외'형이면 급락장(고점 대비 −15% 이하이면서 반등 전)에는 새로 사지 않습니다.</p>`;
 
     // 순위
@@ -181,9 +181,12 @@
     const V = [
       ["n", "개별 종목을 매일 사고팔기 — 불가능", `1일 보유 종목 모델 ${h1.n || 66}개 중 ${h1.positive ?? "-"}개만 수익. 하루 반전 효과(IC 0.056, 9년 모두 양수)는 진짜지만, 상위 10% 초과수익이 하루 ${(B.ic.find((x) => x.signal === "rev1") || {h1: {}}).h1.top10_bp}bp로 왕복 비용 ${(B.costs.stock_roundtrip * 1e4).toFixed(0)}bp보다 작습니다.`],
       ["y", "5~10일 보유 — 가능", `5·10일 보유 종목 모델 샤프 중앙값 ${slow.map((x) => sh(x.sharpe_med)).join("·")} (132개 중 ${slow.reduce((s, x) => s + x.positive, 0)}개 수익). 비용이 적게 드는 보유 기간이어야 신호가 살아남습니다.`],
-      ["m", "지수 ETF 밤사이 보유 — 유망하지만 비용에 민감", ov ? `ETF는 매도세가 없어 가능. '120일선 위일 때만 밤사이 보유'가 샤프 ${sh(ov.full.sharpe)}·최대낙폭 ${pctv(ov.full.mdd, 0)} (지수 보유 ${sh(hold.full.sharpe)}·${pctv(hold.full.mdd, 0)}). 미끄러짐 3배면 샤프 ${sh(ov.stress.sharpe)}로 떨어져 실제 ETF 가격으로 다시 확인합니다.` : ""],
+      ov ? (B.etf_source === "etf" && ov.full.sharpe < hold.full.sharpe + 0.1
+        ? ["n", "지수 ETF 밤사이 보유 — 실제 ETF 가격으로는 이점 없음", `지수로 근사하면 밤사이(종가→다음날 시가) 수익이 커 보였지만, 실제 KODEX 200 시가로 다시 재니 '120일선 위일 때만 밤사이 보유'가 샤프 ${sh(ov.full.sharpe)} (지수 보유 ${sh(hold.full.sharpe)}), 미끄러짐 3배면 ${sh(ov.stress.sharpe)}. ETF 시가는 지수의 밤사이 상승을 2/3 정도만 담습니다.`]
+        : ["m", "지수 ETF 밤사이 보유 — 유망하지만 비용에 민감", `ETF는 매도세가 없어 가능. '120일선 위일 때만 밤사이 보유'가 샤프 ${sh(ov.full.sharpe)}·최대낙폭 ${pctv(ov.full.mdd, 0)} (지수 보유 ${sh(hold.full.sharpe)}·${pctv(hold.full.mdd, 0)}). 미끄러짐 3배면 샤프 ${sh(ov.stress.sharpe)}.${B.etf_source === "etf" ? "" : " 아직 지수 근사값입니다."}`])
+        : ["m", "지수 ETF 모델", "자료 없음"],
       ["n", "매일 1등 모델로 갈아타기 — 불리", `고르는 방식 ${(g.ALL?.n || 0) + (g.SLOW?.n || 0)}가지를 미래 정보 없이 실제로 돌려 보니 지수 보유(샤프 ${sh(hold.meta.sharpe)})를 이긴 비율 ${Math.round((g.ALL?.beat_bench || 0) * 100)}~${Math.round((g.SLOW?.beat_bench || 0) * 100)}%. 과거에 좋았던 방식이 이후에도 좋을지 순위상관 ${sh(g.ALL?.dev_test_spearman)} — 미리 알 수 없습니다. 문자 그대로 '매일 최근 20일 수익 1등'은 샤프 ${sh(d20.all.sharpe)}.`],
-      ["y", "주 1회 · 1년 위험조정 성적으로 고르기 — 채택", `2019~2026 샤프 ${sh(live.all.sharpe)} · 연 ${pctv(live.all.cagr)} · 최대낙폭 ${pctv(live.all.mdd, 0)} (지수 ${sh(hold.meta.sharpe)} · 연 ${pctv(hold.meta.cagr)} · ${pctv(hold.meta.mdd, 0)}). 2019~2022에서 고른 방식이 2023~2026에도 샤프 ${sh(live.test.sharpe)}. 다만 지수보다 낫다는 통계적 확신은 아직 부족(P=${live.p_vs_hold}).`],
+      ["y", "주 1회 · 1년 위험조정 성적으로 고르기 — 채택", `2019~2026 샤프 ${sh(live.all.sharpe)} · 연 ${pctv(live.all.cagr)} · 최대낙폭 ${pctv(live.all.mdd, 0)} (지수 ${sh(hold.meta.sharpe)} · 연 ${pctv(hold.meta.cagr)} · ${pctv(hold.meta.mdd, 0)}). 2019~2022에서 고른 방식이 2023~2026에도 샤프 ${sh(live.test.sharpe)}. ${live.p_vs_hold < 0.05 ? `지수 대비 P=${live.p_vs_hold}로 5% 기준은 겨우 넘지만, 288가지 중 고른 몫을 빼면 확신은 약합니다 (2023~만 보면 P=${live.p_vs_hold_test}).` : `다만 지수보다 낫다는 통계적 확신은 아직 부족(P=${live.p_vs_hold}).`}`],
     ];
     U.$("#verdicts").innerHTML = V.map(([c, t, d]) => `<div class="verdict"><span class="ic ${c}">${c === "y" ? "✓" : c === "n" ? "✕" : "!"}</span><div><b>${t}</b><p>${d}</p></div></div>`).join("");
     U.$("#rules-sub").textContent = `${B.meta_start}부터 · 비용 포함`;
