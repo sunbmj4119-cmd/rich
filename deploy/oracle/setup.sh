@@ -51,10 +51,8 @@ install_packages() {
 }
 
 tune_system() {
-  step "2/6 시간대 · 메모리"
-  if [ "$(timedatectl show -p Timezone --value 2>/dev/null || echo '')" != "Asia/Seoul" ]; then
-    $SUDO timedatectl set-timezone Asia/Seoul 2>/dev/null && ok "시간대 → Asia/Seoul" || no "시간대 변경 실패 (cron 시각은 UTC 기준이 됩니다)"
-  else ok "시간대 Asia/Seoul"; fi
+  step "2/6 메모리 (서버의 시간대·기존 프로그램은 건드리지 않음)"
+  ok "서버 시간대 $(timedatectl show -p Timezone --value 2>/dev/null || date +%Z) 그대로 — 실행 시각은 run.sh 가 한국 시간으로 판단"
   mem_mb=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
   swap_mb=$(awk '/SwapTotal/ {print int($2/1024)}' /proc/meminfo)
   if [ "$mem_mb" -lt 2048 ] && [ "$swap_mb" -lt 1024 ]; then
@@ -147,9 +145,10 @@ check() {
 }
 
 install_cron() {
-  line="40 8 * * 1-5 bash $DIR/deploy/oracle/run.sh >> $STATE/logs/cron.log 2>&1"
+  # 서버 시간대와 상관없이: 매시 40분에 깨어나고, run.sh 가 '한국 시간 평일 08시'일 때만 실제로 일한다
+  line="40 * * * * bash $DIR/deploy/oracle/run.sh >> $STATE/logs/cron.log 2>&1"
   ( { crontab -l 2>/dev/null || true; } | { grep -v "rich/deploy/oracle/run.sh" || true; } ; echo "$line" ) | crontab -
-  ok "평일 08:40 (서버 시간) 자동 실행 등록: $line"
+  ok "자동 실행 등록 (한국 시간 평일 08:40에만 주문): $line"
 }
 
 case "$MODE" in
