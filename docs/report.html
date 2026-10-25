@@ -7,115 +7,128 @@
 <title>엔진 성과 보고서</title>
 <link rel="stylesheet" href="ui.css">
 <style>
-.label-bt { font: 700 12px/1 var(--mono); letter-spacing: .06em; color: var(--orange); background: var(--warn-bg); padding: 5px 8px; border-radius: 6px; align-self: flex-start }
-.heat td { text-align: center; padding: 5px 2px; font-size: 12px; min-width: 38px }
-.heat td:first-child, .heat th:first-child { text-align: left; min-width: 44px }
-.sim-grid { display: grid; grid-template-columns: max-content 1fr; gap: 8px 12px; align-items: center }
+.label-bt { font: 700 11.5px/1 var(--mono); letter-spacing: .06em; color: var(--orange); background: var(--warn-bg); padding: 5px 8px; border-radius: 6px }
+.heat { table-layout: fixed; min-width: 330px }
+.heat td, .heat th { text-align: center; padding: 4px 1px; font-size: 10.5px; border-bottom: 2px solid var(--card) }
+.heat td:first-child, .heat th:first-child { text-align: left; width: 34px; font-size: 11.5px }
+.heat td:last-child, .heat th:last-child { width: 42px; font-weight: 700 }
+.sim-ax { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap }
+.sim-ax .seg { flex-wrap: nowrap }
 .cmp td:nth-child(2), .cmp td:nth-child(3) { font-weight: 600 }
-@media (max-width: 520px) { .sim-grid { grid-template-columns: 1fr } }
+.cmp td, .cmp th { white-space: normal }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <nav class="nav" aria-label="페이지">
-    <a href="index.html">대시보드</a><a href="autotrade.html">자동매매</a><a href="stock.html">종목 분석</a>
-    <a class="on" href="report.html">성과 보고서</a><a href="features.html">기능 고르기</a>
-  </nav>
-  <span class="label-bt" id="lbl">BACKTEST</span>
-  <h1>엔진 성과 보고서</h1>
-  <p class="mut" id="sub">불러오는 중…</p>
-  <div class="warn" id="disc"></div>
+  <nav class="nav" id="topnav" aria-label="페이지"></nav>
+  <header class="phead">
+    <div class="row" style="gap:8px"><h1>성과 보고서</h1><span class="label-bt" id="lbl">BACKTEST</span></div>
+    <div class="mut small" id="sub">불러오는 중…</div>
+  </header>
+  <details class="fold"><summary><div class="sum"><b style="font-size:14px">가설 성과입니다</b><span id="disc-short"></span></div></summary>
+    <div class="body"><p class="small" id="disc"></p><p class="guide" id="assume"></p></div></details>
 
-  <section class="card" data-feat="backtest_report">
-    <header><h2>핵심 지표</h2><div class="seg" id="kseg"><button data-k="full" class="on">전체</button><button data-k="train">2019~2023</button><button data-k="test">2024~</button></div></header>
-    <div class="kpis" id="kpis"></div>
-  </section>
+  <div class="stick"><div class="tabs" id="tabs">
+    <button data-t="sum">요약</button><button data-t="chart">차트</button><button data-t="trades">거래</button>
+    <button data-t="sim">설정 바꿔보기</button><button data-t="live">실전 추적</button>
+  </div></div>
 
-  <section class="card" data-feat="backtest_report">
-    <header><h2>자산 곡선</h2><span class="mut small">세로 점선 = 검증 구간 시작</span></header>
-    <div class="chart" id="c-eq"></div>
-    <div class="legend"><span><i style="background:var(--blue)"></i>엔진</span><span><i style="background:var(--faint)"></i>시장(100종목 등가중)</span></div>
-    <h3>고점 대비 하락 (수중 차트)</h3>
-    <div class="chart" id="c-dd"></div>
-  </section>
+  <!-- 요약 -->
+  <div class="tabpane" data-tab="sum" data-feat="backtest_report">
+    <section class="card">
+      <header><div class="seg" id="kseg"><button data-k="full" class="on" type="button">전체</button><button data-k="train" type="button">2019~23</button><button data-k="test" type="button">2024~</button></div>
+        <button class="linkbtn" id="guide-btn" type="button" data-feat="metric_guide" aria-expanded="false">읽는 법 보기</button></header>
+      <div class="kpis compact" id="kpis"></div>
+    </section>
+    <section class="card"><h2>기간별 수익률</h2><div class="scroll"><table id="periods"></table></div></section>
+    <section class="card"><h2>가장 깊었던 낙폭</h2><div id="wdd"></div></section>
+  </div>
 
-  <section class="card" data-feat="backtest_report">
-    <h2>기간별 수익률</h2>
-    <div class="scroll"><table id="periods"></table></div>
-  </section>
+  <!-- 차트 -->
+  <div class="tabpane" data-tab="chart" data-feat="backtest_report">
+    <section class="card">
+      <header><h2>자산 곡선</h2><span class="mut small">점선 = 검증 구간 시작</span></header>
+      <div class="chart" id="c-eq"></div>
+      <div class="legend"><span><i style="background:var(--blue)"></i>엔진</span><span><i style="background:var(--faint)"></i>시장(100종목 등가중)</span></div>
+      <h3>고점 대비 하락</h3><div class="chart" id="c-dd"></div>
+    </section>
+    <section class="card">
+      <header><h2>월별 수익률</h2><div class="seg" id="mseg"><button data-k="s" class="on" type="button">엔진</button><button data-k="b" type="button">시장</button></div></header>
+      <div class="scroll"><table class="heat" id="heat"></table></div>
+    </section>
+    <details class="fold"><summary><div class="sum"><b>6개월 굴린 수익률</b><span>엔진 vs 시장</span></div></summary>
+      <div class="body"><div class="chart" id="c-roll"></div></div></details>
+  </div>
 
-  <section class="card" data-feat="backtest_report">
-    <header><h2>월별 수익률</h2><div class="seg" id="mseg"><button data-k="s" class="on">엔진</button><button data-k="b">시장</button></div></header>
-    <div class="scroll"><table class="heat" id="heat"></table></div>
-  </section>
+  <!-- 거래 -->
+  <div class="tabpane" data-tab="trades" data-feat="backtest_report">
+    <section class="card"><h2>거래 요약</h2><div class="facts" id="tk"></div></section>
+    <section class="card"><h2>청산 사유별</h2><div id="exits"></div></section>
+    <details class="fold"><summary><div class="sum"><b>최대 역행(MAE) vs 최종 수익</b><span id="mae-sum"></span></div></summary>
+      <div class="body"><div class="chart" id="c-mae"></div><p class="guide" id="mae-text"></p></div></details>
+    <section class="card">
+      <header><h2>최근 거래</h2><select id="tf" aria-label="청산 사유로 거르기"></select></header>
+      <div id="tl"></div>
+    </section>
+  </div>
 
-  <section class="card" data-feat="backtest_report">
-    <h2>가장 깊었던 낙폭 5개</h2>
-    <div class="scroll"><table id="wdd"></table></div>
-    <h3>6개월 굴린 수익률</h3>
-    <div class="chart" id="c-roll"></div>
-  </section>
+  <!-- 설정 바꿔보기 -->
+  <div class="tabpane" data-tab="sim" data-feat="strategy_simulator" id="sim">
+    <section class="card">
+      <header><h2>설정 바꿔보기</h2><span class="badge b-mut">미리 계산한 72개</span></header>
+      <div id="sim-ctl" style="display:flex;flex-direction:column;gap:8px"></div>
+    </section>
+    <section class="card">
+      <div id="sim-verdict"></div>
+      <div class="scroll"><table class="cmp" id="sim-cmp"></table></div>
+      <div class="chart" id="c-sim"></div>
+      <div class="legend"><span><i style="background:var(--fg)"></i>현재 설정</span><span><i style="background:var(--blue)"></i>고른 설정</span></div>
+    </section>
+    <details class="fold"><summary><div class="sum"><b>이 설정을 쓰려면</b><span>config/autotrade.yaml 에 붙여넣기</span></div></summary>
+      <div class="body"><pre class="code" id="sim-yaml"></pre><button class="btn ghost" id="sim-copy" type="button">설정 복사</button>
+        <p class="guide" id="sim-note"></p></div></details>
+  </div>
 
-  <section class="card" data-feat="backtest_report">
-    <h2>거래 분석</h2>
-    <div class="kpis" id="tk"></div>
-    <div class="scroll"><table id="exits"></table></div>
-    <h3>거래 중 최대 역행(MAE) vs 최종 수익</h3>
-    <div class="chart" id="c-mae"></div>
-    <p class="guide" id="mae-text"></p>
-  </section>
-
-  <section class="card" data-feat="backtest_report">
-    <header><h2>최근 거래</h2><select id="tf" aria-label="청산 사유"></select></header>
-    <div class="scroll"><table id="tl"></table></div>
-    <button class="btn ghost" id="tl-more" type="button">더 보기</button>
-  </section>
-
-  <section class="card" data-feat="live_tracking">
-    <header><h2>실전(모의) 추적</h2><span class="badge b-ref" id="live-badge">PAPER</span></header>
-    <p class="freq" id="live-text"></p>
-    <div class="chart" id="c-live"></div>
-    <p class="guide">음영은 백테스트 일간 수익의 평균·변동성으로 그린 기대 범위(±1σ 진한, ±2σ 옅은)입니다(pyfolio 방식). 모의 성과가 아래쪽 옅은 범위 밖으로 오래 나가 있으면 백테스트가 지금 시장을 설명하지 못한다는 신호입니다.</p>
-  </section>
-
-  <section class="card" data-feat="strategy_simulator" id="sim">
-    <header><h2>설정 바꿔보기</h2><span class="badge b-mut">미리 계산한 72개 조합</span></header>
-    <div class="sim-grid" id="sim-ctl"></div>
-    <div class="scroll"><table class="cmp" id="sim-cmp"></table></div>
-    <div class="chart" id="c-sim"></div>
-    <div class="legend"><span><i style="background:var(--fg)"></i>현재 설정</span><span><i style="background:var(--blue)"></i>고른 설정</span></div>
-    <div id="sim-verdict"></div>
-    <details><summary>이 설정을 쓰려면 (config/autotrade.yaml)</summary><pre class="code" id="sim-yaml"></pre>
-      <button class="btn ghost" id="sim-copy" type="button">설정 복사</button></details>
-    <p class="guide" id="sim-note"></p>
-  </section>
+  <!-- 실전 추적 -->
+  <div class="tabpane" data-tab="live" data-feat="live_tracking">
+    <section class="card">
+      <header><h2>실전(모의) 추적</h2><span class="badge b-ref" id="live-badge">PAPER</span></header>
+      <p id="live-text"></p>
+      <div class="chart" id="c-live"></div>
+      <details><summary>음영 읽는 법</summary><p class="guide">백테스트 일간 수익의 평균·변동성으로 그린 기대 범위입니다(진한 ±1σ, 옅은 ±2σ, pyfolio 방식). 모의 성과가 옅은 범위 아래로 오래 나가 있으면 백테스트가 지금 시장을 설명하지 못한다는 신호입니다.</p></details>
+    </section>
+  </div>
 </div>
 <script src="ui.js"></script>
 <script>
+U.nav("report.html");
 (async () => {
   const [B, S] = await Promise.all([U.j("backtest.json"), U.j("autotrade.json").catch(() => ({})), U.feat.load()]);
   const sm = B.summary, ser = B.series;
-  U.$("#lbl").textContent = B.label || "BACKTEST";
-  U.$("#sub").textContent = `${B.period[0]} ~ ${B.period[1]} · 검증 구간 ${B.split}~ · ${B.assumptions}`;
+  U.$("#lbl").textContent = (B.label || "BACKTEST").split(" ")[0];
+  U.$("#sub").textContent = `${B.period[0]} ~ ${B.period[1]} · 검증 구간 ${B.split}~`;
+  U.$("#disc-short").textContent = "실제 매매 기록이 아닙니다 · 가정 보기";
   U.$("#disc").textContent = B.disclaimer;
+  U.$("#assume").textContent = "가정: " + B.assumptions;
+
+  // ── 요약 ──
   const G = {
     cagr: "연평균 복리 수익률. 15% 이상이면 우수(퀀터스 기준).", sharpe: "변동성 1만큼 견딜 때 얻는 수익. 1 이상 우수, 0.5 미만 약함.",
     mdd: "고점에서 바닥까지 가장 크게 빠진 폭. −20% 이내면 안정적.", sortino: "하락 변동성만 위험으로 본 Sharpe.",
     calmar: "연수익 ÷ 최대낙폭. 1 이상이면 낙폭 대비 수익이 충분.", longest: "고점을 다시 회복하기까지 가장 오래 걸린 거래일.",
-    psr: "이 Sharpe가 우연이 아닐 확률(기간 길이·분포 보정, Bailey 2012).", beta: "시장이 1% 움직일 때 같이 움직인 정도.",
+    psr: "이 Sharpe가 우연이 아닐 확률(기간 길이·분포 보정).", beta: "시장이 1% 움직일 때 같이 움직인 정도.",
   };
-  const guide = U.feat.on("metric_guide");
-  const kpi = (lab, val, g, c = "") => `<div class="kpi"><span>${lab}</span><b class="${c}">${val}</b>${guide && g ? `<i>${g}</i>` : ""}</div>`;
+  const kpi = (lab, val, g, c = "") => `<div class="kpi"><span>${lab}</span><b class="${c}">${val}</b>${g ? `<i>${g}</i>` : ""}</div>`;
+  const psrTxt = (p) => (p >= 99 ? "99% 이상" : `${Math.round(p)}%`);
   function drawK(k) {
     const m = sm[k], b = sm["bench_" + k];
     U.$("#kpis").innerHTML = [
       kpi("연평균 수익", U.pct(m.cagr), `${G.cagr} 시장 ${U.pct(b.cagr)}`, U.cls(m.cagr)),
       kpi("Sharpe", U.num(m.sharpe, 2), `${G.sharpe} 시장 ${U.num(b.sharpe, 2)}`),
       kpi("최대 낙폭", U.pct(m.mdd), `${G.mdd} 시장 ${U.pct(b.mdd)}`, "neg"),
+      kpi("최장 회복", `${m.longest_dd_days}일`, G.longest),
       kpi("Sortino", U.num(m.sortino, 2), G.sortino), kpi("Calmar", U.num(m.calmar, 2), G.calmar),
-      kpi("최장 회복기간", `${m.longest_dd_days}일`, G.longest),
-      kpi("시장 베타", U.num(m.beta, 2), G.beta),
-      kpi("우연 아닐 확률", ((p) => (p >= 99 ? "99% 이상" : `${Math.round(p)}%`))(k === "test" ? B.psr_test : B.psr), G.psr),
+      kpi("시장 베타", U.num(m.beta, 2), G.beta), kpi("우연 아닐 확률", psrTxt(k === "test" ? B.psr_test : B.psr), G.psr),
     ].join("");
   }
   drawK("full");
@@ -123,24 +136,29 @@
     const k = e.target.dataset.k; if (!k) return;
     U.$("#kseg").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.k === k)); drawK(k);
   });
+  U.$("#guide-btn").addEventListener("click", (e) => {
+    const on = U.$("#kpis").classList.toggle("show-guide");
+    e.target.textContent = on ? "읽는 법 접기" : "읽는 법 보기"; e.target.setAttribute("aria-expanded", on);
+  });
+  U.$("#periods").innerHTML = `<tr><th></th>${B.periods.map((p) => `<th>${p.label}</th>`).join("")}</tr>
+    <tr><td>엔진</td>${B.periods.map((p) => `<td class="${U.cls(p.strat)}">${U.pct(p.strat, 0)}</td>`).join("")}</tr>
+    <tr><td>시장</td>${B.periods.map((p) => `<td class="${U.cls(p.bench)}">${U.pct(p.bench, 0)}</td>`).join("")}</tr>`;
+  U.$("#wdd").innerHTML = B.worst_dd.slice(0, 3).map((w) => `<div class="row" style="padding:6px 0;border-bottom:1px solid var(--line)">
+      <b class="neg num" style="width:64px">${U.pct(w.depth)}</b><span class="grow small">${w.start} → 바닥 ${w.trough}<br><span class="mut">${w.end ? `회복 ${w.end} · ${w.days}거래일` : `회복 중 · ${w.days}거래일째`}</span></span></div>`).join("");
 
+  // ── 차트 ──
   const yy = (d) => d.slice(2, 7);
-  U.line(U.$("#c-eq"), { labels: ser.d, h: 240, xfmt: yy, yfmt: (v) => `${v.toFixed(1)}배`, tipfmt: (v) => `${v.toFixed(2)}배`,
+  U.line(U.$("#c-eq"), { labels: ser.d, h: 220, xfmt: yy, yfmt: (v) => `${v.toFixed(1)}배`, tipfmt: (v) => `${v.toFixed(2)}배`,
     series: [{ name: "시장", data: ser.bench, color: "var(--faint)", width: 1.5 }, { name: "엔진", data: ser.eq, color: "var(--blue)", width: 2, end: true }],
-    vline: { i: ser.split_i, label: "검증 구간" }, aria: "자산 곡선" });
-  U.line(U.$("#c-dd"), { labels: ser.d, h: 150, xfmt: yy, yfmt: (v) => `${Math.round(v)}%`, zero: true,
+    vline: { i: ser.split_i, label: "검증" }, aria: "자산 곡선" });
+  U.line(U.$("#c-dd"), { labels: ser.d, h: 130, xfmt: yy, yfmt: (v) => `${Math.round(v)}%`, zero: true,
     series: [{ name: "시장", data: ser.bdd, color: "var(--faint)", width: 1 }, { name: "엔진", data: ser.dd, color: "var(--red)", width: 1.5, area: true, areaBase: 0 }], aria: "낙폭" });
-  U.line(U.$("#c-roll"), { labels: ser.d, h: 170, xfmt: yy, yfmt: (v) => `${Math.round(v)}%`, zero: true,
+  U.line(U.$("#c-roll"), { labels: ser.d, h: 160, xfmt: yy, yfmt: (v) => `${Math.round(v)}%`, zero: true,
     series: [{ name: "시장", data: ser.broll, color: "var(--faint)", width: 1 }, { name: "엔진", data: ser.roll, color: "var(--blue)", width: 1.5 }], aria: "6개월 수익" });
-
-  U.$("#periods").innerHTML = `<tr><th></th>${B.periods.map((p) => `<th>${p.label}</th>`).join("")}<th>연평균</th></tr>
-    <tr><td>엔진</td>${B.periods.map((p) => `<td class="${U.cls(p.strat)}">${U.pct(p.strat)}</td>`).join("")}<td>${U.pct(sm.full.cagr)}</td></tr>
-    <tr><td>시장</td>${B.periods.map((p) => `<td class="${U.cls(p.bench)}">${U.pct(p.bench)}</td>`).join("")}<td>${U.pct(sm.bench_full.cagr)}</td></tr>`;
-
   function heat(rows) {
-    U.$("#heat").innerHTML = `<tr><th>연도</th>${Array.from({ length: 12 }, (_, i) => `<th>${i + 1}월</th>`).join("")}<th>연간</th></tr>` +
-      rows.map((r) => `<tr><td>${r.year}</td>${r.months.map((v) => `<td style="${U.heatBg(v, 10)}">${U.ok(v) ? v.toFixed(1) : ""}</td>`).join("")}
-        <td style="${U.heatBg(r.year_ret, 40)};font-weight:700">${U.pct(r.year_ret, 0)}</td></tr>`).join("");
+    U.$("#heat").innerHTML = `<tr><th>연도</th>${Array.from({ length: 12 }, (_, i) => `<th>${i + 1}</th>`).join("")}<th>연간</th></tr>` +
+      rows.map((r) => `<tr><td>${String(r.year).slice(2)}</td>${r.months.map((v) => `<td style="${U.heatBg(v, 10)}" title="${r.year}년 ${U.pct(v)}">${U.ok(v) ? Math.round(v) : ""}</td>`).join("")}
+        <td style="${U.heatBg(r.year_ret, 40)}">${U.pct(r.year_ret, 0)}</td></tr>`).join("");
   }
   heat(B.monthly);
   U.$("#mseg").addEventListener("click", (e) => {
@@ -149,114 +167,100 @@
     heat(k === "s" ? B.monthly : B.bench_monthly);
   });
 
-  U.$("#wdd").innerHTML = `<tr><th>시작(고점)</th><th>바닥</th><th>회복</th><th>깊이</th><th>기간</th></tr>` +
-    B.worst_dd.map((w) => `<tr><td>${w.start}</td><td>${w.trough}</td><td>${w.end || "회복 중"}</td><td class="neg">${U.pct(w.depth)}</td><td>${w.days}일</td></tr>`).join("");
-
+  // ── 거래 ──
   const t = B.trades;
-  U.$("#tk").innerHTML = [
-    kpi("거래 수", U.num(t.n)), kpi("이익 거래", `${Math.round(t.win)}%`, `${U.num(t.n)}건 중 ${U.num(Math.round(t.n * t.win / 100))}건`),
-    kpi("Profit factor", U.num(t.profit_factor, 2), "총이익 ÷ 총손실. 1.5 이상 양호."),
-    kpi("손익비", U.num(t.payoff, 2), "평균 이익 ÷ 평균 손실. 승률이 낮아도 이게 크면 수익."),
-    kpi("평균 이익 / 손실", `${U.pct(t.avg_win)} / ${U.pct(t.avg_loss)}`), kpi("평균 보유", `${t.avg_hold}일`),
-    kpi("평균 주식 비중", `${Math.round(B.exposure_avg)}%`, "주식에 들어가 있던 평균 비율."),
-  ].join("");
-  U.$("#exits").innerHTML = `<tr><th>청산 사유</th><th>건수</th><th>평균 수익</th><th>이익 비율</th></tr>` +
-    t.exits.map((e) => `<tr><td>${U.esc(e.why)}</td><td>${e.n}</td><td class="${U.cls(e.avg)}">${U.pct(e.avg)}</td><td>${Math.round(e.win)}%</td></tr>`).join("");
+  U.$("#tk").innerHTML = `<div class="fact"><span>거래 수</span><b>${U.num(t.n)}</b></div>
+    <div class="fact"><span>이익 거래</span><b>${U.num(Math.round(t.n * t.win / 100))}건 (${Math.round(t.win)}%)</b></div>
+    <div class="fact"><span>총이익÷총손실</span><b>${U.num(t.profit_factor, 2)}</b></div><div class="fact"><span>평균이익÷평균손실</span><b>${U.num(t.payoff, 2)}</b></div>
+    <div class="fact"><span>평균 이익 / 손실</span><b>${U.pct(t.avg_win, 1)} / ${U.pct(t.avg_loss, 1)}</b></div><div class="fact"><span>평균 보유 · 주식 비중</span><b>${t.avg_hold}일 · ${Math.round(B.exposure_avg)}%</b></div>`;
+  U.$("#exits").innerHTML = t.exits.map((e) => `<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)">
+      <span class="grow"><b>${U.esc(e.why)}</b> <span class="small mut">${e.n}건 · 이익 ${Math.round(e.win)}%</span></span><b class="${U.cls(e.avg)} num">${U.pct(e.avg)}</b></div>`).join("");
   const mm = B.mae_mfe;
-  U.scatter(U.$("#c-mae"), { pts: mm.map((p) => [p[0], p[2]]), h: 240, xfmt: (v) => `${Math.round(v)}%`, yfmt: (v) => `${Math.round(v)}%`,
-    xlab: "보유 중 최대 역행 →", ylab: "최종 수익", color: (p) => (p[1] >= 0 ? "var(--green)" : "var(--red)"), aria: "MAE 산점도" });
   const deep = mm.filter((p) => p[0] <= -8), deepWin = deep.filter((p) => p[2] > 0).length;
-  U.$("#mae-text").textContent = `보유 중 −8% 넘게 밀렸던 거래 ${deep.length}건 중 ${deepWin}건이 결국 이익으로 끝났습니다. ` +
-    `오른쪽 위에 점이 많으면 손절이 너무 좁고, 왼쪽 아래에 몰려 있으면 손절이 제 역할을 하는 것입니다.`;
-
-  const why = [...new Set(B.trade_list.map((x) => x.why))];
-  U.$("#tf").innerHTML = `<option value="">전체 사유</option>` + why.map((w) => `<option>${U.esc(w)}</option>`).join("");
-  let tlN = 15;
+  U.$("#mae-sum").textContent = `−8% 넘게 밀린 ${deep.length}건 중 ${deepWin}건이 이익으로 끝남`;
+  U.scatter(U.$("#c-mae"), { pts: mm.map((p) => [p[0], p[2]]), h: 220, xfmt: (v) => `${Math.round(v)}%`, yfmt: (v) => `${Math.round(v)}%`,
+    xlab: "보유 중 최대 역행 →", ylab: "최종 수익", color: (p) => (p[1] >= 0 ? "var(--green)" : "var(--red)"), aria: "MAE 산점도" });
+  U.$("#mae-text").textContent = "오른쪽 위에 점이 많으면 손절이 너무 좁고, 왼쪽 아래에 몰리면 손절이 제 역할을 하는 것입니다.";
+  const whys = [...new Set(B.trade_list.map((x) => x.why))];
+  U.$("#tf").innerHTML = `<option value="">전체</option>` + whys.map((w) => `<option>${U.esc(w)}</option>`).join("");
   const drawTL = () => {
     const f = U.$("#tf").value;
     const rows = B.trade_list.filter((x) => !f || x.why === f);
-    U.$("#tl-more").hidden = rows.length <= tlN;
-    U.$("#tl").innerHTML = `<tr><th>종목</th><th>매수</th><th>매도</th><th>수익</th><th>보유</th><th>사유</th><th>최대역행</th><th>최대순행</th></tr>` +
-      rows.slice(0, tlN).map((x) => `<tr><td><a href="stock.html#c${x.code}">${U.esc(x.name)}</a>${x.frac < 1 ? ` <span class="small mut">${Math.round(x.frac * 100)}%</span>` : ""}</td>
-        <td>${x.in}</td><td>${x.out}</td><td class="${U.cls(x.ret)}">${U.pct(x.ret)}</td><td>${x.held}일</td><td>${U.esc(x.why)}</td>
-        <td class="neg">${U.pct(x.mae)}</td><td class="pos">${U.pct(x.mfe)}</td></tr>`).join("");
+    U.more(U.$("#tl"), rows, (x) => `<button class="li" type="button" data-i="${B.trade_list.indexOf(x)}">
+      <span class="main"><span class="t">${U.esc(x.name)}${x.frac < 1 ? ` <span class="small mut">${Math.round(x.frac * 100)}%</span>` : ""}</span>
+        <span class="s">${x.out} · ${U.esc(x.why)} · ${x.held}일</span></span><span class="r ${U.cls(x.ret)}">${U.pct(x.ret)}</span><span class="chev" aria-hidden="true"></span></button>`, 8, 15);
   };
-  U.$("#tf").addEventListener("change", () => { tlN = 15; drawTL(); });
-  U.$("#tl-more").addEventListener("click", () => { tlN += 25; drawTL(); });
-  drawTL();
+  U.$("#tf").addEventListener("change", drawTL); drawTL();
+  U.$("#tl").addEventListener("click", (e) => {
+    const b = e.target.closest(".li"); if (!b) return;
+    const x = B.trade_list[+b.dataset.i];
+    U.sheet(`${x.name} 거래`, `<div class="facts">
+      <div class="fact"><span>매수 → 매도</span><b>${x.in.slice(2)} → ${x.out.slice(2)}</b></div><div class="fact"><span>수익</span><b class="${U.cls(x.ret)}">${U.pct(x.ret)}</b></div>
+      <div class="fact"><span>보유</span><b>${x.held}거래일</b></div><div class="fact"><span>청산 사유</span><b>${U.esc(x.why)}</b></div>
+      <div class="fact"><span>보유 중 최대 하락</span><b class="neg">${U.pct(x.mae)}</b></div><div class="fact"><span>보유 중 최대 상승</span><b class="pos">${U.pct(x.mfe)}</b></div></div>
+      ${x.frac < 1 ? `<p class="small mut">보유의 ${Math.round(x.frac * 100)}%만 판 부분 익절입니다.</p>` : ""}
+      <a class="btn" style="text-align:center;text-decoration:none" href="stock.html#c${x.code}">종목 분석 열기</a>`);
+  });
 
-  // ── 실전(모의) 추적 ──
+  // ── 실전 추적 ──
   const eq = (S.equity_curve || []).filter((x) => U.ok(x.equity));
   U.$("#live-badge").textContent = (S.broker || "paper").toUpperCase();
-  const cone = B.cone;
-  const days = eq.length;
-  if (days >= 1) {
-    const e0 = eq[0].equity;
-    const H = Math.max(60, Math.ceil((days + 5) / 5) * 5);
-    const cut = cone.filter((c) => c[0] <= H);
-    const labels = cut.map((c) => `${c[0]}일`);
-    const live = cut.map((c) => { const p = eq[c[0]]; return p ? p.equity / e0 : null; });
-    U.line(U.$("#c-live"), { labels, h: 200, yfmt: (v) => `${((v - 1) * 100).toFixed(0)}%`, tipfmt: (v) => `${((v - 1) * 100).toFixed(1)}%`,
+  if (eq.length) {
+    const e0 = eq[0].equity, H = Math.max(60, Math.ceil((eq.length + 5) / 5) * 5);
+    const cut = B.cone.filter((c) => c[0] <= H);
+    U.line(U.$("#c-live"), { labels: cut.map((c) => `${c[0]}일`), h: 190, yfmt: (v) => `${((v - 1) * 100).toFixed(0)}%`, tipfmt: (v) => `${((v - 1) * 100).toFixed(1)}%`,
       series: [{ name: "기대 가운데", data: cut.map((c) => c[1]), color: "var(--faint)", dash: "4 3", width: 1.5 },
-               { name: "모의 계좌", data: live, color: "var(--blue)", width: 2.2, end: true }],
+               { name: "모의 계좌", data: cut.map((c) => (eq[c[0]] ? eq[c[0]].equity / e0 : null)), color: "var(--blue)", width: 2.2, end: true }],
       bands: [{ name: "±2σ", lo: cut.map((c) => c[4]), hi: cut.map((c) => c[5]), color: "var(--blue)", opacity: 0.08 },
               { name: "±1σ", lo: cut.map((c) => c[2]), hi: cut.map((c) => c[3]), color: "var(--blue)", opacity: 0.14 }], aria: "실전 추적" });
     const last = eq[eq.length - 1];
-    U.$("#live-text").innerHTML = `모의 운용 <b>${days}거래일째</b> (${eq[0].date} 시작) · 평가액 ${U.won(last.equity)} (${U.pct((last.equity / e0 - 1) * 100)}).
-      ${days < 20 ? "아직 표본이 너무 짧아 백테스트와 비교할 수 없습니다. 20거래일 이상 쌓이면 의미가 생깁니다." : ""}`;
-  } else {
-    U.$("#live-text").textContent = "모의 운용 기록이 아직 없습니다. 매일 17시 판단이 쌓이면 여기에 그려집니다.";
-  }
+    U.$("#live-text").innerHTML = `${eq[0].date}부터 <b>${eq.length}거래일째</b> · ${U.won(last.equity)} (${U.pct((last.equity / e0 - 1) * 100)})`
+      + (eq.length < 20 ? `<br><span class="small mut">20거래일 이상 쌓여야 백테스트와 비교할 의미가 생깁니다.</span>` : "");
+  } else U.$("#live-text").textContent = "모의 운용 기록이 아직 없습니다.";
 
-  // ── 설정 시뮬레이터 ──
+  // ── 설정 바꿔보기 ──
   const g = B.grid;
-  if (!g) { U.$("#sim").hidden = true; return; }
-  const base = { max_positions: B.settings.max_positions, trail_base: B.settings.trail_base, stop_loss: B.settings.stop_loss,
-                 crash_gate: B.settings.crash_gate, take_profit: B.settings.take_profit_gain < 1 };
-  const sel = { ...base };
-  const AX = [
-    ["max_positions", "보유 종목 수", (v) => `${v}개`], ["trail_base", "트레일 폭", (v) => `고점 −${Math.round(v * 100)}%`],
-    ["stop_loss", "손절선", (v) => `−${Math.round(v * 100)}%`], ["crash_gate", "급락장 바닥확인", (v) => (v ? "켬" : "끔")],
-    ["take_profit", "+25% 부분익절", (v) => (v ? "켬" : "끔")],
-  ];
-  U.$("#sim-ctl").innerHTML = AX.map(([k, lab, f]) => `<span class="mut">${lab}</span><div class="seg" data-ax="${k}">${g.axes[k].map((v) =>
-    `<button type="button" data-v='${JSON.stringify(v)}'>${f(v)}${JSON.stringify(v) === JSON.stringify(base[k]) ? " ·현재" : ""}</button>`).join("")}</div>`).join("");
-  const find = (o) => g.rows.find((r) => AX.every(([k]) => JSON.stringify(r[k]) === JSON.stringify(o[k])));
-  const baseRow = find(base);
-  const cd = g.curve_d;
-  function drawSim() {
-    U.$("#sim-ctl").querySelectorAll(".seg").forEach((sg) => sg.querySelectorAll("button").forEach((b) =>
-      b.classList.toggle("on", b.dataset.v === JSON.stringify(sel[sg.dataset.ax])) ));
-    const r = find(sel);
-    const row = (lab, a, b, f, better) => `<tr><td>${lab}</td><td>${f(a)}</td><td>${f(b)}</td><td class="${better == null ? "" : better ? "pos" : "neg"}">${better == null ? "" : better ? "나아짐" : "나빠짐"}</td></tr>`;
-    const s2 = (v) => U.num(v, 2);
-    U.$("#sim-cmp").innerHTML = `<tr><th></th><th>현재</th><th>고른 설정</th><th></th></tr>` +
-      row("2019~2023 Sharpe", baseRow.train.sharpe, r.train.sharpe, s2, r.train.sharpe === baseRow.train.sharpe ? null : r.train.sharpe > baseRow.train.sharpe) +
-      row("2024~ Sharpe", baseRow.test.sharpe, r.test.sharpe, s2, r.test.sharpe === baseRow.test.sharpe ? null : r.test.sharpe > baseRow.test.sharpe) +
-      row("2019~2023 연수익", baseRow.train.cagr, r.train.cagr, (v) => U.pct(v), null) +
-      row("2024~ 연수익", baseRow.test.cagr, r.test.cagr, (v) => U.pct(v), null) +
-      row("최대 낙폭(전체)", baseRow.full.mdd, r.full.mdd, (v) => U.pct(v), r.full.mdd === baseRow.full.mdd ? null : r.full.mdd > baseRow.full.mdd) +
-      row("이익 거래 비율", baseRow.win, r.win, (v) => `${Math.round(v)}%`, null) +
-      row("거래 수", baseRow.n_trades, r.n_trades, (v) => U.num(v), null) +
-      row("Profit factor", baseRow.profit_factor, r.profit_factor, s2, null);
-    U.line(U.$("#c-sim"), { labels: cd, h: 200, xfmt: (d) => d.slice(2, 7), yfmt: (v) => `${v.toFixed(1)}배`,
-      series: [{ name: "현재", data: baseRow.curve, color: "var(--fg)", width: 1.5 }, { name: "고른 설정", data: r.curve, color: "var(--blue)", width: 2 }], aria: "설정 비교 자산곡선" });
-    const both = r.train.sharpe > baseRow.train.sharpe && r.test.sharpe > baseRow.test.sharpe;
-    const gap = Math.min(r.train.sharpe - baseRow.train.sharpe, r.test.sharpe - baseRow.test.sharpe);
-    const luck = g.deflated.sr0_annual;
-    U.$("#sim-verdict").innerHTML = r === baseRow ? `<div class="note">지금 쓰는 설정입니다.</div>` :
-      both && gap > luck ? `<div class="note" style="color:var(--green)">두 구간 모두에서 우연 기준(Sharpe +${luck})보다 크게 나아졌습니다. 그래도 바꾸기 전에 모의 계좌로 먼저 확인하세요.</div>` :
-      both ? `<div class="warn">두 구간 모두 나아졌지만 차이가 Sharpe ${gap.toFixed(2)}로, ${g.deflated.n_trials}개를 시험할 때 운으로 생길 수 있는 폭(약 ${luck}) 안입니다. 이 차이를 믿고 바꿀 근거는 약합니다.</div>` :
-      `<div class="warn">한 구간 이상에서 나빠졌습니다. 이 저장소의 채택 기준(두 구간 동시 개선)을 통과하지 못합니다.</div>`;
-    U.$("#sim-yaml").textContent = `strategy:\n  max_positions: ${sel.max_positions}\n  entry_rank: ${sel.max_positions}\n  trail_base: ${sel.trail_base}\n  stop_loss: ${sel.stop_loss}\n  crash_gate: ${sel.crash_gate}\n  take_profit_gain: ${sel.take_profit ? 0.25 : 9.99}`;
-  }
-  U.$("#sim-ctl").addEventListener("click", (e) => {
-    const b = e.target.closest("button"); if (!b) return;
-    sel[b.parentElement.dataset.ax] = JSON.parse(b.dataset.v); drawSim();
-  });
-  U.$("#sim-copy").addEventListener("click", (e) => U.copy(U.$("#sim-yaml").textContent, e.target));
-  U.$("#sim-note").textContent = `${g.note} 손절선은 −10%와 −15%의 결과가 같아(고점 −8% 트레일이 먼저 걸림) −7%와 −10%만 넣었습니다. 각 조합은 2019~2026 한 번의 연속 실행에서 두 구간을 잘라 계산했습니다.`;
-  drawSim();
+  if (g) {
+    const base = { max_positions: B.settings.max_positions, trail_base: B.settings.trail_base, stop_loss: B.settings.stop_loss,
+                   crash_gate: B.settings.crash_gate, take_profit: B.settings.take_profit_gain < 1 };
+    const sel = { ...base };
+    const AX = [["max_positions", "보유 종목 수", (v) => `${v}개`], ["trail_base", "트레일 폭", (v) => `−${Math.round(v * 100)}%`],
+      ["stop_loss", "손절선", (v) => `−${Math.round(v * 100)}%`], ["crash_gate", "급락장 바닥확인", (v) => (v ? "켬" : "끔")], ["take_profit", "+25% 부분익절", (v) => (v ? "켬" : "끔")]];
+    const J = JSON.stringify;
+    U.$("#sim-ctl").innerHTML = AX.map(([k, lab, f]) => `<div class="sim-ax"><span class="small mut">${lab}</span><div class="seg" data-ax="${k}">${g.axes[k].map((v) =>
+      `<button type="button" data-v='${J(v)}'>${f(v)}${J(v) === J(base[k]) ? " ●" : ""}</button>`).join("")}</div></div>`).join("") +
+      `<p class="small mut">● = 지금 쓰는 값</p>`;
+    const find = (o) => g.rows.find((r) => AX.every(([k]) => J(r[k]) === J(o[k])));
+    const baseRow = find(base);
+    const drawSim = () => {
+      U.$("#sim-ctl").querySelectorAll(".seg").forEach((sg) => sg.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === J(sel[sg.dataset.ax]))));
+      const r = find(sel);
+      const cell = (a, b, f, better) => `<td>${f(a)}</td><td class="${better == null || a === b ? "" : better ? "pos" : "neg"}">${f(b)}</td>`;
+      U.$("#sim-cmp").innerHTML = `<tr><th></th><th>현재</th><th>고른 것</th></tr>
+        <tr><td>Sharpe 2019~23</td>${cell(baseRow.train.sharpe, r.train.sharpe, (v) => U.num(v, 2), r.train.sharpe > baseRow.train.sharpe)}</tr>
+        <tr><td>Sharpe 2024~</td>${cell(baseRow.test.sharpe, r.test.sharpe, (v) => U.num(v, 2), r.test.sharpe > baseRow.test.sharpe)}</tr>
+        <tr><td>연수익 2019~23</td>${cell(baseRow.train.cagr, r.train.cagr, (v) => U.pct(v), r.train.cagr > baseRow.train.cagr)}</tr>
+        <tr><td>연수익 2024~</td>${cell(baseRow.test.cagr, r.test.cagr, (v) => U.pct(v), r.test.cagr > baseRow.test.cagr)}</tr>
+        <tr><td>최대 낙폭</td>${cell(baseRow.full.mdd, r.full.mdd, (v) => U.pct(v), r.full.mdd > baseRow.full.mdd)}</tr>
+        <tr><td>이익 거래 · 거래 수</td><td>${Math.round(baseRow.win)}% · ${baseRow.n_trades}</td><td>${Math.round(r.win)}% · ${r.n_trades}</td></tr>`;
+      U.line(U.$("#c-sim"), { labels: g.curve_d, h: 180, xfmt: (d) => d.slice(2, 7), yfmt: (v) => `${v.toFixed(1)}배`,
+        series: [{ name: "현재", data: baseRow.curve, color: "var(--fg)", width: 1.5 }, { name: "고른 설정", data: r.curve, color: "var(--blue)", width: 2 }], aria: "설정 비교" });
+      const both = r.train.sharpe > baseRow.train.sharpe && r.test.sharpe > baseRow.test.sharpe;
+      const gap = Math.min(r.train.sharpe - baseRow.train.sharpe, r.test.sharpe - baseRow.test.sharpe);
+      const luck = g.deflated.sr0_annual;
+      U.$("#sim-verdict").innerHTML = r === baseRow ? `<div class="note">지금 쓰는 설정입니다. 위에서 값을 바꿔 보세요.</div>`
+        : both && gap > luck ? `<div class="note" style="color:var(--green)">두 기간 모두 운의 폭(Sharpe +${luck})보다 크게 나아졌습니다. 바꾸기 전에 모의 계좌로 먼저 확인하세요.</div>`
+        : both ? `<div class="warn">두 기간 모두 나아졌지만 차이(Sharpe +${gap.toFixed(2)})가 72개를 시험할 때 운으로 생기는 폭(약 ${luck}) 안입니다. 바꿀 근거는 약합니다.</div>`
+        : `<div class="warn">한 기간 이상에서 나빠졌습니다. 채택 기준(두 기간 동시 개선)에 못 미칩니다.</div>`;
+      U.$("#sim-yaml").textContent = `strategy:\n  max_positions: ${sel.max_positions}\n  entry_rank: ${sel.max_positions}\n  trail_base: ${sel.trail_base}\n  stop_loss: ${sel.stop_loss}\n  crash_gate: ${sel.crash_gate}\n  take_profit_gain: ${sel.take_profit ? 0.25 : 9.99}`;
+    };
+    U.$("#sim-ctl").addEventListener("click", (e) => { const b = e.target.closest("button[data-v]"); if (!b) return; sel[b.parentElement.dataset.ax] = JSON.parse(b.dataset.v); drawSim(); });
+    U.$("#sim-copy").addEventListener("click", (e) => U.copy(U.$("#sim-yaml").textContent, e.target));
+    U.$("#sim-note").textContent = `${g.note} 손절선 −10%와 −15%는 결과가 같아(고점 −8% 트레일이 먼저 걸림) −7%와 −10%만 넣었습니다.`;
+    drawSim();
+  } else U.$("#sim-ctl").innerHTML = `<p class="mut">격자가 아직 계산되지 않았습니다 (주 1회 robust.yml).</p>`;
+
+  U.tabs(U.$("#tabs"), "report");
   U.feat.apply();
 })().catch((e) => { document.getElementById("sub").textContent = "자료를 불러오지 못했습니다: " + e.message; });
 </script>

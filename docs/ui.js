@@ -33,6 +33,11 @@ const U = (() => {
     all: () => { const o = { ...defaults }; for (const k in session) o[k] = session[k]; return o; },
     apply(root = document) {
       root.querySelectorAll("[data-feat]").forEach((el) => el.classList.toggle("feat-off", !feat.on(el.dataset.feat)));
+      // 구역이 통째로 꺼진 탭은 버튼도 숨긴다
+      document.querySelectorAll(".tabs button[data-t]").forEach((b) => {
+        const pane = document.querySelector(`[data-tab="${b.dataset.t}"]`);
+        b.hidden = !!pane && pane.classList.contains("feat-off");
+      });
     },
   };
 
@@ -240,5 +245,104 @@ const U = (() => {
     catch { return false; }
   }
 
-  return { j, esc, ok, pct, num, won, cls, $, feat, line, bars, radar, scatter, contrib, heatBg, copy, mount };
+  /* ── 페이지 이동: 휴대폰은 하단 탭바, 넓은 화면은 위쪽 칩 ── */
+  const ICONS = {
+    home: '<path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/>',
+    bot: '<rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5"/>',
+    stock: '<path d="M4 19V5M4 19h16"/><path d="M7 15l4-4 3 3 5-6"/>',
+    report: '<rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/>',
+    pick: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
+  };
+  const PAGES = [["index.html", "대시보드", "home"], ["autotrade.html", "자동매매", "bot"], ["stock.html", "종목", "stock"],
+                 ["report.html", "성과", "report"], ["features.html", "기능", "pick"]];
+  function nav(active) {
+    const top = document.getElementById("topnav");
+    if (top) top.innerHTML = PAGES.map(([h, l]) => `<a href="${h}" class="${h === active ? "on" : ""}">${l}</a>`).join("");
+    const b = document.createElement("nav");
+    b.className = "bnav";
+    b.setAttribute("aria-label", "페이지 이동");
+    b.innerHTML = PAGES.map(([h, l, ic]) => `<a href="${h}" class="${h === active ? "on" : ""}" ${h === active ? 'aria-current="page"' : ""}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[ic]}</svg><span>${l}</span></a>`).join("");
+    document.body.appendChild(b);
+  }
+
+  /* ── 페이지 안 탭: [data-tab=id] 구역 중 하나만 보인다. 마지막 탭을 기억하고 #id 로 바로 열 수 있다 ── */
+  function tabs(bar, key, onShow) {
+    const btns = [...bar.querySelectorAll("button[data-t]")];
+    const panes = [...document.querySelectorAll("[data-tab]")];
+    const ids = btns.map((b) => b.dataset.t);
+    bar.setAttribute("role", "tablist");
+    btns.forEach((b) => { b.setAttribute("role", "tab"); b.type = "button"; });
+    const anchor = document.createElement("div");
+    bar.closest(".stick")?.before(anchor);
+    function show(t, user) {
+      btns.forEach((b) => b.setAttribute("aria-selected", String(b.dataset.t === t)));
+      panes.forEach((p) => (p.hidden = p.dataset.tab !== t));
+      try { localStorage.setItem("rich.tab." + key, t); } catch { /* 기억 못 해도 동작은 같다 */ }
+      if (user) {
+        const y = anchor.getBoundingClientRect().top + window.scrollY;
+        if (window.scrollY > y) window.scrollTo(0, y);      // 탭을 바꾸면 새 내용의 처음부터
+        bar.querySelector(`[data-t="${t}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+      }
+      onShow && onShow(t);
+    }
+    bar.addEventListener("click", (e) => { const b = e.target.closest("button[data-t]"); if (b) show(b.dataset.t, true); });
+    bar.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      const i = ids.indexOf(btns.find((b) => b.getAttribute("aria-selected") === "true")?.dataset.t);
+      const n = ids[(i + (e.key === "ArrowRight" ? 1 : ids.length - 1)) % ids.length];
+      show(n, true); bar.querySelector(`[data-t="${n}"]`).focus();
+    });
+    let saved = null;
+    try { saved = localStorage.getItem("rich.tab." + key); } catch { /* 없음 */ }
+    const h = (location.hash || "").replace(/^#(t-)?/, "");
+    show(ids.includes(h) ? h : ids.includes(saved) ? saved : ids[0], false);
+    return { show };
+  }
+
+  /* ── 바텀시트: 목록을 늘리지 않고 상세를 띄운다 ── */
+  function sheet(title, html, onOpen) {
+    const last = document.activeElement;
+    const bg = document.createElement("div");
+    bg.className = "sheet-bg";
+    bg.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="grab" aria-hidden="true"></div>
+      <header><h2>${esc(title)}</h2><button class="x" type="button" aria-label="닫기">✕</button></header><div class="sbody" style="display:flex;flex-direction:column;gap:10px">${html}</div></div>`;
+    document.body.appendChild(bg);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const sh = bg.querySelector(".sheet");
+    const close = () => { bg.remove(); document.body.style.overflow = prev; document.removeEventListener("keydown", key); last && last.focus && last.focus(); };
+    const key = (e) => { if (e.key === "Escape") close(); };
+    document.addEventListener("keydown", key);
+    bg.addEventListener("click", (e) => { if (e.target === bg) close(); });
+    bg.querySelector(".x").addEventListener("click", close);
+    // 손잡이·머리를 아래로 끌면 닫힌다
+    let y0 = null;
+    const head = [bg.querySelector(".grab"), bg.querySelector("header")];
+    head.forEach((h) => h.addEventListener("touchstart", (e) => { y0 = e.touches[0].clientY; }, { passive: true }));
+    sh.addEventListener("touchmove", (e) => { if (y0 === null) return; const d = e.touches[0].clientY - y0; if (d > 0) sh.style.transform = `translateY(${d}px)`; }, { passive: true });
+    sh.addEventListener("touchend", (e) => {
+      if (y0 === null) return;
+      const d = e.changedTouches[0].clientY - y0; y0 = null;
+      if (d > 90) close(); else sh.style.transform = "";
+    });
+    bg.querySelector(".x").focus();
+    onOpen && onOpen(bg.querySelector(".sbody"));
+    feat.apply(bg);
+    return close;
+  }
+
+  /* ── 앞의 n개만 보이고 '더 보기'로 늘린다 ── */
+  function more(box, items, render, n = 5, step = 10) {
+    let shown = n;
+    const draw = () => {
+      box.innerHTML = items.slice(0, shown).map(render).join("") +
+        (items.length > shown ? `<button class="more" type="button">${Math.min(step, items.length - shown)}개 더 보기 · 남은 ${items.length - shown}개</button>` : "");
+      const m = box.querySelector(".more");
+      if (m) m.addEventListener("click", () => { shown += step; draw(); });
+    };
+    draw();
+  }
+
+  return { j, esc, ok, pct, num, won, cls, $, feat, line, bars, radar, scatter, contrib, heatBg, copy, mount, nav, tabs, sheet, more };
 })();

@@ -138,7 +138,6 @@ body:not(.simple) .simponly{display:none}
 <div style="display:flex;gap:8px;margin:14px 0">
   <a href="trade.html" class="btn" style="flex:1;margin:0">📝 매매 기록</a>
   <a href="journal.html" class="btn" style="flex:1;margin:0;background:#5856d6">📓 투자논리</a>
-  <a href="autotrade.html" class="btn" style="flex:1;margin:0;background:#1d1d1f">🤖 자동매매</a>
 </div>
 <div class="lvbar"><button id="lv0" class="on" onclick="setLv(1)">🟢 쉽게 보기</button>
   <button id="lv1" onclick="setLv(0)">🔬 자세히 보기</button></div>
@@ -175,7 +174,7 @@ body:not(.simple) .simponly{display:none}
   <div><div class="v">2</div><div class="k">보유 종목</div></div>
 </div><div style="margin-top:12px"><div class="leg" style="margin:0 0 2px">🌐 <b>시장이 이렇게 되면 내 계좌는</b> · 내 계좌 베타 <b>1.29</b></div><div class="tw"><table class="stab"><tr><th>시장</th><th>확률</th><th>평가액</th><th>손익</th><th>손절발동</th></tr><tr><td style="color:#ff3b30">시장 -20%</td><td style="color:#999">8%</td><td>164,743</td><td style="color:#0071e3;font-weight:700">-164,957</td><td><span style="color:#ff3b30;font-weight:700">2종목</span></td></tr><tr><td style="color:#ff3b30">시장 -10%</td><td style="color:#999">7%</td><td>187,979</td><td style="color:#0071e3;font-weight:700">-141,721</td><td><span style="color:#ff3b30;font-weight:700">2종목</span></td></tr><tr><td style="color:#ff3b30">시장 -5%</td><td style="color:#999">13%</td><td>199,596</td><td style="color:#0071e3;font-weight:700">-130,104</td><td><span style="color:#ff3b30;font-weight:700">2종목</span></td></tr><tr><td style="color:#8e8e93">시장 +0%</td><td style="color:#999">35%</td><td>211,214</td><td style="color:#0071e3;font-weight:700">-118,486</td><td><span style="color:#ff3b30;font-weight:700">2종목</span></td></tr><tr><td style="color:#34c759">시장 +5%</td><td style="color:#999">23%</td><td>224,816</td><td style="color:#0071e3;font-weight:700">-104,884</td><td><span style="color:#ff3b30;font-weight:700">2종목</span></td></tr><tr><td style="color:#34c759">시장 +10%</td><td style="color:#999">14%</td><td>238,419</td><td style="color:#0071e3;font-weight:700">-91,281</td><td><span style="color:#ff3b30;font-weight:700">2종목</span></td></tr></table></div><div class="leg">각 종목의 <b>베타</b>(시장 1% 움직일 때 이 종목이 몇 % 움직였나, 최근 250일)로 추정. 내릴 때는 <b>하락베타</b>를 씁니다. 확률은 현재 국면에서 30일 뒤 그 구간이 나온 과거 빈도.<br>※ 베타는 과거 평균일 뿐 급락장에서는 상관이 1에 수렴해 <b>더 나쁘게</b> 나오는 경향이 있습니다.</div></div><div style="margin-top:10px"><div class="leg" style="margin:0 0 4px">📦 업종 편중 (평가액 기준)</div><span style="display:inline-block;background:#eef;color:#0071e3;border-radius:8px;padding:3px 9px;margin:2px 3px 2px 0;font-size:12px;font-weight:600">지주 65%</span><span style="display:inline-block;background:#eef;color:#0071e3;border-radius:8px;padding:3px 9px;margin:2px 3px 2px 0;font-size:12px;font-weight:600">금융 35%</span><div class="warn" style="margin-top:6px">보유 종목수가 적어 특정 업종(<b>지주</b>) 비중이 높게 잡힙니다. 늘릴 때 분산 고려. (업종은 KRX 분류 기반 자동 근사(참고용).)</div></div><div id="eqchart" style="margin-top:10px"></div>
 <div class="leg"><b>최악의 날</b> = 지금 걸어둔 감시가(손절·트레일 중 먼저 닿는 값)가 전 종목 동시 체결될 때의 추가손실. 실제 동시발동은 드물지만 <b>감내 가능한 최대 손실</b>을 미리 확인하세요.</div></div><div class="card"><h2>🟢 지금 사기 좋은 순서 (BuyFit)<span class="tb t1">검증됨</span></h2><div class="leg" style="margin-top:0;margin-bottom:6px">점수 상위 풀에서, 최근 조정받아 반등 여지가 큰 종목을 앞으로. (백테스트에서 <b>관찰된</b> 단기 평균회귀 · 생존편향 미보정 → 아래 한계 참고)</div><div class="bi" onclick="openD('034730')"><div class="brk">1</div><div class="bmid"><div class="bn">SK <span class="gr gA" style="vertical-align:middle">A</span></div><div class="bsub">점수 79(1위) · 승률 53%<span style="color:#bbb">(기준 50)</span> · 손절 15% · <span style="color:#ff9500">반대 2</span></div><div class="bsub" style="color:#aaa">60일고점대비 -27.0% · <span style="color:#ff9500;font-weight:700">타이밍 60</span></div></div><div class="fit"><div class="fitv">100</div><div class="fitk">BuyFit</div></div><span class="chev">›</span></div><div class="bi" onclick="openD('078930')"><div class="brk r2">2</div><div class="bmid"><div class="bn">GS <span class="gr gA" style="vertical-align:middle">A</span></div><div class="bsub">점수 76(2위) · 승률 53%<span style="color:#bbb">(기준 50)</span> · 손절 15%</div><div class="bsub" style="color:#aaa">60일고점대비 -34.4% · <span style="color:#34c759;font-weight:700">타이밍 74</span></div></div><div class="fit"><div class="fitv">97</div><div class="fitk">BuyFit</div></div><span class="chev">›</span></div><div class="bi" onclick="openD('267250')"><div class="brk r3">3</div><div class="bmid"><div class="bn">HD현대 <span class="gr gA" style="vertical-align:middle">A</span></div><div class="bsub">점수 71(3위) · 승률 53%<span style="color:#bbb">(기준 50)</span> · 손절 15% · <span style="color:#ff9500">반대 1</span></div><div class="bsub" style="color:#aaa">60일고점대비 -46.0% · <span style="color:#34c759;font-weight:700">타이밍 97</span></div></div><div class="fit"><div class="fitv">92</div><div class="fitk">BuyFit</div></div><span class="chev">›</span></div><div class="bi" onclick="openD('004170')"><div class="brk rx">4</div><div class="bmid"><div class="bn">신세계 <span class="gr gA" style="vertical-align:middle">A</span></div><div class="bsub">점수 68(6위) · 승률 49%<span style="color:#bbb">(기준 50)</span> · 손절 15% · <span style="color:#ff9500">반대 2</span></div><div class="bsub" style="color:#aaa">60일고점대비 -51.3% · <span style="color:#34c759;font-weight:700">타이밍 100</span></div></div><div class="fit"><div class="fitv">87</div><div class="fitk">BuyFit</div></div><span class="chev">›</span></div><div class="bi" onclick="openD('088350')"><div class="brk rx">5</div><div class="bmid"><div class="bn">한화생명 <span class="gr gA" style="vertical-align:middle">A</span></div><div class="bsub">점수 68(5위) · 승률 53%<span style="color:#bbb">(기준 50)</span> · 손절 15% · <span style="color:#ff9500">반대 1</span></div><div class="bsub" style="color:#aaa">60일고점대비 -34.8% · <span style="color:#34c759;font-weight:700">타이밍 79</span></div></div><div class="fit"><div class="fitv">83</div><div class="fitk">BuyFit</div></div><span class="chev">›</span></div><div class="bi" onclick="openD('006800')"><div class="brk rx">6</div><div class="bmid"><div class="bn">미래에셋증권 <span class="gr gA" style="vertical-align:middle">A</span></div><div class="bsub">점수 68(7위) · 승률 49%<span style="color:#bbb">(기준 50)</span> · 손절 15% · <span style="color:#ff9500">반대 2</span></div><div class="bsub" style="color:#aaa">60일고점대비 -35.9% · <span style="color:#34c759;font-weight:700">타이밍 75</span></div></div><div class="fit"><div class="fitv">81</div><div class="fitk">BuyFit</div></div><span class="chev">›</span></div><div class="bi" onclick="openD('375500')"><div class="brk rx">7</div><div class="bmid"><div class="bn">DL이앤씨 <span class="gr gA" style="vertical-align:middle">A</span></div><div class="bsub">점수 67(8위) · 승률 49%<span style="color:#bbb">(기준 50)</span> · 손절 15% · <span style="color:#ff9500">반대 1</span></div><div class="bsub" style="color:#aaa">60일고점대비 -32.7% · <span style="color:#34c759;font-weight:700">타이밍 76</span></div></div><div class="fit"><div class="fitv">80</div><div class="fitk">BuyFit</div></div><span class="chev">›</span></div><div class="bi" onclick="openD('005930')"><div class="brk rx">8</div><div class="bmid"><div class="bn">삼성전자 <span class="gr gA" style="vertical-align:middle">A</span></div><div class="bsub">점수 68(4위) · 승률 53%<span style="color:#bbb">(기준 50)</span> · 손절 15% · <span style="color:#ff9500">반대 1</span></div><div class="bsub" style="color:#aaa">60일고점대비 -25.5% · <span style="color:#ff9500;font-weight:700">타이밍 60</span></div></div><div class="fit"><div class="fitv">79</div><div class="fitk">BuyFit</div></div><span class="chev">›</span></div><div class="bi" onclick="openD('120110')"><div class="brk rx">9</div><div class="bmid"><div class="bn">코오롱인더 <span class="gr gA" style="vertical-align:middle">A</span></div><div class="bsub">점수 66(9위) · 승률 49%<span style="color:#bbb">(기준 50)</span> · 손절 15%</div><div class="bsub" style="color:#aaa">60일고점대비 -30.6% · <span style="color:#34c759;font-weight:700">타이밍 72</span></div></div><div class="fit"><div class="fitv">77</div><div class="fitk">BuyFit</div></div><span class="chev">›</span></div><div class="bi" onclick="openD('000660')"><div class="brk rx">10</div><div class="bmid"><div class="bn">SK하이닉스 <span class="gr gB" style="vertical-align:middle">B</span></div><div class="bsub">점수 64(11위) · 승률 49%<span style="color:#bbb">(기준 50)</span> · 손절 15% · <span style="color:#ff9500">반대 2</span></div><div class="bsub" style="color:#aaa">60일고점대비 -32.8% · <span style="color:#34c759;font-weight:700">타이밍 78</span></div></div><div class="fit"><div class="fitv">76</div><div class="fitk">BuyFit</div></div><span class="chev">›</span></div><div class="leg">BuyFit(0~100): 펀더멘털 점수 + 진입타이밍 종합. 높을수록 "지금" 매수 적합.<br><b>A~D 등급</b>은 초과승률·기대값·표본두께·반대논리·시장국면을 합친 <b>근거의 두께</b>입니다. "오른다"는 예측이 아니라 "같은 잣대로 줄 세웠을 때 어디쯤인가"입니다.</div></div><div class="card adv"><h2>📰 시장 뉴스<span class="tb t2">참고</span></h2><a class="nw" href="https://news.google.com/rss/articles/CBMiiAFBVV95cUxQeWw4WG0tUGtwS3o3YmZoYmJaZmk3cVFENXIyMUUzVklCV29sWUV3M3NwOFJMNjF6ci1YLTJuMGl6OWNhY0Q5ZDlrYUo2aGRDcFhrMDFzSG96eHR2LXlmamRjRkZZelpwRDduNVQ4MGdzN2ctNkxjUGhLSXJMWUpudHpTZnFPVy1q?oc=5" target="_blank" rel="noopener"><div class="nwt"><span class="chip cneu">중립</span>증시 불안에 서학개미 순매수 급증…코스피는 '9300' 전망도</div><div class="nws">글로벌이코노믹 · 2026-10-23 09:18</div></a><a class="nw" href="https://news.google.com/rss/articles/CBMiXEFVX3lxTE5IMUlMRW13Wm02TlY0NUFhSnBNa3dta1hVLXZpdnJjUEJseFh4My1Fc2V3SFZQZGJoOVg1eElRYVkwQXhWUTl2cnpSTGpwbUZ0SWtRTGV3bjhNQjJK?oc=5" target="_blank" rel="noopener"><div class="nwt"><span class="chip cneu">중립</span>[AI MY 증시전망] 나스닥 2.6%↓·반도체지수 6.7%↓…국내 증시 변동성 확대</div><div class="nws">뉴스핌 · 2026-10-23 08:55</div></a><a class="nw" href="https://news.google.com/rss/articles/CBMiYkFVX3lxTE5JN3pWN2ZZc0huVDRXMFppRjlCQnZDYTU1bThILURGYXZydHNXMUNMZElCaXptVGpzd2JyS3dkYWpBWlFkTDc5bTVGTzJTWThPc09lS0JRaUZBVUFMd1ExTXln?oc=5" target="_blank" rel="noopener"><div class="nwt"><span class="chip cneg">악재</span>한화투자증권 "내년 코스피 최대 9,300"…5,500대 급락장서 강세 전망</div><div class="nws">매일신문 · 2026-10-22 19:33</div></a><a class="nw" href="https://news.google.com/rss/articles/CBMiUkFVX3lxTE9Dby1KSWVXX0xBaVhWWjh1Q3VHbXo2am5wUlI4and0XzlZcHRtZWRzeE5UeVk1d2ItQ0dIcUJpUThRY0FOSU5McmVWbTd0WjVsQ0E?oc=5" target="_blank" rel="noopener"><div class="nwt"><span class="chip cneu">중립</span>연일 출렁이는데…한화증권 "내년 코스피 최대 9,300" 전망</div><div class="nws">매일경제 마켓 · 2026-10-22 18:54</div></a><div class="leg">호재/악재 표시는 <b>제목의 키워드만</b> 본 자동 분류입니다. 점수에는 반영하지 않으며, "내 판단을 뒤집을 사건이 있나" 확인용입니다.</div></div><div class="card"><h2>🔎 전체 종목 (검색·정렬)</h2>
-<input id="q" placeholder="종목명 검색 (예: 삼성)" oninput="renderStocks()" style="width:100%;padding:11px;font-size:15px;border:1px solid #ddd;border-radius:10px;margin-bottom:8px">
+<input id="q" placeholder="종목명 검색 (예: 삼성)" oninput="renderStocks(true)" style="width:100%;padding:11px;font-size:15px;border:1px solid #ddd;border-radius:10px;margin-bottom:8px">
 <div id="sortBtns" style="display:flex;gap:6px;margin-bottom:6px"></div>
 <div id="stockList"></div></div><div class="card adv"><details><summary style="font-size:17px;font-weight:700;cursor:pointer">📊 시장 점수 분포</summary>
 <div class="date" style="margin-top:8px">평균 50.1 · 중앙값 50.2 · 최고 79.4</div>
@@ -292,14 +291,17 @@ let SORT='score';
   b.style.cssText='flex:1;padding:8px;border:0;border-radius:9px;background:'+(k==0?'#0071e3':'#e5e5ea')+';color:'+(k==0?'#fff':'#333')+';font-weight:700;font-size:13px';
   b.onclick=()=>{SORT=o[0];sb.querySelectorAll('button').forEach(x=>{x.style.background='#e5e5ea';x.style.color='#333'});b.style.background='#0071e3';b.style.color='#fff';renderStocks();};
   sb.appendChild(b);});})();
-function renderStocks(){
+let STOCK_N=10;   // 모바일에서 100종목이 한 번에 늘어지지 않게 — 10개부터, 20개씩 더
+function renderStocks(reset){
+ if(reset)STOCK_N=10;
  const el=document.getElementById('stockList');if(!el)return;
  const q=(document.getElementById('q').value||'').trim();
  let arr=DATA.items.slice();
  if(q)arr=arr.filter(i=>i.name.indexOf(q)>=0||(i.sector&&i.sector.indexOf(q)>=0)||(i.industry&&i.industry.indexOf(q)>=0));
  const key=i=>SORT==='conf'?(i.verdict?i.verdict.conf:0):(i[SORT]||0);
  arr.sort((a,b)=>key(b)-key(a));
- el.innerHTML=arr.slice(0,60).map(i=>{
+ const N=q?60:STOCK_N;
+ el.innerHTML=arr.slice(0,N).map(i=>{
    const sig=i.signal?`<span style="font-size:11px;margin-left:4px">${i.signal}</span>`:'';
    const pnl=(i.pnl!==''&&i.pnl!=null)?`<span class="${i.pnl>=0?'pp':'pn'}" style="font-size:13px;margin-right:6px">${i.pnl>=0?'+':''}${i.pnl}%</span>`:'';
    const sec=i.sector?`<div style="font-size:11px;color:#999;margin-top:1px">${i.sector}</div>`:'';
@@ -309,7 +311,8 @@ function renderStocks(){
      `<span style="font-size:12px;color:#888;margin-right:6px">BF ${(i.buyfit||0).toFixed(0)}</span>`+
      `<span class="sc">${i.score.toFixed(0)}</span><span class="chev">›</span></div>`;
  }).join('')||'<div class="empty" style="color:#aaa;text-align:center;padding:16px">검색 결과 없음</div>';
- if(arr.length>60)el.innerHTML+='<div class="leg" style="text-align:center">상위 60개 표시 · 검색(종목·업종)으로 좁히세요</div>';
+ if(arr.length>N&&!q)el.innerHTML+=`<button onclick="STOCK_N+=20;renderStocks()" style="display:block;margin:10px auto 0;border:0;background:#e9e9ee;border-radius:999px;padding:9px 18px;font-size:13.5px;font-weight:600">${Math.min(20,arr.length-N)}개 더 보기 · 남은 ${arr.length-N}개</button>`;
+ else if(arr.length>N)el.innerHTML+='<div class="leg" style="text-align:center">상위 60개 표시 · 검색(종목·업종)으로 좁히세요</div>';
 }
 renderStocks();
 
@@ -812,4 +815,75 @@ function setLv(simple){
   try{ localStorage.setItem('rich_lv', simple?'1':'0'); }catch(e){}
 }
 setLv((()=>{ try{ return localStorage.getItem('rich_lv')!=='0'; }catch(e){ return true; } })());
+</script><style>
+body{padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}
+.bnav{position:fixed;left:0;right:0;bottom:0;z-index:40;display:grid;grid-template-columns:repeat(5,1fr);
+  background:rgba(255,255,255,.94);-webkit-backdrop-filter:saturate(1.6) blur(14px);backdrop-filter:saturate(1.6) blur(14px);
+  border-top:1px solid #e6e6ec;padding-bottom:env(safe-area-inset-bottom,0px)}
+.bnav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;font-size:10.5px;color:#6e6e78;text-decoration:none}
+.bnav a.on{color:#0071e3;font-weight:700}
+.bnav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media (min-width:900px){.bnav{display:none}body{padding-bottom:14px}}
+[hidden]{display:none!important}
+.dtabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:#f2f2f7;margin:0 -14px 10px;padding:8px 14px;
+  display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;box-shadow:0 6px 8px -8px rgba(0,0,0,.25)}
+.dtabs::-webkit-scrollbar{display:none}
+.dtabs button{flex:0 0 auto;border:0;background:#fff;color:#1d1d1f;font:inherit;font-size:14px;font-weight:600;padding:8px 14px;border-radius:999px;min-height:38px}
+.dtabs button[aria-selected="true"]{background:#1d1d1f;color:#fff}
+</style>
+<nav class="bnav" aria-label="페이지 이동">
+<a href="index.html" class="on" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg><span>대시보드</span></a>
+<a href="autotrade.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5"/></svg><span>자동매매</span></a>
+<a href="stock.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M7 15l4-4 3 3 5-6"/></svg><span>종목</span></a>
+<a href="report.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></svg><span>성과</span></a>
+<a href="features.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span>기능</span></a>
+</nav>
+<script>
+/* 대시보드 카드를 탭으로 묶는다 — 한 화면에 다 늘어놓지 않게. 카드 제목의 낱말로 나눈다. */
+(function(){
+  var GROUPS=[["today","오늘",["할 일","데이터 지연","손절 (즉시","숫자 읽는 법"]],
+              ["list","종목",["사기 좋은","전체 종목"]],
+              ["market","시장·계좌",["어떤 시장","내 계좌","익절과 손절","시장 뉴스"]],
+              ["verify","검증",["기대수익","믿어도","방법론"]]];
+  var lv=document.querySelector(".lvbar"); if(!lv) return;
+  var cards=[].slice.call(document.body.children).filter(function(el){return el.classList&&(el.classList.contains("card")||el.classList.contains("strip"));});
+  var tabOf=function(el){
+    var h=el.querySelector("h2"), t=h?h.textContent:"";
+    if(el.classList.contains("strip")) return "today";
+    for(var i=0;i<GROUPS.length;i++) for(var j=0;j<GROUPS[i][2].length;j++) if(t.indexOf(GROUPS[i][2][j])>=0) return GROUPS[i][0];
+    return el.classList.contains("adv")?"verify":"today";
+  };
+  cards.forEach(function(c){c.dataset.dtab=tabOf(c);});
+  var bar=document.createElement("div"); bar.className="dtabs"; bar.setAttribute("role","tablist");
+  bar.innerHTML=GROUPS.map(function(g){return '<button type="button" role="tab" data-t="'+g[0]+'">'+g[1]+'</button>';}).join("");
+  lv.after(bar);
+  var cur="today"; try{cur=localStorage.getItem("rich.dtab")||"today";}catch(e){}
+  function show(t,user){
+    cur=t;
+    cards.forEach(function(c){c.hidden=c.dataset.dtab!==t;});
+    bar.querySelectorAll("button").forEach(function(b){
+      b.setAttribute("aria-selected",String(b.dataset.t===t));
+      // 지금 보기(쉽게/자세히)에서 보이는 카드가 하나도 없는 탭은 숨긴다
+      var any=cards.some(function(c){return c.dataset.dtab===b.dataset.t&&!(document.body.classList.contains("simple")&&c.classList.contains("adv"));});
+      b.hidden=!any;
+    });
+    if(bar.querySelector('[data-t="'+t+'"]').hidden){show("today");return;}
+    try{localStorage.setItem("rich.dtab",t);}catch(e){}
+    if(user){var y=bar.getBoundingClientRect().top+window.scrollY-8; if(window.scrollY>y) window.scrollTo(0,y);}
+  }
+  bar.addEventListener("click",function(e){var b=e.target.closest("button[data-t]"); if(b) show(b.dataset.t,true);});
+  var orig=window.setLv; window.setLv=function(x){orig(x); show(cur);};
+  show(cur);
+  // 자동매매 엔진의 오늘 판단을 '오늘' 탭 맨 위에 한 줄로 — 이 화면의 매수 후보와 엔진 판단이 다를 때 헷갈리지 않게
+  fetch("autotrade.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+    if(!d||!d.gate) return;
+    var c=d.counts||{}, g=d.gate, el=document.createElement("a");
+    el.href="autotrade.html"; el.className="card"; el.dataset.dtab="today";
+    el.style.cssText="display:flex;gap:10px;align-items:center;text-decoration:none;color:inherit;border-left:5px solid "+(g.open?"#34c759":"#ff3b30");
+    el.innerHTML='<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:15px">🤖 자동매매 엔진: 신규 매수 '+(g.open?"열림":"닫힘")+'</div>'+
+      '<div style="font-size:12.5px;color:#666;margin-top:2px">매도 '+(c["매도"]||0)+' · 매수 '+(c["매수"]||0)+' · 유지 '+(c["유지"]||0)+' · 관망 '+(c["관망"]||0)+
+      (g.open?'':' — '+(g.need||g.reason))+'</div><div style="font-size:11.5px;color:#999;margin-top:2px">이 화면의 매수 후보는 엔진의 시장 게이트를 거치지 않은 순위입니다</div></div><span style="color:#c8c8cd;font-size:20px">›</span>';
+    bar.after(el); cards.unshift(el); show(cur);
+  }).catch(function(){});
+})();
 </script></body></html>
