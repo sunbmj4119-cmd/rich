@@ -44,7 +44,8 @@ GitHub → 저장소 → Settings → Deploy keys → Add deploy key → Title `
 
 - WTS → 설정 → Open API → 키 발급 (client_id, client_secret)
 - 같은 화면 허용 IP 관리에 점검 결과의 **바깥으로 나가는 IP** 등록
-- 키는 서버 파일에만: `nano ~/.rich/secrets.env` → `TOSS_CLIENT_ID=`, `TOSS_CLIENT_SECRET=` 뒤에 붙여 쓰고 저장 (Ctrl+O, Enter, Ctrl+X)
+- 키는 서버 파일에만: `bash ~/rich/deploy/oracle/setup.sh --keys` → 물어보는 항목마다 붙여넣고 Enter (화면에 안 보임)
+  (또는 `nano ~/.rich/secrets.env` 로 직접 편집 — 저장 Ctrl+O, Enter, 나가기 Ctrl+X)
 
 ## 6. 아직 하지 않을 것
 

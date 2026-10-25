@@ -7,6 +7,7 @@
 #
 #   사용:  bash setup.sh            준비 (여러 번 실행해도 안전) + 마지막에 점검 결과
 #          bash setup.sh --check    점검만
+#          bash setup.sh --keys     증권사 키 입력 (붙여넣기만, 화면에 안 보임 — 휴대폰에서 편집기 없이)
 #          bash setup.sh --cron     평일 08:40 자동 실행 등록 (증권사 연결이 끝난 뒤에만)
 #
 #   이 스크립트는 비밀 값을 화면에 출력하지 않는다. 키는 ~/.rich/secrets.env 에만 저장한다.
@@ -144,6 +145,23 @@ check() {
   echo "  └──────────────────────────────────────────"
 }
 
+set_keys() {
+  step "증권사 키 입력 — 붙여넣고 Enter (입력한 글자는 화면에 보이지 않습니다. 건너뛰려면 그냥 Enter)"
+  [ -f "$STATE/secrets.env" ] || secrets_file
+  for k in TOSS_CLIENT_ID TOSS_CLIENT_SECRET TOSS_ACCOUNT; do
+    printf "  %s: " "$k"
+    IFS= read -rs v || v=""
+    echo
+    v="$(printf '%s' "$v" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+    [ -z "$v" ] && { echo "    (건너뜀)"; continue; }
+    tmp="$(mktemp)"
+    { grep -v "^$k=" "$STATE/secrets.env" || true; } > "$tmp"
+    printf '%s=%s\n' "$k" "$v" >> "$tmp"
+    mv "$tmp" "$STATE/secrets.env" && chmod 600 "$STATE/secrets.env"
+    ok "$k 저장 (${#v}글자)"
+  done
+}
+
 install_cron() {
   # 서버 시간대와 상관없이: 매시 40분에 깨어나고, run.sh 가 '한국 시간 평일 08시'일 때만 실제로 일한다
   line="40 * * * * bash $DIR/deploy/oracle/run.sh >> $STATE/logs/cron.log 2>&1"
@@ -153,6 +171,7 @@ install_cron() {
 
 case "$MODE" in
   --check) check ;;
+  --keys)  set_keys; check ;;
   --cron)  install_cron; check ;;
   *)       install_packages; tune_system; get_code; deploy_key; secrets_file; check
            echo; echo "다음 단계: 위 ✗ 항목을 해결한 뒤 'bash ~/rich/deploy/oracle/setup.sh --check' 로 다시 확인하세요." ;;
