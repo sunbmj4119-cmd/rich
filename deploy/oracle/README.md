@@ -30,11 +30,26 @@ less setup.sh     # 내용 확인 (q 로 나가기)
 bash setup.sh
 ```
 
+휴대폰에서 붙여넣기가 안 되면 짧은 두 줄을 직접 입력해도 됩니다 (키보드를 영어로):
+
+```bash
+git clone https://github.com/sunbmj4119-cmd/rich
+bash rich/deploy/oracle/setup.sh
+```
+
 설치가 하는 일: git·Python 설치 → (메모리 2GB 미만이고 스왑이 없으면) 스왑 2GB → 코드 받기 →
 GitHub 쓰기용 배포 키 만들기 → 비밀 키 파일 `~/.rich/secrets.env` 만들기 → 점검 결과 출력.
 여러 번 실행해도 안전합니다. 서버의 시간대나 이미 돌고 있는 다른 프로그램은 건드리지 않습니다(설치 위치는 `~/rich`, `~/.rich` 뿐).
 
-## 4. 배포 키 등록 (GitHub 웹)
+## 4. GitHub 쓰기 권한 — 둘 중 하나
+
+**휴대폰(Cloud Shell)이라 화면 글자를 복사하기 어려우면 → 토큰 방식**
+GitHub(브라우저) → 프로필 → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token
+→ Repository access: Only select repositories → `rich` → Repository permissions → **Contents: Read and write** → Generate → **Copy**.
+서버에서 `bash ~/rich/deploy/oracle/setup.sh --token` → 키보드의 클립보드로 붙여넣고 Enter (화면에 안 보임).
+토큰에는 만료일이 있어, 만료되면 같은 방법으로 새로 넣습니다.
+
+**PC라면 → 배포 키 방식 (만료 없음)**
 
 설치 화면에 나온 `ssh-ed25519 …` 한 줄(공개 키)을 복사합니다.
 GitHub → 저장소 → Settings → Deploy keys → Add deploy key → Title `oracle` → Key에 붙여넣기 →

@@ -8,6 +8,7 @@
 #   사용:  bash setup.sh            준비 (여러 번 실행해도 안전) + 마지막에 점검 결과
 #          bash setup.sh --check    점검만
 #          bash setup.sh --keys     증권사 키 입력 (붙여넣기만, 화면에 안 보임 — 휴대폰에서 편집기 없이)
+#          bash setup.sh --token    GitHub 쓰기 권한을 토큰으로 (휴대폰처럼 화면 글자를 복사하기 어려울 때)
 #          bash setup.sh --cron     평일 08:40 자동 실행 등록 (증권사 연결이 끝난 뒤에만)
 #
 #   이 스크립트는 비밀 값을 화면에 출력하지 않는다. 키는 ~/.rich/secrets.env 에만 저장한다.
@@ -22,8 +23,28 @@ SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
 ok()   { printf "  \033[32m✓\033[0m %s\n" "$*"; }
 no()   { printf "  \033[33m✗\033[0m %s\n" "$*"; }
 step() { printf "\n\033[1m▶ %s\033[0m\n" "$*"; }
-# GitHub 은 인증에 성공해도 종료 코드 1 을 돌려준다 → 출력 문구로 판정
-gh_ok() { out=$(ssh -o BatchMode=yes -o ConnectTimeout=8 -T github-rich 2>&1 || true); echo "$out" | grep -q "successfully authenticated"; }
+# GitHub 쓰기 권한 확인. 토큰 방식이면 '없는 가지에 올려 보기'를 흉내만 내고(dry-run), 배포 키 방식이면 ssh 인사 문구로.
+# (GitHub ssh 는 인증에 성공해도 종료 코드 1 을 돌려준다 → 출력 문구로 판정)
+# 토큰 방식: GitHub 에 '이 토큰으로 이 저장소에 쓸 수 있나'(permissions.push)를 직접 묻는다. 토큰은 명령줄에 싣지 않는다.
+token_ok() {
+  tok=$(sed -n 's#^https://x-access-token:\(.*\)@github.com$#\1#p' "$STATE/git-credentials" 2>/dev/null | head -1)
+  [ -n "$tok" ] || return 1
+  hf=$(mktemp); chmod 600 "$hf"; printf 'Authorization: Bearer %s\n' "$tok" > "$hf"
+  res=$(curl -s -m 10 -H @"$hf" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$REPO" || true)
+  rm -f "$hf"
+  printf '%s' "$res" | push_allowed
+}
+push_allowed() { python3 -c 'import sys,json
+try: d=json.load(sys.stdin)
+except Exception: sys.exit(1)
+sys.exit(0 if (d.get("permissions") or {}).get("push") else 1)'; }
+gh_ok() {
+  if [ -f "$STATE/git-credentials" ]; then
+    token_ok
+  else
+    out=$(ssh -o BatchMode=yes -o ConnectTimeout=8 -T github-rich 2>&1 || true); echo "$out" | grep -q "successfully authenticated"
+  fi
+}
 # 값이 들어 있는 항목 이름만 (값은 절대 출력하지 않음)
 filled() { { grep -E '^[A-Z_]+=.+' "$STATE/secrets.env" 2>/dev/null || true; } | cut -d= -f1 | tr '\n' ' '; }
 
@@ -80,6 +101,10 @@ get_code() {
 
 deploy_key() {
   step "4/6 GitHub 쓰기 권한 (배포 키)"
+  if [ -f "$STATE/git-credentials" ]; then
+    gh_ok && ok "토큰으로 GitHub 쓰기 권한 확인됨" || no "토큰이 있지만 쓰기 실패 — bash ~/rich/deploy/oracle/setup.sh --token 으로 다시 입력"
+    return
+  fi
   mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
   [ -f "$KEY" ] || ssh-keygen -q -t ed25519 -N "" -C "rich-oracle-$(hostname)" -f "$KEY"
   if ! grep -q "Host github-rich" "$HOME/.ssh/config" 2>/dev/null; then
@@ -101,6 +126,7 @@ deploy_key() {
     echo "    $(cat "$KEY.pub")"
     echo
     echo "    (공개 키라 보여도 안전합니다. 개인 키 $KEY 는 이 서버 밖으로 내보내지 마세요.)"
+    echo "    휴대폰이라 화면 글자를 복사하기 어려우면 대신: bash ~/rich/deploy/oracle/setup.sh --token"
   fi
 }
 
@@ -162,6 +188,25 @@ set_keys() {
   done
 }
 
+set_token() {
+  step "GitHub 토큰 입력 — 붙여넣고 Enter (화면에 보이지 않습니다)"
+  echo "  토큰 만들기: GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens"
+  echo "  → Only select repositories: $REPO · Repository permissions → Contents: Read and write → Generate → Copy"
+  printf "  토큰: "
+  IFS= read -rs tok || tok=""
+  echo
+  tok="$(printf '%s' "$tok" | tr -d '\r\n\t ')"
+  [ -z "$tok" ] && { no "입력이 없어 건너뜀"; return 0; }
+  mkdir -p "$STATE" && chmod 700 "$STATE"
+  ( umask 077; printf 'https://x-access-token:%s@github.com\n' "$tok" > "$STATE/git-credentials" )
+  git -C "$DIR" config credential.helper "store --file $STATE/git-credentials"
+  git -C "$DIR" remote set-url --push origin "https://github.com/$REPO.git"
+  git -C "$DIR" config user.name "rich-oracle"
+  git -C "$DIR" config user.email "rich-oracle@users.noreply.github.com"
+  if gh_ok; then ok "GitHub 쓰기 권한 확인됨 (토큰 ${#tok}글자 · $STATE/git-credentials 권한 600)"
+  else no "쓰기 실패 — 저장소 선택($REPO)과 Contents: Read and write 권한을 확인한 뒤 다시 --token"; fi
+}
+
 install_cron() {
   # 서버 시간대와 상관없이: 매시 40분에 깨어나고, run.sh 가 '한국 시간 평일 08시'일 때만 실제로 일한다
   line="40 * * * * bash $DIR/deploy/oracle/run.sh >> $STATE/logs/cron.log 2>&1"
@@ -172,6 +217,7 @@ install_cron() {
 case "$MODE" in
   --check) check ;;
   --keys)  set_keys; check ;;
+  --token) set_token; check ;;
   --cron)  install_cron; check ;;
   *)       install_packages; tune_system; get_code; deploy_key; secrets_file; check
            echo; echo "다음 단계: 위 ✗ 항목을 해결한 뒤 'bash ~/rich/deploy/oracle/setup.sh --check' 로 다시 확인하세요." ;;
