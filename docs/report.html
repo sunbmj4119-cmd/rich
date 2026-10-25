@@ -105,7 +105,7 @@
     <section class="card" id="evo-status"><p class="mut">불러오는 중…</p></section>
     <section class="card" id="evo-meta" hidden></section>
     <section class="card" id="evo-ch" hidden></section>
-    <details class="fold" id="evo-weekly-fold" hidden><summary><div class="sum"><b>주간 기록</b><span id="evo-weekly-sum"></span></div></summary>
+    <details class="fold" id="evo-weekly-fold" hidden><summary><div class="sum"><b>진화 기록</b><span id="evo-weekly-sum"></span></div></summary>
       <div class="body"><div class="scroll"><table id="evo-weekly"></table></div></div></details>
     <details class="fold"><summary><div class="sum"><b>어떻게 진화하나</b><span>유전자 · 점수 · 승격 규칙</span></div></summary>
       <div class="body" id="evo-how"></div></details>
@@ -258,12 +258,13 @@ U.nav("report.html");
       <div class="facts">
         <div class="fact"><span>지금까지 시험한 설정</span><b>${U.num(E.n_evaluated)}개</b></div>
         <div class="fact"><span>관찰 중인 도전자</span><b>${E.challengers.length}개</b></div>
-        <div class="fact"><span>이번 주 진화 방식</span><b style="font-size:15px">${U.esc(((E.mode || {}).label || "—").split(" (")[0])}</b></div>
+        <div class="fact"><span>쌓인 세대 (연속 진화)</span><b>${U.num((E.continuous || {}).generations)}세대</b></div>
+        <div class="fact"><span>진화 방식</span><b style="font-size:15px">${U.esc(((E.mode || {}).label || "—").split(" (")[0])}</b></div>
         <div class="fact"><span>적응을 믿어도 되나</span><b class="${mt && mt.trusted ? "good" : "bad"}" style="font-size:15px">${mt ? (mt.trusted ? "검증 통과" : "아직 아님") : "측정 전"}</b></div>
       </div>
       ${E.proposal ? `<div class="warn"><b>승격 제안: ${U.esc(E.proposal)}</b><br>GitHub → Actions → autotrade-control → Run workflow에서 action <b>promote</b>, challenger 칸에 <b>${U.esc(E.proposal)}</b>를 넣으면 적용됩니다.</div>` : ""}
-      ${E.promoted ? `<div class="note">이번 주 자동 승격: <b>${U.esc(E.promoted)}</b></div>` : ""}
-      <p class="guide">${U.esc(E.asof)} 데이터 기준 · 매주 토요일 저녁에 다시 진화합니다.</p>`;
+      ${E.promoted ? `<div class="note">자동 승격: <b>${U.esc(E.promoted)}</b></div>` : ""}
+      <p class="guide">${U.esc(E.asof)} 데이터 기준 · 마지막 진화 ${U.esc((E.continuous || {}).updated || E.generated)} · 2시간마다 저장된 인구에서 이어서 진화하고, 매일 밤 진화 자체를 다시 검증합니다.</p>`;
 
     if (mt) {
       const M = U.$("#evo-meta"); M.hidden = false;
@@ -317,7 +318,7 @@ U.nav("report.html");
 
     if ((E.weekly || []).length) {
       U.$("#evo-weekly-fold").hidden = false;
-      U.$("#evo-weekly-sum").textContent = `${E.weekly.length}주 기록`;
+      U.$("#evo-weekly-sum").textContent = `최근 ${E.weekly.length}일 (날마다 마지막 실행)`;
       U.$("#evo-weekly").innerHTML = `<tr><th>날짜</th><th>평가</th><th>최선</th><th>챔피언</th><th>새 도전자</th></tr>` +
         E.weekly.slice().reverse().map((w) => `<tr><td>${U.esc(String(w["날짜"]).slice(5))}</td><td>${U.num(w["평가 수"])}</td><td>${sh(w["최선 점수"])}</td><td>${sh(w["챔피언 점수"])}</td><td>${U.esc(w["새 도전자"] || "")}</td></tr>`).join("");
     }

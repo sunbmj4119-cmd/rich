@@ -5,6 +5,7 @@
            (시가 주문 = 오늘 시가, 종가 주문 = 오늘 종가 · 주식 수는 정수 · 수수료·세금·미끄러짐 포함 = 연구와 같은 비용)
   2) 매일 시뮬레이션: 후보 모델 전부(short_lab)를 2018년부터 오늘까지 다시 돌려 순위표를 만든다
   3) 진화(선택): 채택 규칙(기본: 주 1회 · 최근 250일 샤프 1등 · 느린 후보군)으로 내일 따라갈 모델을 정한다
+           — 후보에는 short_evolve.py 가 2시간마다 새로 만든 진화 모델도 들어간다 (등록 뒤 성적만 센다 → 약 6개월 뒤부터 선택 가능)
            — 검증 결과 '매일 1등으로 갈아타기'는 288가지 방식 중 19~29%만 지수 보유를 이겼다 (docs/STRATEGY.md 3-6-5)
            — 다른 선택 규칙들도 모의투자 시작일부터 나란히 기록해(그림자) 앞으로의 성적으로 비교한다
   4) 계획: 내일 주문 → data/short/plan.json (나중에 토스 연결 시 서버가 이 파일을 받아 보낼 수 있는 형식)
@@ -24,6 +25,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import settings  # noqa: E402
+import short_evolve as SE  # noqa: E402
 import short_lab as L  # noqa: E402
 import short_panel as SP  # noqa: E402
 
@@ -268,9 +270,12 @@ def run(cfg=None, now=None):
     append_csv(EQUITY, ["날짜", "평가액", "현금", "지수ETF", "모델"], eq_rows)
     acc["last_date"] = today
     # 2) 매일 시뮬레이션
-    models = L.stock_models() + L.etf_models()
+    models = L.stock_models() + L.etf_models() + SE.models_from_registry()   # + 쉬지 않고 진화한 후보
     recs = [L.run(D, m, record=True) for m in models]
     R = np.c_[[L.rets(r["E"]) for r in recs]].T
+    for i, mm in enumerate(models):                    # 진화 후보는 등록일 다음 날부터의 성적만 센다
+        if mm.get("born"):
+            R[:int(np.searchsorted(D.dates, pd.Timestamp(mm["born"]), side="right")), i] = np.nan
     rule = sc["rule"]
     pool = L.pool_index(models, rule["pool"])
     if D.legs["source"] != "etf":                      # 실제 ETF 가격이 없으면 ETF 모델은 체결할 수 없어 뺀다
@@ -296,8 +301,11 @@ def run(cfg=None, now=None):
     r60 = L.trailing_score(R, T, 60, "ret")
     board = []
     for i in pool:
+        if not np.isfinite(sh250[i]):                  # 아직 시험 기간인 진화 후보는 docs/short_evo.json 에서 보여 준다
+            continue
         st = L.stats(recs[i]["E"], D.dates)
         board.append({"id": models[i]["id"], "desc": L.describe(models[i]), "kind": models[i]["kind"],
+                      "evolved": bool(models[i].get("born")),
                       "sh250": round(float(sh250[i]), 3), "sh60": round(float(sh60[i]), 3),
                       "r20": round(float(r20[i]), 4), "r60": round(float(r60[i]), 4),
                       "cagr": st["cagr"], "mdd": st["mdd"], "chosen": i == mi})

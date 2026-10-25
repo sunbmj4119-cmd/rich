@@ -1,0 +1,41 @@
+name: learn
+# 쉬지 않는 학습·진화 — 2시간마다 (하루 12번)
+#   1) 30일 자동매매 모델: 저장된 인구(data/evolve/population.json)에서 이어서 20세대 더 진화
+#      → 챔피언보다 확실히 나으면 도전자 등록 → 도전자들의 '등록 뒤' 성적으로 승격 판단 (조건 통과 시 자동 승격)
+#   2) 단기 모델: 저장된 인구에서 이어서 6세대 → 고정 후보보다 나으면 진화 후보 등록 (등록 뒤 성적만 셈)
+#   무거운 재검증(중첩 워크포워드 · 단기 검증 전체)은 매일 밤 evolve.yml
+on:
+  schedule:
+    - cron: "11 */2 * * *"
+  workflow_dispatch:
+concurrency:
+  group: evolve
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: install
+        run: pip install pandas numpy pyyaml requests
+      - name: 30일 모델 연속 진화
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python src/evolve.py step 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY
+      - name: 단기 모델 연속 진화
+        run: python src/short_evolve.py step 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY
+      - name: 커밋
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add data/evolve/ docs/evolve.json data/short/evo_population.json data/short/evolved.json docs/short_evo.json
+          git add config/champion.yaml 2>/dev/null || true
+          git commit -q -m "learn $(date -u +%F' '%H:%M)" || { echo "no change"; exit 0; }
+          for i in 1 2 3; do git pull -q --rebase && git push -q && exit 0; sleep $((i * 10)); done
+          exit 1

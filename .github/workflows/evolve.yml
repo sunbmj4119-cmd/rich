@@ -1,11 +1,11 @@
 name: evolve
-# 모델 진화 (src/evolve.py) + 단기매매 검증 (src/short_lab.py) — 매주 토요일
+# 밤마다 재검증 (2시간마다 도는 연속 진화는 learn.yml)
 #   1) 중첩 워크포워드: '그 시점 데이터만으로 진화했다면 실제로 나았나'를 진화 방식 6개 × 시드 3개로 다시 잰다
-#   2) 전체 데이터로 진화 → 챔피언보다 확실히 나으면 도전자로 등록
-#   3) 도전자마다 등록일 이후 새 데이터로만 전진 성적 → 승격 조건 판단 (기본은 제안만, 승인은 autotrade-control → promote)
+#   2) 큰 진화 한 번(48 × 14세대, 저장된 인구에서 이어서) → 도전자 등록 → 전진 성적 → 승격 (조건 통과 시 자동)
+#   3) 단기매매 검증 전체 (신호 IC · 모델 341개 · 고르는 방식 288가지)
 on:
   schedule:
-    - cron: "37 9 * * 6"   # 토요일 18:37 KST (robust-backtest 17:00 다음)
+    - cron: "37 17 * * *"   # 매일 02:37 KST (daily-run 17:00 이 끝난 뒤 밤)
   workflow_dispatch:
 concurrency:
   group: evolve
@@ -45,5 +45,6 @@ jobs:
           git config user.email actions@github.com
           git add data/evolve/ docs/evolve.json data/short/lab.json docs/short_lab.json
           git add config/champion.yaml 2>/dev/null || true
-          git commit -m "evolve $(date +%F)" || echo "no change"
-          git pull --rebase && git push
+          git commit -m "evolve $(date +%F)" || { echo "no change"; exit 0; }
+          for i in 1 2 3; do git pull -q --rebase && git push -q && exit 0; sleep $((i * 10)); done
+          exit 1

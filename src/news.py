@@ -11,6 +11,7 @@
   - 전 종목이 아니라 '오늘 판단이 필요한 종목'만 조회(보유·신호·상위권) → 요청 수 절감.
   - 누적 저장하되 30일 지난 기사는 버려 파일 크기를 묶어둔다.
 """
+import json
 import os
 import re
 import sys
@@ -25,7 +26,7 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 
 SCORES = "data/scores.csv"
-SIGNALS = "data/signals_today.csv"
+HOLDINGS = ["data/autotrade/paper_account.json", "data/short/account.json"]   # 자동매매 계좌들의 보유 종목
 OUT = "data/news.csv"
 
 KST = timezone(timedelta(hours=9))
@@ -173,19 +174,22 @@ def _fetch(query: str):
 
 
 def _targets():
-    """오늘 판단이 필요한 종목만 고른다: 신호 있는 종목 + 점수 상위 N."""
+    """오늘 판단이 필요한 종목만 고른다: 자동매매 계좌들이 들고 있는 종목 + 점수 상위 N.
+    (보유 종목은 순위가 떨어져도 악재 공시를 봐야 강제 매도 규칙이 작동한다)"""
     s = pd.read_csv(SCORES, dtype={"종목코드": str}, usecols=["날짜", "종목코드", "종목명", "종합점수"])
     s["종목코드"] = s["종목코드"].str.zfill(6)
     s["날짜"] = pd.to_datetime(s["날짜"])
     cur = s[s["날짜"] == s["날짜"].max()].sort_values("종합점수", ascending=False)
     picked = {}
-    if os.path.exists(SIGNALS):
+    names = dict(zip(s["종목코드"], s["종목명"]))
+    for path in HOLDINGS:
         try:
-            sg = pd.read_csv(SIGNALS, dtype={"종목코드": str})
-            for _, r in sg.iterrows():
-                picked[str(r["종목코드"]).zfill(6)] = str(r["종목명"])
-        except Exception:
-            pass
+            pos = (json.load(open(path, encoding="utf-8")) or {}).get("positions") or {}
+        except (OSError, ValueError):
+            continue
+        for code, p in pos.items():
+            code = str(code).zfill(6)
+            picked[code] = names.get(code) or (p.get("name") if isinstance(p, dict) else None) or code
     for _, r in cur.head(TOP_SCORE_N).iterrows():
         picked.setdefault(r["종목코드"], r["종목명"])
     return picked

@@ -128,21 +128,19 @@ U.nav("stock.html");
   const calBadge = U.ok(cal.cover80) && Math.abs(cal.cover80 - 80) < 5
     ? `<span class="badge b-ok">검증됨 · 적중 ${Math.round(cal.cover80)}%</span>` : `<span class="badge b-ref">참고</span>`;
   let rtKey = "test";
-  // 내가 직접 들고 있는 종목(data/my_trades.csv)은 손절·익절 규칙이 자동매매 판단보다 먼저다 — 홈 '내 계좌'와 같은 값
+  // 단기 모의투자 계좌가 들고 있는 종목 (30일 자동매매 보유는 아래 decisions 의 유지/매도로 보인다)
   let MY = {};
-  const SIG = { "🔴손절": "손절선 넘음", "🔵매도": "매도 신호", "🟠부분익절": "일부 익절", "🟢유지": "보유 유지", "⏳보유": "최소 보유기간" };
-  U.j("data.json").then((D) => { MY = Object.fromEntries((D.items || []).filter((i) => i.held).map((i) => [i.code, i])); if (MY[pick.value]) show(pick.value); }).catch(() => {});
+  U.j("short.json").then((S) => { MY = Object.fromEntries(((S.account || {}).positions || []).map((p) => [p.code, p])); if (MY[pick.value]) show(pick.value); }).catch(() => {});
 
   function show(code) {
     pick.value = code;
     const s = stocks[code], d = decisions[code], my = MY[code];
-    const mySell = my && /손절|매도|익절/.test(my.signal || "");
     document.title = `${s.name} 분석`;
 
     // ── 요약: 머리 ──
     const state = d ? `<span class="st st-${d.state}">자동매매 ${d.state}${d.action ? " · " + U.esc(d.action) : ""}</span>` : `<span class="badge b-mut">자동매매 판단 대상 아님 (21위 이하)</span>`;
-    const mine = my ? `<div class="${mySell ? "warn" : "note"}" style="color:var(--fg)"><b>내 계좌 보유</b> · ${my.held}일째 · 평단 ${U.won(my.avgp)} → <b class="${U.cls(my.pnl)}">${U.pct(my.pnl)}</b>
-        ${mySell ? `<br><b>${U.esc(SIG[my.signal] || "매도 검토")}</b> — ${U.esc(my.reason || "")}. 내 보유분은 이 손절·매도 규칙이 아래 자동매매 판단보다 먼저입니다.` : `<br>${U.esc(SIG[my.signal] || "보유 중")} · 손절선 ${U.won(my.stop_price)}`}</div>` : "";
+    const mr = my && U.ok(my.last) ? (my.last / my.avg - 1) * 100 : null;
+    const mine = my ? `<div class="note" style="color:var(--fg)"><b>단기 모의투자 보유</b> · ${my.qty.toLocaleString("ko-KR")}주 · 평단 ${U.won(my.avg)} → <b class="${U.cls(mr)}">${U.pct(mr)}</b> · ${U.esc(my.since || "")}부터</div>` : "";
     U.$("#head").innerHTML = `
       <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><h1 style="font-size:21px">${U.esc(s.name)}</h1>${state}</div>
       <div class="row" style="align-items:baseline;gap:10px;flex-wrap:wrap"><span class="big">${U.won(s.close)}</span><span class="${U.cls(s.ret20)}">20일 ${U.pct(s.ret20)}</span></div>
@@ -151,7 +149,7 @@ U.nav("stock.html");
         ${U.ok(s.beta) ? `<div class="fact"><span>시장 베타</span><b>${U.num(s.beta, 2)}</b></div><div class="fact"><span>연 변동성</span><b>${U.num(s.vol, 0)}%</b></div>` : ""}</div>
       ${mine}
       ${d ? `<p class="small mut">자동매매 판단 근거: ${U.esc(d.reason).replace(/ ✗/g, " 미충족")}</p>` : ""}
-      ${d && d.need && d.need.length && !my ? `<div class="note">자동매매가 사려면: ${d.need.map(U.esc).join(" / ")}</div>` : ""}`;
+      ${d && d.need && d.need.length ? `<div class="note">자동매매가 사려면: ${d.need.map(U.esc).join(" / ")}</div>` : ""}`;
 
     // ── 요약: 범위 막대 ──
     const b = s.band;

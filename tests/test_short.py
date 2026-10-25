@@ -146,6 +146,40 @@ def test_toss_collect_pagination():
         assert r2["added"] == 0 and api2.n == 1
 
 
+def test_trailing_score_ignores_unborn_days():
+    """진화 후보는 등록 전 날들이 NaN — 유효한 날이 L/2 보다 적으면 점수가 없다(선택 불가), 차면 생긴다."""
+    rng = np.random.default_rng(1)
+    R = rng.normal(0.001, 0.01, (600, 2))
+    R[:500, 1] = np.nan                          # 100일 전에 '태어난' 후보
+    sc = L.trailing_score(R, 599, 250, "sharpe")
+    assert np.isfinite(sc[0]) and np.isnan(sc[1])
+    R2 = R.copy()
+    R2[470:500, 1] = 0.001                        # 130일째 → 선택 가능
+    assert np.isfinite(L.trailing_score(R2, 599, 250, "sharpe")[1])
+    ch = L.choose(R, 560, every=1, L=250, how="sharpe", k=1)
+    assert all(c == 0 for c in ch[560:])
+
+
+def test_short_evolve_genomes_valid():
+    import short_evolve as SE
+    rng = np.random.default_rng(3)
+    g = SE.random_genome(rng)
+    for _ in range(200):
+        g = SE.mutate(g, rng) if rng.random() < 0.7 else SE.crossover(g, SE.random_genome(rng), rng)
+        assert 1 <= len(g["w"]) <= 4 and all(k in SP.SIGNAL_INFO for k in g["w"])
+        assert g["K"] in (5, 10) and g["hold"] in ("H5", "H10") and g["gate"] in L.GATES
+    m = SE.to_model(g, "X1", "2026-10-23")
+    assert m["combo"] and m["born"] == "2026-10-23" and L.describe(m).startswith("진화 X1")
+
+
+def test_evolved_model_runs_like_fixed():
+    """진화 모델 경로(조합 순위)는 같은 조합의 고정 모델과 똑같이 움직인다."""
+    D = data()
+    fixed = {"id": "S:REVC:5:H5:crash", "kind": "stock", "sel": "REVC", "K": 5, "hold": "H5", "gate": "crash"}
+    evo = {**fixed, "id": "X", "sel": "EVO", "combo": [(k, float(w)) for k, w in L.SELECTORS["REVC"]]}
+    assert abs(L.run_stock(D, fixed)["E"][-1] - L.run_stock(D, evo)["E"][-1]) < 1e-12
+
+
 if __name__ == "__main__":
     for k, fn in list(globals().items()):
         if k.startswith("test_"):
