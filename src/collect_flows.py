@@ -34,6 +34,8 @@ FLOWS = "data/flows.csv"
 SHORTS = "data/shorts.csv"
 OHLCV = "data/ohlcv.csv"
 MCAP = "data/marketcap.csv"
+STATUS = "data/collect_status.json"     # 마지막 수집 결과 — 자동매매·홈·해설이 '왜 자료가 낡았나'를 보여 줄 때 읽는다
+GAP_MAX_DAYS = 120                      # 매일 모드: 빠진 기간이 있으면 이만큼까지 거슬러 메운다
 
 try:
     from pykrx import stock
@@ -296,6 +298,53 @@ def collect_shorts_only(codes, start, end):
     return pd.DataFrame(short_rows), short_fails
 
 
+class _Tee:
+    """화면 출력은 그대로 두고 내용을 모아 둔다 (pykrx 의 로그인 실패 문구를 잡기 위해)."""
+    def __init__(self, out):
+        self.out, self.buf = out, []
+
+    def write(self, s):
+        self.buf.append(s)
+        return self.out.write(s)
+
+    def flush(self):
+        return self.out.flush()
+
+
+def last_dates():
+    out = {}
+    for p in (FLOWS, OHLCV, MCAP):
+        if os.path.exists(p):
+            try:
+                out[p] = str(pd.read_csv(p, usecols=["날짜"])["날짜"].max())
+            except Exception:
+                pass
+    return out
+
+
+def write_status(start, end, flows, ohlcv, log):
+    import json
+    text = "".join(log)
+    lasts = last_dates()
+    problem = None
+    if "패스워드 변경" in text or "비밀번호 변경" in text:
+        problem = "KRX 로그인 실패 — KRX 계정이 '비밀번호 변경 필요' 상태입니다"
+    elif "로그인 실패" in text:
+        problem = "KRX 로그인 실패 — 아이디·비밀번호(GitHub Secrets KRX_ID/KRX_PW)를 확인하세요"
+    elif flows.empty and ohlcv.empty and len(pd.bdate_range(start, end)) > 1:   # 평일이 끼었는데 0건 (KRX 호출 없이 판단)
+        problem = "KRX에서 자료를 하나도 받지 못했습니다 (접속 장애 또는 로그인 문제)"
+    st = {"time": datetime.now().strftime("%Y-%m-%d %H:%M"), "start": start, "end": end,
+          "flows_rows": int(len(flows)), "ohlcv_rows": int(len(ohlcv)),
+          "flows_last": lasts.get(FLOWS), "ohlcv_last": lasts.get(OHLCV), "marketcap_last": lasts.get(MCAP),
+          "ok": problem is None, "problem": problem,
+          "fix": ("KRX 정보데이터시스템(data.krx.co.kr)에 로그인해 비밀번호를 바꾸거나 '다음에 변경'을 누른 뒤, "
+                  "비밀번호를 바꿨다면 GitHub → Settings → Secrets → KRX_PW 도 새 값으로 바꿔 주세요. "
+                  "다음 실행 때 빠진 날짜는 저절로 메웁니다.") if problem else None}
+    json.dump(st, open(STATUS, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    print(("✓ 수집 상태 정상" if st["ok"] else f"🔴 {problem}") + f" → {STATUS}")
+    return st
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--backfill", metavar="YYYY-MM-DD", help="이 날짜부터 전체 수집")
@@ -332,7 +381,16 @@ def main():
     else:
         end = datetime.today().strftime("%Y-%m-%d")
         start = (datetime.today() - timedelta(days=7)).strftime("%Y-%m-%d")
+        # 빠진 기간이 있으면(로그인 실패 등으로 며칠~몇 주 못 받았으면) 그 다음 날부터 다시 받는다
+        lasts = last_dates()
+        oldest = min(lasts.values()) if lasts else None
+        floor = (datetime.today() - timedelta(days=GAP_MAX_DAYS)).strftime("%Y-%m-%d")
+        if oldest and oldest < start:
+            start = max(oldest, floor)
+            print(f"빈 기간 메우기: 가장 늦은 파일의 마지막 날 {oldest} → {start}부터 다시 받음")
         print(f"데일리 모드: {start} ~ {end}")
+    tee = _Tee(sys.stdout)
+    sys.stdout = tee
 
     # 1+2) 수급 + 공매도 (종목 루프 1회)
     print("\n[1/2] 투자자 순매수 + 공매도 수집...")
@@ -357,6 +415,8 @@ def main():
         print(f"    OHLCV 실패 {len(of)}일")
     save_merge(ohlcv, OHLCV)
     save_merge(cap, MCAP)
+    sys.stdout = tee.out
+    write_status(start, end, flows, ohlcv, tee.buf)
 
     check()
 

@@ -179,6 +179,7 @@ def decision_line(d, st):
 
 def engine_section(cfg, A, Dd, BT):
     st = cfg["strategy"]
+    flags = (A or {}).get("flags") or {}
     items = {i["code"]: i for i in (Dd or {}).get("items", [])}
     weights, wsrc = weights_used(cfg, Dd)
     decs = (A or {}).get("decisions", [])
@@ -202,7 +203,11 @@ def engine_section(cfg, A, Dd, BT):
         today.append({
             "code": d["code"], "name": d["name"], "rank": d.get("rank"), "state": d["state"], "sector": d.get("sector"),
             "price": d.get("price"), "line": decision_line(d, st),
-            "checks": [{"label": c["label"], "ok": c["ok"], "plain": plain_check(c), "tier": c.get("tier")} for c in d.get("checks", [])],
+            "checks": [{"label": c["label"], "ok": c["ok"], "tier": c.get("tier"),
+                        "plain": plain_check(c) + (f" (마지막 수급 {flags.get('flow_last')} · {flags.get('flow_gap')}거래일 비어 있음"
+                                                   + (f" · 원인: {flags['collect_problem']}" if flags.get("collect_problem") else "") + ")"
+                                                   if "낡아" in str(c.get("value", "")) else "")}
+                       for c in d.get("checks", [])],
             "need": [x.replace("수급 데이터 갱신 (collect_flows)", "수급 자료가 다시 채워짐 (매일 오후 5시 자동 수집)") for x in (d.get("need") or [])],
             "score": it.get("score"),
             "contrib": [{"name": f["name"], "val": f["val"], "w": f["w"], "pts": f["contrib"],
@@ -272,7 +277,13 @@ def engine_section(cfg, A, Dd, BT):
     else:
         head = "오늘은 사고팔 종목이 없습니다."
     eq = (A or {}).get("equity")
-    return {"headline": head, "equity": eq, "cash": (A or {}).get("cash"), "gate": gate,
+    data_issue = None
+    if flags.get("collect_problem"):
+        data_issue = {"problem": flags["collect_problem"], "fix": flags.get("collect_fix"), "time": flags.get("collect_time")}
+    elif flags.get("flow_stale"):
+        data_issue = {"problem": f"외국인·기관 수급 자료가 {flags.get('flow_gap')}거래일 비어 있습니다 (마지막 {flags.get('flow_last')})",
+                      "fix": "매일 수집이 다시 채웁니다. 며칠째 그대로면 KRX 로그인 상태를 확인하세요.", "time": None}
+    return {"headline": head, "equity": eq, "cash": (A or {}).get("cash"), "gate": gate, "data_issue": data_issue,
             "weights": weights, "weights_src": wsrc, "funnel": stage, "today": today,
             "n_hold": len(holds), "rules": rulebook(cfg), "examples": ex, "best": best, "worst": worst, "stats": stats,
             "journal": (A or {}).get("journal", [])[:20]}
@@ -509,6 +520,8 @@ def main():
                         + ("새로 살 수 있는 시장입니다." if g.get("open") else
                            f"30일 자동매매는 지수가 최근 20일 최저점보다 5% 이상 반등할 때까지 새로 사지 않습니다 (지금 {pct(g.get('rebound'))}).") )}
     summary = [f"30일 자동매매: {eng['headline']}"]
+    if eng.get("data_issue"):
+        summary.insert(0, f"자료 문제: {eng['data_issue']['problem']} — {eng['data_issue']['fix']}")
     if sh:
         summary.append(f"단기 모의투자: {sh['headline']} (모델: {sh['model']['desc']})")
     if EV:

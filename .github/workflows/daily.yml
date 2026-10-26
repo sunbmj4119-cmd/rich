@@ -1,8 +1,8 @@
 name: daily-run
 on:
   schedule:
-    # 매일 오후 5시 KST (UTC 08:00), 평일
-    - cron: "0 8 * * 1-5"
+    # 평일 17:47 KST (UTC 08:47). 정각(0분)은 GitHub 예약이 몰려 5시간까지 늦게 시작했다(10-23: 22시 실행) → 정각을 피함
+    - cron: "47 8 * * 1-5"
   workflow_dispatch:
 jobs:
   run:

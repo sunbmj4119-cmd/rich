@@ -140,6 +140,7 @@ U.nav("index.html");
   // ── 데이터 신선도: 낡은 데이터가 있으면 머리에 알약 하나로 ──
   const stale = [];
   if (m.stale && m.stale.lag > 3) stale.push(`${m.stale.file.replace(".csv", "")} ${m.stale.lag}거래일 지연 — ${m.stale.effect}`);
+  if (A && A.flags && A.flags.collect_problem) stale.push(`${A.flags.collect_problem} (${A.flags.collect_time} 수집) — 해결: ${A.flags.collect_fix}`);
   if (A && A.flags && A.flags.flow_stale) stale.push(`외국인·기관 수급 ${A.flags.flow_gap}거래일 지연 (마지막 ${A.flags.flow_last}) — 자동매매 신규 매수 보류`);
   const fr = U.$("#fresh");
   fr.hidden = false;
@@ -163,7 +164,8 @@ U.nav("index.html");
   eBuy.forEach((x) => todo.push({ st: "매수", t: x.name, s: `30일 자동매매 · ${x.rank}위 · ${x.reason}`, href: "autotrade.html" }));
   sOrders.forEach((o) => todo.push({ st: o.side === "buy" ? "매수" : "매도", t: o.name, s: `단기 모의 · ${o.session === "open" ? "시가" : "종가"} ${o.qty.toLocaleString("ko-KR")}주`, href: "short.html" }));
   if (g && !g.open) todo.push({ st: "관망", t: "30일 자동매매 신규 매수 쉬기", s: `${g.regime} — ${g.need}이면 다시 삽니다`, href: "autotrade.html" });
-  if (A && A.flags && A.flags.flow_stale) todo.push({ st: "관망", t: "수급 데이터 확인", s: `외국인 수급이 ${A.flags.flow_gap}거래일 낡아 매수를 보류합니다`, href: "autotrade.html" });
+  if (A && A.flags && (A.flags.flow_stale || A.flags.collect_problem)) todo.push({ st: "관망", t: A.flags.collect_problem ? "KRX 자료 수집 막힘 — 확인 필요" : "수급 데이터 확인",
+    s: A.flags.collect_problem ? `${A.flags.collect_problem}. ${A.flags.collect_fix}` : `외국인 수급이 ${A.flags.flow_gap}거래일 낡아 매수를 보류합니다`, href: "explain.html" });
 
   const nb = eBuy.length + sOrders.filter((o) => o.side === "buy").length, ns = eSell.length + sOrders.filter((o) => o.side === "sell").length;
   let head, lead;

@@ -196,6 +196,11 @@ def safety(cfg, panel, feats):
         flags["flow_last"] = str(last_ok.date()) if pd.notna(last_ok) else None
         flags["flow_stale"] = gap > rk.get("stale_flow_days", 10)
         flags["flow_gap"] = gap
+    cs = jload("data/collect_status.json", {})               # 마지막 KRX 수집 결과 (collect_flows.py)
+    if cs and not cs.get("ok", True):
+        flags["collect_problem"] = cs.get("problem")
+        flags["collect_fix"] = cs.get("fix")
+        flags["collect_time"] = cs.get("time")
     return issues, flags
 
 
