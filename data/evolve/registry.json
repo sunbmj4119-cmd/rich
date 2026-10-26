@@ -169,8 +169,79 @@
      "p": false
     }
    }
+  },
+  {
+   "id": "E20261023a",
+   "born": "2026-10-23",
+   "genome": {
+    "max_positions": 10,
+    "entry_rank": 10,
+    "exit_rank": 15,
+    "min_hold": 30,
+    "stop": 0.1,
+    "trail": 0.08,
+    "tiers": true,
+    "tp": 0.25,
+    "crash_gate": false,
+    "rebound": 0.05,
+    "flow_filter": true,
+    "w": {
+     "s_value": 0.11,
+     "s_profit": 0.18,
+     "s_grow": 0.18,
+     "s_flow": 0.17,
+     "s_rmom": 0.18,
+     "s_mom": 0.17
+    }
+   },
+   "fit_born": {
+    "fit": 0.6611,
+    "sharpe": 1.18,
+    "ann": 29.2,
+    "mdd": -32.2,
+    "trades": 1129,
+    "adj": 0.5095
+   },
+   "status": "관찰 중",
+   "source": "연속 진화 · 수축 (기본값에서 멀수록 감점)",
+   "forward": {
+    "days": 0,
+    "me": {
+     "ann": null,
+     "sharpe": null,
+     "mdd": null,
+     "total": null
+    },
+    "champ": {
+     "ann": null,
+     "sharpe": null,
+     "mdd": null,
+     "total": null
+    },
+    "p": null
+   },
+   "fit_now": {
+    "fit": 0.6611,
+    "sharpe": 1.18,
+    "ann": 29.2,
+    "mdd": -32.2,
+    "trades": 1129
+   },
+   "checks": {
+    "A": {
+     "days": false,
+     "beat": false,
+     "fit": true,
+     "meta": false
+    },
+    "B": {
+     "days": false,
+     "beat": false,
+     "p": false
+    }
+   }
   }
  ],
  "retired": [],
- "n_evaluated": 5574
+ "n_evaluated": 6384
 }
