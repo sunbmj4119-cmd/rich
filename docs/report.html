@@ -264,7 +264,7 @@ U.nav("report.html");
       </div>
       ${E.proposal ? `<div class="warn"><b>승격 제안: ${U.esc(E.proposal)}</b><br>GitHub → Actions → autotrade-control → Run workflow에서 action <b>promote</b>, challenger 칸에 <b>${U.esc(E.proposal)}</b>를 넣으면 적용됩니다.</div>` : ""}
       ${E.promoted ? `<div class="note">자동 승격: <b>${U.esc(E.promoted)}</b></div>` : ""}
-      <p class="guide">${U.esc(E.asof)} 데이터 기준 · 마지막 진화 ${U.esc((E.continuous || {}).updated || E.generated)} · 2시간마다 저장된 인구에서 이어서 진화하고, 매일 밤 진화 자체를 다시 검증합니다.</p>`;
+      <p class="guide">${U.esc(E.asof)} 데이터 기준 · 마지막 진화 ${U.esc((E.continuous || {}).updated || E.generated)} · 저장된 인구에서 이어서 진화하고(2시간마다 걸어 둠, 한 번에 15분), 매일 밤 진화 자체를 다시 검증합니다.</p>`;
 
     if (mt) {
       const M = U.$("#evo-meta"); M.hidden = false;

@@ -217,7 +217,7 @@
   if (X) {
     U.$("#evo-card").hidden = false;
     U.$("#evo-sub").textContent = `누적 ${X.generations}세대 · 마지막 ${X.updated}`;
-    U.$("#evo-lead").textContent = `2시간마다 저장된 인구에서 이어서 진화합니다. 고정 후보 최고(적합도 ${(+X.bench.fit).toFixed(2)})보다 나은 모델만 후보로 등록하고, 등록 뒤 ${X.incubate_days}거래일 성적이 쌓여야 고를 수 있습니다. 지금 인구 최선은 ${(+X.best_fit).toFixed(2)}.`;
+    U.$("#evo-lead").textContent = `저장된 인구에서 이어서 진화합니다 (2시간마다 걸어 두고, 한 번 돌 때 15분씩). 적합도는 해마다 샤프의 평균·흔들림에 '가장 나빴던 시장 국면'의 손실 감점을 더한 값입니다. 고정 후보 최고(${(+X.bench.fit).toFixed(2)})보다 나은 모델만 후보로 등록하고, 등록 뒤 ${X.incubate_days}거래일 성적이 쌓여야 고를 수 있습니다. 지금 인구 최선은 ${(+X.best_fit).toFixed(2)} · 실행 ${X.runs}번.`;
     U.$("#evo-list").innerHTML = X.candidates.length ? X.candidates.map((c) => {
       const f = c.forward || {};
       return `<div class="li"><span class="main"><span class="t">${U.esc(c.desc.replace(/^진화 \S+ · /, ""))}</span>
