@@ -1,6 +1,6 @@
 {
  "asof": "2026-10-28",
- "generated": "2026-10-29T00:35:28+09:00",
+ "generated": "2026-10-29T04:01:25+09:00",
  "broker": "paper",
  "live": false,
  "approval": "auto",
@@ -1763,7 +1763,7 @@
     {
      "label": "외국인 20일 순매도 아님",
      "ok": true,
-     "value": "+168.7bp(시총대비)",
+     "value": "+170.6bp(시총대비)",
      "tier": "검증됨"
     },
     {
