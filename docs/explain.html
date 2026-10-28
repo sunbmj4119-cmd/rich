@@ -101,6 +101,7 @@
   </div>
 
   <div class="tabpane" data-tab="short">
+    <section class="card" id="s-aw" hidden></section>
     <section class="card" id="s-model"></section>
     <section class="card" id="s-today"></section>
     <section class="card" id="s-hold"></section>
@@ -220,9 +221,18 @@
   drawEx();
 
   // ── 단기 ──
+  if (S && S.aw) {
+    const w = S.aw;
+    U.$("#s-aw").hidden = false;
+    U.$("#s-aw").innerHTML = `<header><h2>계좌 구조 — 단기 + 전천후</h2><span class="mut small">지금 국면 ${U.esc(w.regime.name)}</span></header>
+      <p style="font-size:14px;line-height:1.65">${U.esc(w.plain)}</p>
+      <div class="note" style="color:var(--fg)">${U.esc(w.regime_plain)}</div>
+      <h3>전천후 몫의 내일 목표</h3>${w.target.map((x) => `<div class="wrow"><span class="n">${Math.round(x.w * 100)}%</span><div><div class="d" style="color:var(--fg);font-size:14px">${U.esc(x.name)}</div><div class="d">${U.esc(x.group)}</div></div><span></span></div>`).join("")}
+      <p class="mut small">자세한 검증과 카드별 국면 성적은 <a href="short.html">모의투자 → 전천후</a> 탭에 있습니다.</p>`;
+  }
   if (S) {
     const m = S.model;
-    U.$("#s-model").innerHTML = `<header><h2>지금 따라가는 모델</h2><span class="mut small">${U.esc(m.selected_at || "")}부터</span></header>
+    U.$("#s-model").innerHTML = `<header><h2>단기 몫이 따라가는 모델</h2><span class="mut small">${U.esc(m.selected_at || "")}부터</span></header>
       <div class="note" style="color:var(--fg)"><b>${U.esc(m.desc)}</b><br>${U.esc(m.plain || "")}</div>
       <h3>왜 이 모델인가</h3><p style="font-size:14px;line-height:1.65">${U.esc(m.why)}</p>
       ${S.signals && S.signals.length ? `<h3>이 모델이 보는 것</h3><div>${S.signals.map((s) => `<div class="wrow"><span class="n">${Math.round(s.share * 100)}%</span><div><div class="d" style="color:var(--fg);font-size:14px">${U.esc(s.name)}</div></div><span></span></div>`).join("")}</div>` : ""}`;

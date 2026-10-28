@@ -1,5 +1,11 @@
 """
-단기 모의투자 — 매일 저녁 (daily.yml, 자료 갱신 뒤) 실행. 실제 돈은 움직이지 않는다.
+모의투자 (단기 갈아타기 50 + 전천후 ETF 혼합 50) — 매일 저녁 (daily.yml, 자료 갱신 뒤) 실행. 실제 돈은 움직이지 않는다.
+
+  계좌는 두 몫으로 나눠 따로 굴린다 (전략서 3-6-7):
+    단기 몫  : 아래 1)~4) — 후보 모델 중 주 1회 고른 모델을 따라감
+    전천후 몫: allweather.live_mix — ETF 12종, 전략 카드 20장을 변동성 반비례로 섞은 목표 비중 (매달 첫 거래일 재조정),
+               지금 비중과 5%p 넘게 다를 때만 주문. 시장 국면은 계산·표시만 (국면 스위칭은 10년 검증에서 불리)
+    분기 마지막 거래일 저녁에 두 몫을 50:50 으로 다시 맞춘다 (config short.aw_share)
 
   1) 체결: 어제 저녁에 세운 계획을 오늘 실제 가격으로 체결한다
            (시가 주문 = 오늘 시가, 종가 주문 = 오늘 종가 · 주식 수는 정수 · 수수료·세금·미끄러짐 포함 = 연구와 같은 비용)
@@ -24,6 +30,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import allweather as AW  # noqa: E402
 import settings  # noqa: E402
 import short_evolve as SE  # noqa: E402
 import short_lab as L  # noqa: E402
@@ -38,8 +45,9 @@ SELECTION = os.path.join(DIR, "selection.csv")
 UI = "docs/short.json"
 LAB_UI = "docs/short_lab.json"
 LEDGER_COLS = ["날짜", "시점", "종목코드", "종목명", "구분", "수량", "가격", "금액", "비용", "손익", "모델"]
-ETF_NAME = {"069500": "KODEX 200", "114800": "KODEX 인버스"}
-ETF_CODE = [SP.ETF_CODES["IDX"], SP.ETF_CODES["INV"]]
+ETF_NAME = AW.NAME                       # 12개 ETF (0 = KODEX 200, 1 = KODEX 인버스 — 단기 모델이 쓰는 두 개)
+ETF_CODE = AW.CODES
+AW_BAND = 0.05                           # 전천후 몫: 목표와 비중 차이가 이보다 작으면 그대로 둔다 (잦은 거래 비용 방지)
 
 
 def names():
@@ -53,6 +61,7 @@ def cfg_short(cfg):
     sc.setdefault("initial_cash", 10_000_000)
     sc.setdefault("buy_buffer", 0.02)
     sc["rule"] = {**L.LIVE_RULE, **(sc.get("rule") or {})}
+    sc.setdefault("aw_share", 0.5)       # 전천후 ETF 혼합에 떼어 두는 몫 (나머지 = 단기 갈아타기)
     return sc
 
 
@@ -91,8 +100,17 @@ def load_json(path, default):
 # ══════════════════════════════════════════════════════════════
 # 1) 체결
 # ══════════════════════════════════════════════════════════════
+def _sleeve(acc, o):
+    """주문이 속한 몫: (현금을 가진 dict, 보유 장부)."""
+    if o.get("sleeve") == "aw":
+        aw = acc.setdefault("aw", {"cash": 0.0, "etf": {}})
+        return aw, aw.setdefault("etf", {})
+    return acc, acc["positions"] if o["kind"] == "stock" else acc["etf"]
+
+
 def settle(D, acc, plan, nm):
-    """계획의 '다음 거래일'이 자료에 들어왔으면 그날 가격으로 체결. 반환: 체결 기록."""
+    """계획의 '다음 거래일'이 자료에 들어왔으면 그날 가격으로 체결. 반환: 체결 기록.
+    ETF 비용은 자산별 호가 반 칸, 기타 ETF(채권·달러·금·미국)는 이익 난 매도에 15.4% 세금."""
     if not plan or not plan.get("orders"):
         return [], None
     made = pd.Timestamp(plan["made"])
@@ -102,29 +120,35 @@ def settle(D, acc, plan, nm):
     t = int(later[0])
     day = str(D.dates[t].date())
     cbS, csS = L.costs("stock")
-    cbE, csE = L.costs("etf")
     etf_ok = D.legs["source"] == "etf"
     fills = []
-    pos, etf = acc["positions"], acc["etf"]
 
     def price(o):
         if o["kind"] == "stock":
             j = D.P["codes"].index(o["code"]) if o["code"] in D.P["codes"] else None
             return None if j is None or np.isnan(D.O[t, j]) else float(D.O[t, j])
-        if not etf_ok:
+        if o["code"] not in ETF_CODE:
             return None
         j = ETF_CODE.index(o["code"])
-        return float(D.Op[t, j] if o["session"] == "open" else D.Cp[t, j])
+        if j >= D.Op.shape[1] or (j < 2 and not etf_ok):
+            return None
+        px = D.Op[t, j] if o["session"] == "open" else D.Cp[t, j]
+        return None if not np.isfinite(px) else float(px)
 
     order = sorted(plan["orders"], key=lambda o: (o["session"] != "open", o["side"] != "sell"))
     for o in order:
         px = price(o)
-        book = pos if o["kind"] == "stock" else etf
-        cb, cs = (cbS, csS) if o["kind"] == "stock" else (cbE, csE)
+        holder, book = _sleeve(acc, o)
+        if o["kind"] == "stock":
+            cb, cs, taxr = cbS, csS, 0.0
+        else:
+            cb, cs = (float(x[0]) for x in AW.costs(np.array([px if px else 1.0])))
+            taxr = float(AW.TAXR[ETF_CODE.index(o["code"])]) if o["code"] in ETF_CODE else 0.0
         name = o.get("name") or nm.get(o["code"], o["code"])
+        tag = {"모델": plan.get("model") if o.get("sleeve") != "aw" else "전천후"}
         if px is None:
             fills.append({"날짜": day, "시점": o["session"], "종목코드": o["code"], "종목명": name, "구분": f"{o['side']}·미체결",
-                          "수량": 0, "가격": "", "금액": 0, "비용": 0, "손익": "", "모델": plan.get("model")})
+                          "수량": 0, "가격": "", "금액": 0, "비용": 0, "손익": "", **tag})
             continue
         if o["side"] == "sell":
             have = int((book.get(o["code"]) or {}).get("qty", 0))
@@ -135,20 +159,21 @@ def settle(D, acc, plan, nm):
             fee = amt * cs
             avg = book[o["code"]]["avg"]
             pnl = amt - fee - q * avg
-            acc["cash"] += amt - fee
+            tax = taxr * max(pnl, 0.0)
+            holder["cash"] += amt - fee - tax
             book[o["code"]]["qty"] = have - q
             if book[o["code"]]["qty"] <= 0:
                 del book[o["code"]]
             fills.append({"날짜": day, "시점": o["session"], "종목코드": o["code"], "종목명": name, "구분": "매도", "수량": q,
-                          "가격": round(px, 2), "금액": round(amt), "비용": round(fee), "손익": round(pnl), "모델": plan.get("model")})
+                          "가격": round(px, 2), "금액": round(amt), "비용": round(fee + tax), "손익": round(pnl - tax), **tag})
         else:
             q = int(o["qty"])
-            q = min(q, int(acc["cash"] // (px * (1 + cb))))
+            q = min(q, int(holder["cash"] // (px * (1 + cb))))
             if q <= 0:
                 continue
             amt = q * px
             fee = amt * cb
-            acc["cash"] -= amt + fee
+            holder["cash"] -= amt + fee
             cur = book.get(o["code"]) or {"qty": 0, "avg": 0.0, "since": day, "name": name}
             tot = cur["qty"] + q
             cur["avg"] = (cur["qty"] * cur["avg"] + amt + fee) / tot        # 평단에 매수 비용 포함
@@ -156,31 +181,55 @@ def settle(D, acc, plan, nm):
             cur.setdefault("since", day)
             book[o["code"]] = cur
             fills.append({"날짜": day, "시점": o["session"], "종목코드": o["code"], "종목명": name, "구분": "매수", "수량": q,
-                          "가격": round(px, 2), "금액": round(amt), "비용": round(fee), "손익": "", "모델": plan.get("model")})
+                          "가격": round(px, 2), "금액": round(amt), "비용": round(fee), "손익": "", **tag})
+    tr = plan.get("transfer")
+    if tr and "aw" in acc:                                    # 분기 몫 맞추기: 전천후에서 판 돈을 단기 몫으로
+        x = min(float(tr["amount"]), acc["aw"]["cash"])
+        acc["aw"]["cash"] -= x
+        acc["cash"] += x
     return fills, t
 
 
-def equity_at(D, acc, t):
+def _etf_value(D, book, t):
+    v = 0.0
+    for c, p in book.items():
+        j = ETF_CODE.index(c) if c in ETF_CODE else None
+        px = D.Cp[t, j] if j is not None and j < D.Cp.shape[1] else np.nan
+        if not np.isfinite(px) and j is not None and j < D.Cp.shape[1]:
+            prev = D.Cp[:t + 1, j]
+            prev = prev[np.isfinite(prev)]
+            px = prev[-1] if len(prev) else np.nan
+        v += p["qty"] * (px if np.isfinite(px) else p["avg"])
+    return float(v)
+
+
+def equity_live(D, acc, t):
     v = acc["cash"]
     for c, p in acc["positions"].items():
         if c in D.P["codes"]:
             v += p["qty"] * D.Cf[t, D.P["codes"].index(c)]
         else:
             v += p["qty"] * p["avg"]
-    for c, p in acc["etf"].items():
-        j = ETF_CODE.index(c)
-        v += p["qty"] * (D.Cp[t, j] if D.legs["source"] == "etf" else p["avg"])
-    return float(v)
+    return float(v + _etf_value(D, acc["etf"], t))
+
+
+def equity_aw(D, acc, t):
+    aw = acc.get("aw") or {}
+    return float(aw.get("cash", 0.0) + _etf_value(D, aw.get("etf", {}), t))
+
+
+def equity_at(D, acc, t):
+    return equity_live(D, acc, t) + equity_aw(D, acc, t)
 
 
 # ══════════════════════════════════════════════════════════════
 # 3) 계획
 # ══════════════════════════════════════════════════════════════
-def make_plan(D, m, res, acc, sc, nm, t_last):
+def make_plan(D, m, res, acc, sc, nm, t_last, hold_back=0.0):
+    """단기 갈아타기 몫의 내일 주문 (이 몫의 평가액 안에서, 전천후로 옮길 돈 hold_back 은 빼고)."""
     T = t_last
-    eq = equity_at(D, acc, T)
+    eq = equity_live(D, acc, T) - hold_back
     cbS, _ = L.costs("stock")
-    cbE, _ = L.costs("etf")
     buf = sc["buy_buffer"]
     orders, notes = [], []
     codes = D.P["codes"]
@@ -215,8 +264,9 @@ def make_plan(D, m, res, acc, sc, nm, t_last):
         for session, w in (("open", wo), ("close", wc)):
             if np.isnan(w[0]):
                 continue
-            for j, c in enumerate(ETF_CODE):
+            for j, c in enumerate(ETF_CODE[:2]):
                 px = float(D.Cp[T, j])
+                cbE = float(AW.costs(np.array([px]))[0][0])
                 tgt = int(math.floor(w[j] * eq / (px * (1 + buf) * (1 + cbE)))) if w[j] > 0 else 0
                 cur = after.get(c, 0)
                 cur_w = cur * px / eq
@@ -228,6 +278,81 @@ def make_plan(D, m, res, acc, sc, nm, t_last):
                 after[c] = tgt
     return {"made": str(D.dates[T].date()), "model": m["id"], "model_desc": L.describe(m), "orders": orders, "notes": notes,
             "equity_est": round(eq)}
+
+
+def quarter_turn(day):
+    """오늘이 분기 마지막 거래일이면(다음 평일이 새 분기) True — 저녁에 몫을 다시 맞춘다."""
+    nxt = pd.Timestamp(day) + pd.offsets.BDay(1)
+    return (nxt.month - 1) // 3 != (pd.Timestamp(day).month - 1) // 3 or nxt.year != pd.Timestamp(day).year
+
+
+def rebalance_cash(D, acc, share, T):
+    """몫 다시 맞추기. 단기 몫이 크면 그 몫의 놀고 있는 현금을 바로 옮기고,
+    전천후 몫이 크면 그만큼 팔도록 계획한 뒤(내일 체결) 판 돈을 옮긴다(settle 의 transfer)."""
+    el, ea = equity_live(D, acc, T), equity_aw(D, acc, T)
+    tot = el + ea
+    if tot <= 0 or abs(ea / tot - share) <= 0.05:
+        return None
+    gap = ea - share * tot                                  # + 면 전천후가 많음
+    if gap < 0:
+        x = min(-gap, acc["cash"])
+        acc["cash"] -= x
+        acc["aw"]["cash"] += x
+        acc["owe_aw"] = round(-gap - x, 2)                  # 못 옮긴 만큼은 단기 몫이 종목을 팔아 현금이 생길 때마다 옮긴다
+        print(f"  분기 몫 맞추기: 단기 → 전천후 현금 {x:,.0f}원" + (f" (남은 {acc['owe_aw']:,.0f}원은 종목 교체 때)" if acc["owe_aw"] > 0 else ""))
+        return {"moved": x}
+    x = min(gap, acc["aw"]["cash"])
+    acc["aw"]["cash"] -= x
+    acc["cash"] += x
+    rest = gap - x
+    print(f"  분기 몫 맞추기: 전천후 → 단기 현금 {x:,.0f}원" + (f" + 내일 {rest:,.0f}원어치 팔아서 옮김" if rest > 0 else ""))
+    return {"moved": -x, "pending": rest}
+
+
+def make_aw_plan(D, acc, aw, sc, T, hold_back=0.0):
+    """전천후 몫의 내일 주문: 목표 비중(aw['target'])과 지금 비중이 5%p 넘게 다르거나, 새로 들어가거나 다 팔 때만.
+    hold_back: 단기 몫으로 옮길 금액 (그만큼 덜 들고 있도록 계획)."""
+    book = acc["aw"]["etf"]
+    eq = equity_aw(D, acc, T) - hold_back
+    buf = sc["buy_buffer"]
+    orders = []
+    if eq <= 0:
+        return orders
+    for j, c in enumerate(ETF_CODE):
+        if j >= D.Cp.shape[1]:
+            continue
+        px = D.Cp[T, j]
+        cur = int((book.get(c) or {}).get("qty", 0))
+        w = float(aw["target"][j])
+        if not np.isfinite(px) or px <= 0:
+            continue
+        cb = float(AW.costs(np.array([px]))[0][0])
+        tq = int(math.floor(w * eq / (px * (1 + buf) * (1 + cb)))) if w > 0 else 0
+        cur_w = cur * px / eq
+        if tq == cur or (tq > 0 and cur > 0 and abs(w - cur_w) <= AW_BAND):
+            continue
+        orders.append({"session": "open", "kind": "etf", "sleeve": "aw", "code": c, "name": ETF_NAME[c],
+                       "side": "buy" if tq > cur else "sell", "qty": abs(tq - cur), "est_price": round(float(px), 2)})
+    return orders
+
+
+def aw_state(D, T):
+    """전천후 혼합의 오늘 상태 (ETF 자료를 단기 자료 마지막 날까지만 써서 같은 날 기준으로 맞춘다)."""
+    m = AW.live_mix(upto=D.dates[T])
+    rules = m["rules"]
+    mix = sorted(m["mix"], key=lambda x: -x[1])
+    s = m["start"]
+    E = m["E"]
+    st = L.stats(E[s:], m["dates"][s:])
+    ys = L.yearly(E[s:], m["dates"][s:])
+    return {"target": m["target"], "regime": m["regime"], "trade_tomorrow": m["trade_tomorrow"],
+            "mix": [{"id": rules[i], "desc": AW.RULES[rules[i]], "group": AW.GROUP[rules[i].split(":")[0]], "w": round(float(w), 4),
+                     "now": {ETF_NAME[ETF_CODE[j]]: round(float(x), 3) for j, x in enumerate(m["card_now"][rules[i]]) if x > 0.001}}
+                    for i, w in mix],
+            "target_named": [{"code": ETF_CODE[j], "name": ETF_NAME[ETF_CODE[j]], "group": AW.ASSETS[ETF_CODE[j]][2],
+                              "w": round(float(x), 4)} for j, x in sorted(enumerate(m["target"]), key=lambda z: -z[1]) if x > 0.001],
+            "backtest": {"from": str(m["dates"][s].date()), "stats": st, "years": ys, "switches": m["switches"]},
+            "data_date": str(m["dates"][-1].date())}
 
 
 # ══════════════════════════════════════════════════════════════
@@ -246,10 +371,17 @@ def run(cfg=None, now=None):
     T = D.T - 1
     today = str(D.dates[T].date())
     acc = load_json(ACC, None)
+    share = float(sc["aw_share"])
     if acc is None:
-        acc = {"start": today, "cash": float(sc["initial_cash"]), "initial_cash": float(sc["initial_cash"]),
-               "positions": {}, "etf": {}, "last_date": None, "model": None, "selected_at": None}
-        print(f"단기 모의 계좌를 새로 엽니다: {sc['initial_cash']:,.0f}원 · 시작 {today}")
+        acc = {"start": today, "cash": float(sc["initial_cash"]) * (1 - share), "initial_cash": float(sc["initial_cash"]),
+               "positions": {}, "etf": {}, "last_date": None, "model": None, "selected_at": None,
+               "aw": {"cash": float(sc["initial_cash"]) * share, "etf": {}, "since": today}}
+        print(f"모의 계좌를 새로 엽니다: {sc['initial_cash']:,.0f}원 (단기 갈아타기 {1 - share:.0%} · 전천후 {share:.0%}) · 시작 {today}")
+    if "aw" not in acc and share > 0:                  # 예전 계좌 → 전천후 몫을 놀고 있는 현금에서 떼어 준다
+        move = min(acc["cash"], equity_live(D, acc, T) * share)
+        acc["cash"] -= move
+        acc["aw"] = {"cash": move, "etf": {}, "since": today}
+        print(f"전천후 몫 신설: 현금 {move:,.0f}원을 옮김 (단기 갈아타기 {1 - share:.0%} · 전천후 {share:.0%})")
     plan = load_json(PLAN, None)
     # 1) 체결
     fills, t_fill = settle(D, acc, plan, nm)
@@ -265,9 +397,15 @@ def run(cfg=None, now=None):
         d = str(D.dates[t].date())
         if last and d <= last:
             continue
-        eq_rows.append({"날짜": d, "평가액": round(equity_at(D, acc, t)), "현금": round(acc["cash"]),
-                        "지수ETF": round(float(D.Cp[t, 0] / b0 * acc["initial_cash"])), "모델": acc.get("model") or ""})
-    append_csv(EQUITY, ["날짜", "평가액", "현금", "지수ETF", "모델"], eq_rows)
+        eq_rows.append({"날짜": d, "평가액": round(equity_at(D, acc, t)), "현금": round(acc["cash"] + acc.get("aw", {}).get("cash", 0)),
+                        "지수ETF": round(float(D.Cp[t, 0] / b0 * acc["initial_cash"])), "모델": acc.get("model") or "",
+                        "단기몫": round(equity_live(D, acc, t)), "전천후몫": round(equity_aw(D, acc, t))})
+    cols = ["날짜", "평가액", "현금", "지수ETF", "모델", "단기몫", "전천후몫"]
+    if os.path.exists(EQUITY):                         # 예전 열(단기몫·전천후몫 없음)이면 열을 늘려 다시 쓴다
+        old_e = pd.read_csv(EQUITY)
+        if list(old_e.columns) != cols:
+            old_e.reindex(columns=cols).to_csv(EQUITY, index=False)
+    append_csv(EQUITY, cols, eq_rows)
     acc["last_date"] = today
     # 2) 매일 시뮬레이션
     models = L.stock_models() + L.etf_models() + SE.models_from_registry()   # + 쉬지 않고 진화한 후보
@@ -326,9 +464,27 @@ def run(cfg=None, now=None):
         E, sw, _ = L.apply_rule(D, models, recs, R, r_, start)
         shadow.append({"key": key, "name": name, "ret": round(float(E[T] / E[start - 1] - 1), 4), "switches": sw,
                        "days": T - start + 1})
-    # 3) 계획
+    # 3) 계획 — 단기 갈아타기 몫 + 전천후 몫 (분기 첫 거래일 전날 저녁: 몫을 50:50 으로 다시 맞춤)
     res = recs[mi]
-    plan = make_plan(D, m, res, acc, sc, nm, T)
+    transfer = None
+    if "aw" in acc and acc.get("owe_aw", 0) > 0:          # 지난 분기 맞추기에서 못 옮긴 돈
+        y = min(acc["owe_aw"], acc["cash"])
+        acc["cash"] -= y
+        acc["aw"]["cash"] += y
+        acc["owe_aw"] = round(acc["owe_aw"] - y, 2)
+    if "aw" in acc and quarter_turn(D.dates[T]):
+        transfer = rebalance_cash(D, acc, share, T)
+    plan = make_plan(D, m, res, acc, sc, nm, T, hold_back=acc.get("owe_aw", 0.0))
+    aw = None
+    if "aw" in acc:
+        try:
+            aw = aw_state(D, T)
+            plan["orders"] += make_aw_plan(D, acc, aw, sc, T, hold_back=(transfer or {}).get("pending", 0.0))
+            if transfer and transfer.get("pending"):
+                plan["transfer"] = {"from": "aw", "to": "live", "amount": round(transfer["pending"])}
+            plan["aw"] = {"regime": aw["regime"]["name"], "target": aw["target_named"]}
+        except Exception as ex:                         # 전천후 계산이 실패해도 단기 몫은 그대로 돈다
+            print(f"  (전천후 몫 계산 실패: {type(ex).__name__} {ex})")
     json.dump(clean(plan), open(PLAN, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     json.dump(acc, open(ACC, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     eq = equity_at(D, acc, T)
@@ -337,7 +493,12 @@ def run(cfg=None, now=None):
     ui = {"updated": time.strftime("%Y-%m-%d %H:%M"), "data_date": today, "start": acc["start"],
           "etf_source": D.legs["source"], "rule": rule, "rule_name": L.rule_name(rule),
           "next_reselect_days": int(every - days_in) if every > 1 else 1,
-          "account": {"equity": round(eq), "cash": round(acc["cash"]), "initial": acc["initial_cash"],
+          "sleeves": {"live": {"equity": round(equity_live(D, acc, T)), "cash": round(acc["cash"]), "share": round(1 - share, 3),
+                               "name": "단기 갈아타기"},
+                      "aw": {"equity": round(equity_aw(D, acc, T)), "cash": round(acc.get("aw", {}).get("cash", 0)), "share": round(share, 3),
+                             "name": "전천후 ETF 혼합", "since": acc.get("aw", {}).get("since")}},
+          "aw": None if aw is None else {k: aw[k] for k in ("regime", "mix", "target_named", "backtest", "data_date", "trade_tomorrow")},
+          "account": {"equity": round(eq), "cash": round(acc["cash"] + acc.get("aw", {}).get("cash", 0)), "initial": acc["initial_cash"],
                       "ret": round(eq / acc["initial_cash"] - 1, 4),
                       "bench_ret": round(float(D.Cp[T, 0] / b0 - 1), 4),
                       "positions": [{"code": c, "name": p.get("name") or nm.get(c, c), "qty": p["qty"], "avg": round(p["avg"], 2),
@@ -345,7 +506,10 @@ def run(cfg=None, now=None):
                                      "since": p.get("since")} for c, p in acc["positions"].items()] +
                                    [{"code": c, "name": ETF_NAME[c], "qty": p["qty"], "avg": round(p["avg"], 2),
                                      "last": round(float(D.Cp[T, ETF_CODE.index(c)]), 2), "since": p.get("since")}
-                                    for c, p in acc["etf"].items()]},
+                                    for c, p in acc["etf"].items()] +
+                                   [{"code": c, "name": ETF_NAME[c], "qty": p["qty"], "avg": round(p["avg"], 2), "sleeve": "aw",
+                                     "last": round(float(AW.ffill(D.Cp)[T, ETF_CODE.index(c)]), 2), "since": p.get("since")}
+                                    for c, p in acc.get("aw", {}).get("etf", {}).items()]},
           "model": {"id": m["id"], "desc": L.describe(m), "selected_at": acc["selected_at"], "changed_today": changed,
                     "sh250": round(float(sh250[mi]), 3)},
           "plan": plan, "leaderboard": board[:20], "pool_size": len(pool), "shadow": shadow,
@@ -364,15 +528,22 @@ def run(cfg=None, now=None):
     # 알림
     try:
         import notify
-        lines = [f"단기 모의 · {today} · 평가액 {eq:,.0f}원 ({ui['account']['ret'] * 100:+.2f}%, 지수 {ui['account']['bench_ret'] * 100:+.2f}%)",
-                 f"모델: {L.describe(m)}" + (" (오늘 바뀜)" if changed else "")]
+        lines = [f"모의 계좌 · {today} · 평가액 {eq:,.0f}원 ({ui['account']['ret'] * 100:+.2f}%, 지수 {ui['account']['bench_ret'] * 100:+.2f}%)",
+                 f"단기 모델: {L.describe(m)}" + (" (오늘 바뀜)" if changed else "")]
+        if aw:
+            lines.append(f"시장 국면: {aw['regime']['name']} · 전천후 몫 목표: " +
+                         ", ".join(f"{x['name']} {x['w'] * 100:.0f}%" for x in aw["target_named"][:4]))
         for o in plan["orders"]:
-            lines.append(f"{'🔴 매수' if o['side'] == 'buy' else '🔵 매도'} {o['name']} {o['qty']}주 ({'시가' if o['session'] == 'open' else '종가'})")
+            lines.append(f"{'🔴 매수' if o['side'] == 'buy' else '🔵 매도'} {o['name']} {o['qty']}주 ({'시가' if o['session'] == 'open' else '종가'}"
+                         f"{' · 전천후' if o.get('sleeve') == 'aw' else ''})")
         notify.send(cfg, "daily", "\n".join(lines), title="단기 모의투자")
     except Exception as ex:                                # 알림 실패가 기록을 막지 않게
         print(f"  (알림 생략: {ex})")
-    print(f"단기 모의투자 {today}: 평가액 {eq:,.0f}원 · 모델 {m['id']}{' (바뀜)' if changed else ''} · 내일 주문 {len(plan['orders'])}건 "
+    print(f"모의 계좌 {today}: 평가액 {eq:,.0f}원 · 단기 모델 {m['id']}{' (바뀜)' if changed else ''} · 내일 주문 {len(plan['orders'])}건 "
           f"· 후보 {len(pool)}개 · {time.time() - t0:.0f}s")
+    if aw:
+        print(f"  시장 국면 {aw['regime']['name']} (1년 고점 대비 {aw['regime']['dd'] * 100:.1f}%) · 전천후 목표: "
+              + ", ".join(f"{x['name']} {x['w'] * 100:.1f}%" for x in aw["target_named"]))
     for o in plan["orders"]:
         print(f"  {o['session']:5s} {o['side']:4s} {o['name']} {o['qty']}주 (어제 종가 {o['est_price']:,})")
     for n in plan.get("notes", []):

@@ -125,9 +125,13 @@ def naver_fill_flows(codes, start, end):
             fails.append(code)
             continue
         for _, r in df.iterrows():
-            f, i = r["외국인"] * r["종가"], r["기관"] * r["종가"]
+            if not np.isfinite(r["외국인"]) or not np.isfinite(r["종가"]):
+                continue
+            f, i = r["외국인"] * r["종가"], np.nan_to_num(r["기관"]) * r["종가"]
+            p_ = r.get("개인", np.nan)
+            p_ = p_ * r["종가"] if np.isfinite(p_) else -(f + i)
             rows.append({"날짜": r["날짜"], "종목코드": code, "외국인순매수": round(f), "기관순매수": round(i),
-                         "개인순매수": round(-(f + i))})
+                         "개인순매수": round(p_)})
     return pd.DataFrame(rows), fails
 
 

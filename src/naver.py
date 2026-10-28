@@ -86,11 +86,44 @@ def parse_investor(html):
     return pd.DataFrame(rows, columns=["날짜", "종가", "기관", "외국인"])
 
 
-def investor(code, pages=1):
+TREND = "https://m.stock.naver.com/api/stock/{code}/trend"
+
+
+def parse_trend(js):
+    """모바일 API 투자자 동향 JSON → [날짜, 종가, 기관, 외국인, 개인] (수량)."""
+    items = js if isinstance(js, list) else (js.get("result") or js.get("items") or js.get("data") or [])
+    rows = []
+    for it in items:
+        d = str(it.get("bizdate") or it.get("localTradedAt") or it.get("date") or "")[:10].replace(".", "").replace("-", "")
+        if not re.fullmatch(r"\d{8}", d):
+            continue
+        g = lambda *ks: next((_num(str(it[k])) for k in ks if it.get(k) not in (None, "")), float("nan"))  # noqa: E731
+        rows.append({"날짜": f"{d[:4]}-{d[4:6]}-{d[6:]}", "종가": g("closePrice", "closePriceRaw"),
+                     "기관": g("organPureBuyQuant", "institutionPureBuyQuant"), "외국인": g("foreignerPureBuyQuant"),
+                     "개인": g("individualPureBuyQuant")})
+    return pd.DataFrame(rows, columns=["날짜", "종가", "기관", "외국인", "개인"])
+
+
+def investor(code, pages=1, debug=False):
+    """외국인·기관(·개인) 순매매 수량. 모바일 API(JSON) 먼저, 안 되면 PC 화면 표."""
+    try:
+        r = _get(TREND.format(code=code), {"pageSize": max(20, 20 * pages)})
+        df = parse_trend(r.json())
+        if debug:
+            print("    trend 응답 앞부분:", r.text[:300].replace("\n", " "))
+        if len(df):
+            return df.drop_duplicates("날짜")
+    except Exception as e:
+        if debug:
+            print("    trend 실패:", str(e)[:120])
     out = []
     for p in range(1, pages + 1):
         r = _get(FRGN, {"code": code, "page": p})
-        out.append(parse_investor(r.content.decode("euc-kr", errors="ignore")))
+        html = r.content.decode("euc-kr", errors="ignore")
+        out.append(parse_investor(html))
+        if debug and out[-1].empty:
+            i = html.find("type2")
+            print("    frgn 표 앞부분:", re.sub(r"\s+", " ", html[i:i + 1500] if i >= 0 else html[:800]))
         time.sleep(0.2)
     df = pd.concat(out, ignore_index=True) if out else pd.DataFrame(columns=["날짜", "종가", "기관", "외국인"])
     return df.drop_duplicates("날짜")
@@ -107,7 +140,7 @@ def selftest():
             print(f"  일봉 {code} 실패: {e}")
             ok = False
     try:
-        f = investor("005930")
+        f = investor("005930", debug=True)
         print(f"  외국인·기관 005930: {len(f)}행 · 첫 줄 {f.iloc[0].to_dict() if len(f) else '-'}")
         ok &= len(f) > 0
     except Exception as e:

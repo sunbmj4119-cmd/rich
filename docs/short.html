@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>단기 모의투자</title>
+<title>모의투자</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="ui.css">
 <style>
@@ -24,23 +24,54 @@
 .chosen { font-size: 11px; font-weight: 700; color: var(--bg); background: var(--fg); border-radius: 5px; padding: 1px 6px }
 .chart.eq { height: 200px }
 .kv > span:first-child { white-space: nowrap }
+.regime { display: flex; gap: 12px; align-items: center; background: var(--soft); border-radius: 14px; padding: 12px 14px }
+.regime .badge { font-weight: 800; font-size: 15px; padding: 6px 12px; border-radius: 10px; flex-shrink: 0 }
+.rg-강세 { background: var(--pos-bg); color: var(--green) } .rg-횡보 { background: var(--warn-bg); color: var(--orange) }
+.rg-약세, .rg-급락 { background: var(--neg-bg); color: var(--red) }
+.bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; margin-top: 4px }
+.bar > i { display: block; height: 100%; background: var(--fg) }
+.sleeves { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.sleeves > div { background: var(--soft); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px }
+.t-reg td:first-child { white-space: normal; min-width: 130px }
 </style>
 </head>
 <body>
 <div class="wrap">
   <nav class="nav" id="topnav" aria-label="페이지"></nav>
-  <header class="phead"><h1>단기 모의투자</h1><div class="mut small" id="sub">불러오는 중…</div></header>
+  <header class="phead"><h1>모의투자 · 단기 + 전천후</h1><div class="mut small" id="sub">불러오는 중…</div></header>
 
   <section class="card hero" id="hero" aria-live="polite"><div class="skeleton" style="height:120px"></div></section>
 
   <div class="stick"><div class="tabs" id="tabs">
-    <button data-t="today">내일 주문</button><button data-t="models">모델 순위</button><button data-t="verify">검증 결과</button><button data-t="log">기록</button>
+    <button data-t="today">내일 주문</button><button data-t="aw">전천후</button><button data-t="models">모델 순위</button><button data-t="verify">검증 결과</button><button data-t="log">기록</button>
   </div></div>
 
   <div class="tabpane" data-tab="today">
     <section class="card" id="orders"></section>
     <section class="card" id="holds"></section>
     <section class="card" id="why"></section>
+  </div>
+
+  <div class="tabpane" data-tab="aw">
+    <section class="card" id="aw-now"></section>
+    <section class="card">
+      <header><h2>어떤 시장에서도 버는 모델이 가능한가</h2><span class="mut small" id="aw-sub"></span></header>
+      <div id="aw-verdicts"></div>
+    </section>
+    <section class="card">
+      <header><h2>이 계좌 방식의 과거 성적</h2><span class="mut small" id="cb-sub"></span></header>
+      <div class="chart eq" id="cb-chart"></div>
+      <div class="legend" id="cb-legend"></div>
+      <div class="scroll"><table class="t-reg" id="cb-table"></table></div>
+      <p class="mut small">국면은 그날 저녁 KODEX 200 종가로만 판정 — 급락: 1년 고점 대비 −15% 이하 · 약세: 200일선 아래 · 강세: 200일선 위 + 60일 수익 플러스 · 횡보: 나머지. 연수익은 그 국면이었던 날들만 모아 1년으로 환산.</p>
+    </section>
+    <details class="fold"><summary><div class="sum"><b>전략 카드 21장의 국면별 성적</b><span>모든 국면에서 버는 카드는 없었다</span></div></summary><div class="body">
+      <div class="scroll"><table class="t-reg" id="cards"></table></div>
+    </div></details>
+    <details class="fold"><summary><div class="sum"><b>고르는 방식 11가지</b><span>한 장 고르기 vs 섞기</span></div></summary><div class="body">
+      <div class="scroll"><table class="t-reg" id="aw-variants"></table></div>
+      <p class="mut small">P = 블록 부트스트랩으로 '샤프가 KODEX 200 보유보다 낫지 않을' 확률. 작을수록 확실.</p>
+    </div></details>
   </div>
 
   <div class="tabpane" data-tab="models">
@@ -91,7 +122,7 @@
     <section class="card">
       <header><h2>평가액</h2><span class="mut small">지수 ETF를 같은 날 같은 돈으로 샀을 때와 비교</span></header>
       <div class="chart eq" id="eq"></div>
-      <div class="legend"><span><i style="background:var(--fg)"></i>단기 모의</span><span><i style="background:var(--faint)"></i>지수 ETF 보유</span></div>
+      <div class="legend"><span><i style="background:var(--fg)"></i>모의 계좌 (단기+전천후)</span><span><i style="background:var(--faint)"></i>지수 ETF 보유</span></div>
     </section>
     <section class="card">
       <header><h2>체결 기록</h2><span class="mut small">최근 40건</span></header>
@@ -110,6 +141,8 @@
   try { S = await U.j("short.json"); } catch { S = null; }
   try { X = await U.j("short_evo.json"); } catch { X = null; }
   try { B = await U.j("short_lab.json"); } catch { B = null; }
+  let A = null;
+  try { A = await U.j("allweather.json"); } catch { A = null; }
   const pctv = (x, d = 1) => U.pct(U.ok(x) ? x * 100 : null, d);
   const sh = (x) => U.ok(x) ? (+x).toFixed(2) : "—";
 
@@ -124,7 +157,10 @@
       <span class="eyebrow">가상 계좌 평가액</span>
       <div class="row"><span class="big-num">${U.won(a.equity)}</span><b class="${U.cls(a.ret)}" style="font-size:16px">${pctv(a.ret, 2)}</b></div>
       <div class="mut">같은 날 지수 ETF를 샀다면 ${pctv(a.bench_ret, 2)} → ${Math.abs(lead) < 5e-5 ? "<b>같음</b>" : `<b class="${lead > 0 ? "good" : "bad"}">${lead > 0 ? "앞섬" : "뒤짐"} ${U.pct(Math.abs(lead) * 100, 2, false)}p</b>`} · 현금 ${Math.round(a.cash / Math.max(a.equity, 1) * 100)}%</div>
-      <div class="model"><span class="eyebrow">지금 따라가는 모델${S.model.changed_today ? " · 오늘 바뀜" : ""}</span><b>${U.esc(S.model.desc)}</b>
+      ${S.sleeves && S.aw ? `<div class="sleeves">
+        <div><span class="eyebrow">단기 갈아타기 몫</span><b>${U.won(S.sleeves.live.equity)}</b><span class="mut small">목표 ${Math.round(S.sleeves.live.share * 100)}%</span></div>
+        <div><span class="eyebrow">전천후 ETF 몫</span><b>${U.won(S.sleeves.aw.equity)}</b><span class="mut small">목표 ${Math.round(S.sleeves.aw.share * 100)}% · 지금 국면 ${U.esc(S.aw.regime.name)}</span></div></div>` : ""}
+      <div class="model"><span class="eyebrow">단기 몫이 따라가는 모델${S.model.changed_today ? " · 오늘 바뀜" : ""}</span><b>${U.esc(S.model.desc)}</b>
         <span class="mut">${U.esc(S.rule_name)} · 다음 재선택까지 ${S.next_reselect_days}거래일 · 최근 250일 샤프 ${sh(S.model.sh250)}</span></div>
       ${S.etf_source !== "etf" ? `<div class="warn">실제 ETF 가격 자료가 아직 없어 ETF 모델은 후보에서 잠시 뺐습니다 (자료가 들어오면 자동으로 포함).</div>` : ""}`;
 
@@ -133,7 +169,7 @@
     const ses = { open: "시가", close: "종가" };
     U.$("#orders").innerHTML = `<header><h2>내일 주문</h2><span class="mut small">${U.esc(p.made)} 저녁에 세운 계획</span></header>` +
       (p.orders.length ? p.orders.map((o) => `<div class="li ord"><span class="st ${o.side === "buy" ? "st-매수" : "st-매도"} tag">${o.side === "buy" ? "매수" : "매도"}</span>
-        <span class="main"><span class="t">${U.esc(o.name)}</span><span class="s">${ses[o.session]} 동시호가 · ${o.qty.toLocaleString("ko-KR")}주 · 어제 종가 ${U.won(o.est_price)}</span></span>
+        <span class="main"><span class="t">${U.esc(o.name)}</span><span class="s">${o.sleeve === "aw" ? "전천후 · " : "단기 · "}${ses[o.session]} 동시호가 · ${o.qty.toLocaleString("ko-KR")}주 · 어제 종가 ${U.won(o.est_price)}</span></span>
         <span class="r"><b>${U.won(o.qty * o.est_price)}</b><span class="mut">예상 금액</span></span></div>`).join("")
         : `<div class="empty">내일은 주문이 없습니다.<br>${a.positions.length ? "지금 보유를 그대로 둡니다." : "모델이 지금은 사지 않는 구간입니다 (아래 '왜 이 모델?' 참고)."}</div>`) +
       ((p.notes || []).length ? `<div class="note">${p.notes.map(U.esc).join("<br>")}</div>` : "");
@@ -141,7 +177,7 @@
     U.$("#holds").innerHTML = `<header><h2>보유</h2><span class="mut small">${a.positions.length}개</span></header>` +
       (a.positions.length ? a.positions.map((x) => {
         const r = U.ok(x.last) ? x.last / x.avg - 1 : null;
-        return `<div class="li"><span class="main"><span class="t">${U.esc(x.name)}</span><span class="s">${x.qty.toLocaleString("ko-KR")}주 · 평단 ${U.won(x.avg)} · ${U.esc(x.since || "")}부터</span></span>
+        return `<div class="li"><span class="main"><span class="t">${U.esc(x.name)}</span><span class="s">${x.sleeve === "aw" ? "전천후 · " : "단기 · "}${x.qty.toLocaleString("ko-KR")}주 · 평단 ${U.won(x.avg)} · ${U.esc(x.since || "")}부터</span></span>
           <span class="r"><b class="${U.cls(r)}">${pctv(r)}</b><span class="mut">${U.won(x.last)}</span></span></div>`;
       }).join("") : `<div class="empty">보유 종목 없음 (전액 현금)</div>`);
     // 왜
@@ -188,6 +224,57 @@
         <span class="s">${U.esc(c.id)} · ${U.esc(c.born)} 등록 · 과거 적합도 ${(+c.fit_born.fit).toFixed(2)} (샤프 ${c.fit_born.sharpe})</span></span>
         <span class="r"><b class="${U.cls(f.ret)}">${f.days ? pctv(f.ret, 2) : "—"}</b><span class="mut">${c.eligible ? "선택 가능" : `시험 ${f.days || 0}/${X.incubate_days}일`}</span></span></div>`;
     }).join("") : `<div class="empty">아직 등록된 진화 후보가 없습니다.</div>`;
+  }
+
+  // 전천후
+  const RG = ["강세", "횡보", "약세", "급락"];
+  const rgcell = (x) => x ? `<td class="${U.cls(x.ann)}">${pctv(x.ann, 0)}</td>` : "<td>—</td>";
+  if (S && S.aw) {
+    const w = S.aw, r = w.regime;
+    U.$("#aw-now").innerHTML = `<header><h2>지금 시장과 전천후 몫의 목표</h2><span class="mut small">${U.esc(w.data_date)} 저녁 판정</span></header>
+      <div class="regime"><span class="badge rg-${r.name}">${U.esc(r.name)}</span><div><b>${U.esc(r.desc)}</b>
+        <div class="mut small">1년 고점 대비 ${pctv(r.dd)} · 200일선 대비 ${pctv(r.trend200)} · 최근 60일 ${pctv(r.r60)} · 20일 변동성 연 ${pctv(r.vol20, 0)}</div></div></div>
+      <p class="note">국면은 화면에 보여 주고 설명하는 데 씁니다. 10년 자료에서 '국면마다 그때 1등 전략으로 갈아타기'는 KODEX 200 보유보다 못했기 때문에, 전천후 몫은 국면을 맞히려 하지 않고 성격이 다른 전략 카드 ${w.mix.length}장을 변동성 반비례로 섞어 들고 매달 첫 거래일에 비중을 다시 맞춥니다. 분기마다 단기 몫과 반반으로 다시 맞춥니다.</p>
+      <h3 style="margin:14px 0 6px;font-size:15px">내일 목표 비중 (전천후 몫 안에서)</h3>` +
+      w.target_named.map((x) => `<div class="li"><span class="main"><span class="t">${U.esc(x.name)}</span><span class="s">${U.esc(x.group)}</span>
+        <div class="bar"><i style="width:${Math.min(100, x.w * 100 / Math.max(...w.target_named.map((y) => y.w)) )}%"></i></div></span>
+        <span class="r"><b>${U.pct(x.w * 100, 1, false)}</b></span></div>`).join("") +
+      `<details class="fold"><summary><div class="sum"><b>어떤 카드가 얼마나</b><span>카드 ${w.mix.length}장 · 변동성 낮은 카드일수록 비중 큼</span></div></summary><div class="body">` +
+      w.mix.map((c) => `<div class="li"><span class="main"><span class="t">${U.esc(c.desc)}</span><span class="s">${U.esc(c.group)} · 지금 ${Object.entries(c.now).map(([k, v]) => `${U.esc(k)} ${Math.round(v * 100)}%`).join(", ") || "현금"}</span></span>
+        <span class="r"><b>${U.pct(c.w * 100, 1, false)}</b></span></div>`).join("") + `</div></details>`;
+  } else {
+    U.$("#aw-now").innerHTML = `<div class="empty">전천후 몫은 다음 저녁 실행부터 채워집니다.</div>`;
+  }
+  if (A) {
+    const V = A.variants, cb = A.combined, idx = A.bench["KODEX 200 보유"];
+    U.$("#aw-sub").textContent = `${A.meta_start} ~ ${A.period[1]} · ETF 12종 · ${A.generated} 계산`;
+    const best1 = ["uncond_250", "cond", "blend_250"].map((k) => V[k]).filter(Boolean);
+    const rp = V.mix_rp, row = cb && cb.rows ? Object.values(cb.rows)[0] : null;
+    const losers = (A.cards || []).filter((c) => RG.every((g) => !c.regime[g] || c.regime[g].ann > 0)).map((c) => c.desc.replace(" 계속 보유", ""));
+    const AV = [
+      ["n", "모든 국면에서 버는 전략 하나 — 없었음", `전략 카드 21장 중 네 국면 모두에서 플러스였던 카드는 ${losers.length ? losers.join("·") + " (거의 현금)" : "없음"}. 특히 '횡보'(200일선 위인데 60일 수익 마이너스)에는 거의 모든 카드가 잃었고, 그때 번 인버스·달러는 다른 국면에서 크게 잃었습니다.`],
+      ["n", "국면마다 그때 1등 전략으로 갈아타기 — 불리", best1.map((x) => `${x.name}: 샤프 ${sh(x.all.sharpe)}·연 ${pctv(x.all.cagr)}`).join(" / ") + ` (KODEX 200 보유 샤프 ${sh(idx.all.sharpe)}·연 ${pctv(idx.all.cagr)}). 국면이 자주 바뀌고 같은 국면 표본이 적어 '과거 그 국면 1등'이 다음에도 1등이 아니었습니다.`],
+      ["y", "성격이 다른 카드 섞기 — 채택", rp ? `카드 21장 변동성 반비례: 연 ${pctv(rp.all.cagr)} · 샤프 ${sh(rp.all.sharpe)} · 최대낙폭 ${pctv(rp.all.mdd, 0)} (P=${rp.p_vs_idx}). 국면별 ${RG.map((g) => rp.regime[g] ? `${g} ${pctv(rp.regime[g].ann, 0)}` : "").join(" · ")}. 수익은 낮지만 흔들림이 지수의 5분의 1.` : ""],
+      ["y", "단기 갈아타기 50 + 전천후 50 (분기마다 맞춤) — 이 계좌", row ? `${cb.from}~: 연 ${pctv(row.all.cagr)} · 샤프 ${sh(row.all.sharpe)} · 최대낙폭 ${pctv(row.all.mdd, 0)} · 손실 난 해 ${Object.values(row.years).filter((v) => v < 0).length}/${Object.keys(row.years).length} (KODEX 200: ${pctv(cb.rows["KODEX 200 보유"].all.cagr)} · ${sh(cb.rows["KODEX 200 보유"].all.sharpe)} · ${pctv(cb.rows["KODEX 200 보유"].all.mdd, 0)} · 손실 난 해 ${Object.values(cb.rows["KODEX 200 보유"].years).filter((v) => v < 0).length}). 지수 대비 P=${row.p_vs_idx} — 낫다는 확신은 아직 '거의' 수준.` : ""],
+      ["m", "그래도 '어떤 환경에서도 수익'은 약속할 수 없음", row ? `이 계좌 방식도 횡보 국면에선 연 ${pctv(row.regime["횡보"]?.ann, 0)}였습니다. 할 수 있는 것은 '어느 국면에서도 크게 잃지 않게' 만드는 것까지이고, 그 대가로 강세장 수익은 지수보다 낮습니다.` : ""],
+    ];
+    U.$("#aw-verdicts").innerHTML = AV.map(([c, t, d]) => `<div class="verdict"><span class="ic ${c}">${c === "y" ? "✓" : c === "n" ? "✕" : "!"}</span><div><b>${t}</b><p>${d}</p></div></div>`).join("");
+    if (cb && cb.rows) {
+      U.$("#cb-sub").textContent = `${cb.from} ~ ${cb.to} · 비용·세금 포함`;
+      const cols = ["var(--up)", "var(--fg)", "var(--purple)", "var(--faint)"];
+      const ser = Object.entries(cb.rows).map(([k, v], i) => ({ name: k, data: v.curve, color: cols[i % 4], width: i === 0 ? 2.2 : 1.4 }));
+      U.line(U.$("#cb-chart"), { labels: cb.curve_dates.map((d) => d.slice(0, 7)), h: 200, left: 36, yfmt: (v) => `${v.toFixed(1)}배`, series: ser, aria: "계좌 방식별 누적 성적" });
+      U.$("#cb-legend").innerHTML = ser.map((s) => `<span><i style="background:${s.color}"></i>${U.esc(s.name)}</span>`).join("");
+      U.$("#cb-table").innerHTML = `<tr><th>방식</th><th>연수익</th><th>샤프</th><th>최대낙폭</th><th>손실 해</th>${RG.map((g) => `<th>${g}</th>`).join("")}</tr>` +
+        Object.entries(cb.rows).map(([k, v]) => `<tr><td>${U.esc(k)}</td><td class="${U.cls(v.all.cagr)}">${pctv(v.all.cagr)}</td><td>${sh(v.all.sharpe)}</td><td>${pctv(v.all.mdd, 0)}</td><td>${Object.values(v.years).filter((y) => y < 0).length}/${Object.keys(v.years).length}</td>${RG.map((g) => rgcell(v.regime[g])).join("")}</tr>`).join("");
+    }
+    U.$("#cards").innerHTML = `<tr><th>카드</th><th>연수익</th><th>샤프</th><th>최대낙폭</th>${RG.map((g) => `<th>${g}</th>`).join("")}</tr>` +
+      (A.cards || []).map((c) => `<tr><td>${U.esc(c.desc)}</td><td class="${U.cls(c.all?.cagr)}">${pctv(c.all?.cagr)}</td><td>${sh(c.all?.sharpe)}</td><td>${pctv(c.all?.mdd, 0)}</td>${RG.map((g) => rgcell(c.regime[g])).join("")}</tr>`).join("");
+    U.$("#aw-variants").innerHTML = `<tr><th>방식</th><th>연수익</th><th>샤프</th><th>최대낙폭</th><th>2021~ 샤프</th><th>P</th>${RG.map((g) => `<th>${g}</th>`).join("")}</tr>` +
+      Object.values(V).map((v) => `<tr><td>${U.esc(v.name)}</td><td class="${U.cls(v.all.cagr)}">${pctv(v.all.cagr)}</td><td>${sh(v.all.sharpe)}</td><td>${pctv(v.all.mdd, 0)}</td><td>${sh(v.test?.sharpe)}</td><td>${v.p_vs_idx ?? "—"}</td>${RG.map((g) => rgcell(v.regime[g])).join("")}</tr>`).join("") +
+      `<tr><td>KODEX 200 보유 (기준)</td><td class="${U.cls(idx.all.cagr)}">${pctv(idx.all.cagr)}</td><td>${sh(idx.all.sharpe)}</td><td>${pctv(idx.all.mdd, 0)}</td><td>${sh(idx.test?.sharpe)}</td><td>—</td>${RG.map((g) => rgcell(idx.regime[g])).join("")}</tr>`;
+  } else {
+    U.$("#aw-verdicts").innerHTML = `<div class="empty">전천후 검증 결과가 아직 없습니다.</div>`;
   }
 
   // 검증 결과

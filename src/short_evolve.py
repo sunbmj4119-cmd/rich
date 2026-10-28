@@ -1,6 +1,7 @@
 """
 단기 모델 진화 — 쉬지 않고 새 단기 모델을 만들고, '태어난 뒤' 성적으로만 시험한다.
-learn.yml 이 2시간마다 `python src/short_evolve.py step` 을 돌린다.
+learn.yml 이 2시간마다(실제로는 GitHub 예약 사정으로 하루 4~6번) `python src/short_evolve.py step` 을 돌린다.
+LEARN_MINUTES(기본 15분)만큼 세대를 이어 간다.
 
 유전자 (short_lab 의 종목 모델과 같은 시뮬레이터)
   신호 가중치  : 13개 신호(short_panel.SIGNAL_INFO) 중 1~4개, 가중치 0.5·1·1.5·2
@@ -8,6 +9,8 @@ learn.yml 이 2시간마다 `python src/short_evolve.py step` 을 돌린다.
   — 1~3일 보유는 검증에서 비용 때문에 거의 모두 손실이라 진화 대상에서 뺐다 (전략서 3-6-5)
 
 적합도 = 해마다 샤프 평균 − 0.5 × 해마다 샤프 표준편차 − 0.02 × (신호 수 − 1)   (매수 50회 미만 탈락)
+         + 0.3 × min(0, 가장 나빴던 시장 국면의 샤프)   ← 국면 견고성 (2026-10-28 추가: '어느 시장에서도 크게 잃지 않게')
+         국면 = 강세·횡보·약세·급락 (allweather.py, KODEX 200 종가로 그날 저녁 판정)
 
 인구(data/short/evo_population.json)를 저장해 두고 매번 이어서 몇 세대씩 진화한다 → 세대가 계속 쌓인다.
 
@@ -95,17 +98,50 @@ def to_model(g, mid="X?", born=None):
     return m
 
 
+FIT_VER = 2              # 2: 국면 견고성 감점 추가 (2026-10-28) — 바뀌면 문턱(고정 후보 최고)을 다시 잰다
+REG_PEN = 0.3            # 네 국면 중 가장 나빴던 국면의 샤프가 마이너스면 그 0.3배를 뺀다
+
+
+def regimes(D):
+    """패널 날짜별 시장 국면 (allweather 정의, KODEX 200 종가 기준). 한 번만 계산해 D 에 붙여 둔다."""
+    if getattr(D, "_reg", None) is None:
+        try:
+            import allweather as AW
+            dates, Op, Cp = AW.load_prices()
+            F = AW.features(Cp, dates)
+            D._reg = pd.Series(F["reg"], index=dates).reindex(D.dates).ffill().fillna(-1).to_numpy().astype(int)
+        except Exception:                                 # ETF 자료가 없으면 감점 없이
+            D._reg = np.full(D.T, -1)
+    return D._reg
+
+
+def regime_sharpes(D, r):
+    reg = regimes(D)
+    prev = np.r_[-1, reg[:-1]]
+    out = {}
+    for k in range(4):
+        x = r[prev == k]
+        if len(x) >= 60 and x.std() > 0:
+            out[k] = float(x.mean() / x.std() * np.sqrt(252))
+    return out
+
+
 def fitness(D, g):
+    """해마다 샤프 평균 − 0.5 × 표준편차 − 신호 수 벌점 + 국면 견고성(가장 나쁜 국면 샤프가 마이너스면 감점)."""
     res = L.run_stock(D, to_model(g))
     E = res["E"]
-    r = pd.Series(L.rets(E), index=D.dates)
+    rr = L.rets(E)
+    r = pd.Series(rr, index=D.dates)
     yrs = [x for _, x in r.groupby(D.dates.year) if len(x) >= 60]
     sh = [x.mean() / x.std() * np.sqrt(252) if x.std() > 0 else 0.0 for x in yrs]
     st = L.stats(E, D.dates)
     if res["buys"] < 50 or not sh:
         return {"fit": -9.0, "sharpe": st["sharpe"] if st else None, "buys": res["buys"]}
-    fit = float(np.mean(sh) - 0.5 * np.std(sh) - 0.02 * (len(g["w"]) - 1))
-    return {"fit": round(fit, 4), "sharpe": st["sharpe"], "cagr": st["cagr"], "mdd": st["mdd"], "buys": int(res["buys"])}
+    rs = regime_sharpes(D, rr)
+    worst = min(rs.values()) if rs else 0.0
+    fit = float(np.mean(sh) - 0.5 * np.std(sh) - 0.02 * (len(g["w"]) - 1) + REG_PEN * min(0.0, worst))
+    return {"fit": round(fit, 4), "sharpe": st["sharpe"], "cagr": st["cagr"], "mdd": st["mdd"], "buys": int(res["buys"]),
+            "worst_regime": round(worst, 3)}
 
 
 def fixed_best(D):
@@ -154,9 +190,10 @@ def step(pop=POP, gens=GENS, seed=None):
     rng = np.random.default_rng(seed if seed is not None else int(time.time() * 1000) % (2 ** 32))
     st = load(POPF, {"generations": 0, "runs": 0, "pop": []})
     reg = load(EVOF, {"candidates": [], "retired": []})
-    if st.get("bench_date") != today:                         # 문턱은 자료가 바뀔 때만 다시 잰다
+    if st.get("bench_date") != today or st.get("fit_ver") != FIT_VER:   # 문턱은 자료나 적합도 정의가 바뀔 때만 다시 잰다
         st["bench_fit"], st["bench_id"] = fixed_best(D)
         st["bench_date"] = today
+        st["fit_ver"] = FIT_VER
     cache = {}
 
     def ev(g):
