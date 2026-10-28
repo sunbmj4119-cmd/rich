@@ -1,12 +1,19 @@
 {
- "time": "2026-10-27 15:04",
- "start": "2026-10-20",
- "end": "2026-10-27",
- "flows_rows": 312,
- "ohlcv_rows": 0,
- "flows_last": "2026-10-27",
- "ohlcv_last": "2026-10-23",
- "marketcap_last": "2026-10-23",
+ "time": "2026-10-28 12:31",
+ "start": "2026-10-21",
+ "end": "2026-10-28",
+ "flows_rows": 1266,
+ "ohlcv_rows": 633,
+ "prices_last": "2026-10-28",
+ "flows_last": "2026-10-28",
+ "ohlcv_last": "2026-10-28",
+ "marketcap_last": "2026-10-28",
+ "krx": null,
+ "filled": {
+  "수급": 1020,
+  "시세": 633
+ },
+ "note": "KRX 일부 실패 → 네이버로 대신 받음: 수급 1020건, 시세 633건 (거래대금·시총·수급 금액은 종가 기준 근사)",
  "ok": true,
  "problem": null,
  "fix": null

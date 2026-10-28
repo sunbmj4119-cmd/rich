@@ -1,10 +1,15 @@
 {
  "start": "2026-10-23",
- "cash": 10000000.0,
+ "cash": 5000000.0,
  "initial_cash": 10000000.0,
  "positions": {},
  "etf": {},
- "last_date": "2026-10-23",
+ "last_date": "2026-10-28",
  "model": "E:oo_rev",
- "selected_at": "2026-10-23"
+ "selected_at": "2026-10-23",
+ "aw": {
+  "cash": 5000000.0,
+  "etf": {},
+  "since": "2026-10-28"
+ }
 }
