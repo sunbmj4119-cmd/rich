@@ -1,8 +1,180 @@
 {
- "made": "2026-10-23",
+ "made": "2026-10-28",
  "model": "E:oo_rev",
  "model_desc": "전날 지수가 내렸으면 지수 ETF 보유, 오르면 다음 날 시가에 팔고 현금",
- "orders": [],
+ "orders": [
+  {
+   "session": "open",
+   "kind": "etf",
+   "sleeve": "aw",
+   "code": "069500",
+   "name": "KODEX 200",
+   "side": "buy",
+   "qty": 2,
+   "est_price": 95650.0
+  },
+  {
+   "session": "open",
+   "kind": "etf",
+   "sleeve": "aw",
+   "code": "114800",
+   "name": "KODEX 인버스",
+   "side": "buy",
+   "qty": 100,
+   "est_price": 1122.0
+  },
+  {
+   "session": "open",
+   "kind": "etf",
+   "sleeve": "aw",
+   "code": "229200",
+   "name": "KODEX 코스닥150",
+   "side": "buy",
+   "qty": 5,
+   "est_price": 12795.0
+  },
+  {
+   "session": "open",
+   "kind": "etf",
+   "sleeve": "aw",
+   "code": "153130",
+   "name": "KODEX 단기채권",
+   "side": "buy",
+   "qty": 2,
+   "est_price": 113305.0
+  },
+  {
+   "session": "open",
+   "kind": "etf",
+   "sleeve": "aw",
+   "code": "114260",
+   "name": "KODEX 국고채3년",
+   "side": "buy",
+   "qty": 27,
+   "est_price": 62345.0
+  },
+  {
+   "session": "open",
+   "kind": "etf",
+   "sleeve": "aw",
+   "code": "148070",
+   "name": "KOSEF 국고채10년",
+   "side": "buy",
+   "qty": 8,
+   "est_price": 107080.0
+  },
+  {
+   "session": "open",
+   "kind": "etf",
+   "sleeve": "aw",
+   "code": "261240",
+   "name": "KODEX 미국달러선물",
+   "side": "buy",
+   "qty": 46,
+   "est_price": 13875.0
+  },
+  {
+   "session": "open",
+   "kind": "etf",
+   "sleeve": "aw",
+   "code": "132030",
+   "name": "KODEX 골드선물(H)",
+   "side": "buy",
+   "qty": 10,
+   "est_price": 22510.0
+  },
+  {
+   "session": "open",
+   "kind": "etf",
+   "sleeve": "aw",
+   "code": "143850",
+   "name": "TIGER 미국S&P500선물(H)",
+   "side": "buy",
+   "qty": 6,
+   "est_price": 77430.0
+  },
+  {
+   "session": "open",
+   "kind": "etf",
+   "sleeve": "aw",
+   "code": "133690",
+   "name": "TIGER 미국나스닥100",
+   "side": "buy",
+   "qty": 1,
+   "est_price": 176360.0
+  }
+ ],
  "notes": [],
- "equity_est": 10000000
+ "equity_est": 5000000,
+ "aw": {
+  "regime": "급락",
+  "target": [
+   {
+    "code": "114260",
+    "name": "KODEX 국고채3년",
+    "group": "국내채권",
+    "w": 0.3545
+   },
+   {
+    "code": "148070",
+    "name": "KOSEF 국고채10년",
+    "group": "국내 장기채",
+    "w": 0.1788
+   },
+   {
+    "code": "261240",
+    "name": "KODEX 미국달러선물",
+    "group": "달러",
+    "w": 0.1326
+   },
+   {
+    "code": "143850",
+    "name": "TIGER 미국S&P500선물(H)",
+    "group": "미국주식",
+    "w": 0.1013
+   },
+   {
+    "code": "153130",
+    "name": "KODEX 단기채권",
+    "group": "현금성",
+    "w": 0.0523
+   },
+   {
+    "code": "069500",
+    "name": "KODEX 200",
+    "group": "국내주식",
+    "w": 0.0498
+   },
+   {
+    "code": "132030",
+    "name": "KODEX 골드선물(H)",
+    "group": "금",
+    "w": 0.0464
+   },
+   {
+    "code": "133690",
+    "name": "TIGER 미국나스닥100",
+    "group": "미국 기술주",
+    "w": 0.0411
+   },
+   {
+    "code": "114800",
+    "name": "KODEX 인버스",
+    "group": "국내주식 하락",
+    "w": 0.023
+   },
+   {
+    "code": "229200",
+    "name": "KODEX 코스닥150",
+    "group": "코스닥",
+    "w": 0.0137
+   },
+   {
+    "code": "122630",
+    "name": "KODEX 레버리지",
+    "group": "국내주식 2배",
+    "w": 0.0065
+   }
+  ]
+ }
 }
