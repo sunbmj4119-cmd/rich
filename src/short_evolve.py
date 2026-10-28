@@ -249,4 +249,12 @@ def step(pop=POP, gens=GENS, seed=None):
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "step"
     if cmd == "step":
+        # LEARN_MINUTES 만큼 세대를 이어서 (기본 0 = 6세대 한 번) — learn.yml 이 정한다
+        budget = float(os.environ.get("LEARN_MINUTES", "0") or 0) * 60
+        t0 = time.time()
         step()
+        spent = time.time() - t0
+        if budget - spent > spent * 1.5:
+            g = int(min(200, GENS * (budget - spent) / max(spent, 1) * 0.8))
+            print(f"남은 시간 {(budget - spent) / 60:.0f}분 → {g}세대 더")
+            step(gens=g)
