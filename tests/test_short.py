@@ -198,6 +198,88 @@ def test_explain_has_plain_answers():
     assert any(r["weight"] == "0%" for r in info["ref"]) and info["direct"][0]["weight"] == "50%"
 
 
+def test_aw_tax_and_costs():
+    """기타 ETF(달러) 이익 매도 → 이익의 15.4% 세금, 국내 주식형은 세금 없음. 비용은 호가 반 칸."""
+    import allweather as AW
+    T = 3
+    Op = np.full((T, AW.A), np.nan)
+    Cp = np.full((T, AW.A), np.nan)
+    j, k = AW.IX["USD"], AW.IX["IDX"]
+    for col in (j, k):
+        Op[:, col] = [10000.0, 10000.0, 12000.0]
+        Cp[:, col] = [10000.0, 10000.0, 12000.0]
+    for col, taxed in ((j, True), (k, False)):
+        W = np.full((T, AW.A), np.nan)
+        W[1] = 0.0
+        W[1, col] = 1.0
+        W[2] = 0.0
+        res = AW.simulate(Op, Cp, W, band=0.0)
+        cb, cs = AW.costs(np.array([10000.0]))[0][0], AW.costs(np.array([12000.0]))[1][0]
+        units = 1 / (1 + cb) / 10000
+        gain = units * 12000 * (1 - cs) - 1.0
+        want = 1.0 + gain - (0.154 * gain if taxed else 0)
+        assert abs(res["E"][-1] - want) < 1e-9, (col, res["E"][-1], want)
+
+
+def test_aw_targets_use_only_past():
+    """t행 목표 비중은 t-1일까지의 가격으로만: t일 이후 가격을 바꿔도 t행까지 같다."""
+    import allweather as AW
+    dates, Op, Cp = AW.load_prices()
+    F = AW.features(Cp, dates)
+    t0 = len(dates) - 300
+    Cp2 = Cp.copy()
+    Cp2[t0:] *= 0.5
+    F2 = AW.features(Cp2, dates)
+    for rule in ("T:ls", "T:def", "DM:1", "RP", "VT", "CR:lev", "BR:usd"):
+        a, b = AW.targets(F, Cp, rule), AW.targets(F2, Cp2, rule)
+        assert np.array_equal(np.nan_to_num(a[:t0 + 1], nan=-1), np.nan_to_num(b[:t0 + 1], nan=-1)), rule
+
+
+def test_aw_live_mix_target_is_full_weight():
+    import allweather as AW
+    m = AW.live_mix()
+    assert abs(m["target"].sum() - 1) < 0.02 and (m["target"] >= -1e-12).all()
+    assert m["regime"]["name"] in AW.REGIMES and len(m["mix"]) >= 10
+
+
+def test_regime_labels():
+    import allweather as AW
+    c = np.r_[np.linspace(100, 200, 300), np.linspace(200, 150, 40)]
+    Cp = np.full((len(c), AW.A), np.nan)
+    Cp[:, AW.IX["IDX"]] = c
+    reg = AW.features(Cp)["reg"]
+    assert reg[299] == 0 and reg[-1] == 3                    # 꾸준히 오르면 강세, 고점 대비 -25% 면 급락
+
+
+def test_quarter_turn_and_aw_sleeve_settle():
+    import allweather as AW
+    assert ST.quarter_turn(pd.Timestamp("2026-12-31")) and ST.quarter_turn(pd.Timestamp("2026-09-30"))
+    assert not ST.quarter_turn(pd.Timestamp("2026-10-28"))
+    D = fake_D()
+    Op = np.full((2, AW.A), np.nan)
+    Op[:, :2] = D.Op
+    Op[:, AW.IX["GOLD"]] = [20000.0, 21000.0]
+    D.Op, D.Cp = Op, Op.copy()
+    acc = {"cash": 100.0, "positions": {}, "etf": {}, "aw": {"cash": 0.0, "etf": {"132030": {"qty": 10, "avg": 20000.0, "since": "x"}}}}
+    plan = {"made": "2026-10-23", "orders": [{"session": "open", "kind": "etf", "sleeve": "aw", "code": "132030", "side": "sell", "qty": 10}],
+            "transfer": {"amount": 50000}}
+    fills, _ = ST.settle(D, acc, plan, {})
+    cs = AW.costs(np.array([21000.0]))[1][0]
+    proceeds = 210000 * (1 - cs)
+    tax = 0.154 * (proceeds - 200000)
+    assert abs(acc["aw"]["cash"] + acc["cash"] - 100 - (proceeds - tax)) < 1e-6
+    assert abs(acc["cash"] - 100 - 50000) < 1e-6 and "132030" not in acc["aw"]["etf"] and acc["positions"] == {}
+    assert fills[0]["손익"] == round(proceeds - 200000 - tax)
+
+
+def test_evolve_fitness_penalizes_bad_regime():
+    import short_evolve as SE
+    D = data()
+    g = {"w": {k: float(w) for k, w in L.SELECTORS["REVC"]}, "K": 5, "hold": "H10", "gate": "none"}
+    f = SE.fitness(D, g)
+    assert "worst_regime" in f and (f["worst_regime"] >= 0 or f["fit"] < f["sharpe"])
+
+
 if __name__ == "__main__":
     for k, fn in list(globals().items()):
         if k.startswith("test_"):

@@ -6,7 +6,7 @@
 
 - 홈: `docs/index.html` (GitHub Pages → 휴대폰으로 확인) — 자동매매가 할 일 · 시장 · 두 계좌 · 학습·진화 현황
 - **30일 자동매매: `docs/autotrade.html`** (매일 모든 종목을 매수/유지/매도/관망으로 확정 → 모의계좌 또는 증권사 API로 주문)
-- **단기 모의투자: `docs/short.html`** (매일 후보 모델 전부 재시뮬레이션 → 모델 선택 → 다음날 시가 주문)
+- **모의투자 (단기 50 + 전천후 50): `docs/short.html`** (단기 몫: 매일 후보 모델 전부 재시뮬레이션 → 주 1회 모델 선택 · 전천후 몫: ETF 12종을 전략 카드 20장 변동성 반비례로 섞어 들기 · 분기마다 반반 · 국면 표시)
 - **학습·진화: `docs/report.html#evo` · `docs/short.html`** (2시간마다 이어서 진화 · 등록 뒤 성적으로만 승격)
 - **쉬운 해설: `docs/explain.html`** (하단 '해설' 탭) — 오늘 무엇을 어떤 기준으로 걸렀나(100종목→매수 거름망) · 종목마다 왜 샀나/기다렸나/팔았나와 그 숫자 ·
   순위 점수의 구성 · 규칙집 · 같은 규칙으로 과거에 사고판 예시 · 단기 모델의 오늘 조건 점검 · 무엇을 얼마나 참고하나(직접/안전장치/참고만 0%) · 용어.
@@ -123,8 +123,8 @@
 ## 🗓 하루 흐름 (모두 자동)
 
 1. **17:00** `daily.yml` — 데이터 갱신 → 채점 → 30일 자동매매 판단·모의 체결 → 단기 모의투자 체결·모델 선택·내일 계획 → 커밋.
-2. **2시간마다** `learn.yml` — 30일 모델·단기 모델을 저장된 인구에서 이어서 진화 → 도전자/진화 후보 등록 → 등록 뒤 성적으로 승격.
-3. **매일 02:37** `evolve.yml` — 중첩 워크포워드로 '진화가 정말 도움이 되나' 재검증 + 단기매매 검증 전체.
+2. **2시간마다** `learn.yml` (GitHub 사정으로 실제 하루 4~6번) — 30일 모델·단기 모델을 저장된 인구에서 이어서 모델마다 15분씩 진화 → 도전자/진화 후보 등록 → 등록 뒤 성적으로 승격. 평일 19시 넘어 그날 daily 가 없으면 직접 실행.
+3. **매일 02:37** `evolve.yml` — 중첩 워크포워드로 '진화가 정말 도움이 되나' 재검증 + 단기매매 검증 전체 + 전천후 검증(국면별 성적).
 4. **다음날 08:40** `autotrade.yml` — 실계좌 설정 시 증권사로 주문 (지금은 모의라 할 일 없음).
 5. 사람이 할 일: 없음. 저녁에 홈 화면으로 확인만 하면 됩니다.
 
@@ -135,7 +135,7 @@
 | 단계 | 스크립트 | 입력 → 출력 | 역할 |
 |---|---|---|---|
 | 1 | `src/update_prices.py` | KRX → `data/prices.csv` | 100종목 종가 append |
-| 2 | `src/collect_flows.py` | KRX → `flows/ohlcv/marketcap/shorts.csv` | 수급·시세·공매도(최근 7일) |
+| 2 | `src/collect_flows.py` | KRX (막히면 빈칸만 네이버) → `flows/ohlcv/marketcap/shorts.csv` | 수급·시세·공매도(최근 7일, 빠진 기간 자동 메움) · 결과는 `data/collect_status.json` |
 | 3 | `src/score.py` | prices+financials+flows → `data/scores.csv` | 팩터 채점 → 종합점수 |
 | 4-2 | `src/regime.py` | prices+scores → `data/regime.json` | 시장국면 판정 · 국면별 전략성과 · 전이확률 · 종목별 베타 |
 | 4-3 | `src/refclass.py` | prices+scores → `data/refclass.json` | 기준집단(순위밴드×국면) 승률·기대·손절률 |
@@ -143,13 +143,13 @@
 | — | `src/strategy_lab.py` | scores+prices → `data/strategy_lab.json` | 손절·익절·가중치·종목수를 train/test로 검증 (수동 실행) |
 | 4-5 | `src/news.py` | Google News RSS + DART 공시 → `data/news.csv` | 자동매매 계좌 보유 종목 + 점수 상위 종목의 뉴스·공시 (강제 매도 규칙이 읽음) |
 | 5 | `src/build_data.py` | 위 전부 → `docs/data.json` | 종목 순위·BuyFit·유사사례·시나리오·확률·판단등급 (홈·종목 화면이 읽음) |
-| 1-2 | `src/collect_etf.py` | KRX → `data/etf_ohlcv.csv` | KODEX 200·인버스 일봉 (단기 모의투자용, 처음엔 2018년부터 저절로) |
+| 1-2 | `src/collect_etf.py` | 네이버(실패 시 KRX) → `data/etf_ohlcv.csv` | ETF 12종 일봉 (지수·레버리지·인버스·코스닥·단기채·국고채·달러·금·미국) — 처음 보는 자산은 전체 기간 |
 | 7 | `src/autotrader.py --phase decide` | 위 전부 + `config/autotrade.yaml` → `data/autotrade/` + `docs/autotrade.json` | 4상태 판단 · 주문계획 · 모의체결 |
 | 9 | `src/explain.py` | autotrade.json · data.json · backtest.json · short.json → `docs/explain.json` | **자동매매 해설**: 판단·규칙·참고 비중을 사람이 읽는 문장으로 (`docs/explain.html`) |
-| 8 | `src/short_trader.py` | 위 데이터 → `data/short/` + `docs/short.json` | **단기 모의투자**: 어제 계획 체결 → 후보 모델 전부 재시뮬레이션 → 주 1회 모델 선택 → 내일 계획 (`docs/short.html`) |
+| 8 | `src/short_trader.py` | 위 데이터 → `data/short/` + `docs/short.json` | **모의투자 (단기 50 + 전천후 50)**: 어제 계획 체결 → 후보 모델 재시뮬레이션 · 주 1회 모델 선택 → 국면 판정 · 전천후 목표 → 내일 계획 (`docs/short.html`) |
 | 다음날 08:40 | `src/autotrader.py --phase execute` (`autotrade.yml`) | `plan.json` → 증권사 | 한국투자증권 주문 (kis_* 설정 시) |
 | 2시간마다 | `src/evolve.py step` · `src/short_evolve.py step` (`learn.yml`) | 저장된 인구 → `data/evolve/` · `data/short/evolved.json` | **쉬지 않는 진화**: 이어서 진화 → 도전자·진화 후보 등록 → 등록 뒤 성적으로 승격 (전략서 3-6-6) |
-| 매일 밤 | `src/evolve.py all` · `src/short_lab.py` (`evolve.yml`) | 위 데이터 → `data/evolve/meta.json` · `data/short/lab.json` | 진화 자체의 재검증 · 단기매매 검증 다시 재기 |
+| 매일 밤 | `src/evolve.py all` · `src/short_lab.py` · `src/allweather_lab.py` (`evolve.yml`) | 위 데이터 → `data/evolve/meta.json` · `data/short/lab.json` · `data/short/allweather.json` | 진화 자체의 재검증 · 단기매매 검증 · 전천후(국면 스위칭 vs 섞기) 검증 다시 재기 (전략서 3-6-7) |
 
 `src/thesis.py`는 실행 스크립트가 아니라 `build_data.py`가 import하는 **판단 엔진**입니다
 (상승 시나리오 · 반대 논리 · 확률 · 시장 시나리오 · 등급).

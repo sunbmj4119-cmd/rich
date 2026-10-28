@@ -155,7 +155,8 @@ def index_legs(P):
 
 
 def etf_prices(P):
-    """(시가, 종가) 두 행렬 (T×2): 0열 = 지수 ETF, 1열 = 인버스 ETF. source 는 'etf' 또는 'proxy'."""
+    """(시가, 종가) 두 행렬 (T×A): 0열 = 지수 ETF, 1열 = 인버스 ETF, 2열부터 = 전천후 자산(allweather.CODES 순서).
+    0·1열은 실제 값이 빠진 날을 지수 근사로 채운다. 나머지는 상장 전·자료 없는 날 NaN. source 는 'etf' 또는 'proxy'."""
     dates = P["dates"]
     co, oc, cc = index_legs(P)
     pc = np.cumprod(1 + cc)
@@ -192,7 +193,21 @@ def etf_prices(P):
             Cp[:, j] = np.where(have, c_, Cp[:, j] * np.nanmedian(r_c / Cp[:, j]))
         if ok:
             src = "etf"
-    return Op, Cp, {"co": co, "oc": oc, "cc": cc, "source": src}
+    import allweather as AW
+    xo = np.full((len(dates), AW.A), np.nan)
+    xc = np.full((len(dates), AW.A), np.nan)
+    xo[:, :2], xc[:, :2] = Op, Cp
+    if os.path.exists(ETF):
+        for j, c in enumerate(AW.CODES[2:], start=2):
+            x = e[e["종목코드"] == c].drop_duplicates("날짜", keep="last").set_index("날짜").reindex(dates)
+            if x["종가"].notna().sum() == 0:
+                continue
+            o_, c_ = x["시가"].to_numpy(float, copy=True), x["종가"].to_numpy(float, copy=True)
+            o_[~(o_ > 0)] = np.nan
+            c_[~(c_ > 0)] = np.nan
+            o_ = np.where(np.isnan(o_) & ~np.isnan(c_), c_, o_)
+            xo[:, j], xc[:, j] = AW._guard(o_, c_)
+    return xo, xc, {"co": co, "oc": oc, "cc": cc, "source": src}
 
 
 # ══════════════════════════════════════════════════════════════

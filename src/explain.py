@@ -358,7 +358,8 @@ def short_section(cfg, S, SX):
             out["checks"].append({"label": name, "value": val, "ok": ok, "plain": f"{dt[T].date()} 값 {val} → 규칙: {rule_txt} → {act}"})
         log = []
         L.run_etf(D, m, log=log)
-        nm = ["KODEX 200", "KODEX 인버스"]
+        import allweather as AW
+        nm = [AW.NAME[c] for c in AW.CODES]
         pend = {}
         for e in log:
             if e["side"] == "buy":
@@ -422,13 +423,30 @@ def short_section(cfg, S, SX):
                                                  f"{dt[e['t']].date()} 아침 팔았습니다 — {why_s}. {e['t'] - b['t']}거래일 {r * 100:+.2f}% (비용 전)."})
         out["examples"] = out["examples"][-10:][::-1]
     for o in plan.get("orders", []):
-        out["orders"].append({**o, "plain": f"{'아침 시가' if o['session'] == 'open' else '장 마감'}에 {o['name']} {o['qty']:,}주 "
+        who = "[전천후] " if o.get("sleeve") == "aw" else "[단기] "
+        out["orders"].append({**o, "plain": who + f"{'아침 시가' if o['session'] == 'open' else '장 마감'}에 {o['name']} {o['qty']:,}주 "
                                             f"{'매수' if o['side'] == 'buy' else '매도'} (어제 종가 {o['est_price']:,.0f}원 기준 약 {o['qty'] * o['est_price']:,.0f}원)"})
     out["notes"] = plan.get("notes", [])
     acc = S.get("account") or {}
     for p in acc.get("positions", []):
         r = (p["last"] / p["avg"] - 1) if p.get("last") and p.get("avg") else None
-        out["holdings"].append({**p, "ret": r, "plain": f"{p['since']}에 {p['avg']:,.0f}원에 샀고 지금 {pct(r)}. 위 모델 규칙대로 팔 때가 되면 아침 시가에 팝니다."})
+        if p.get("sleeve") == "aw":
+            txt = f"[전천후] {p['since']}에 {p['avg']:,.0f}원에 샀고 지금 {pct(r)}. 목표 비중과 5%p 넘게 벌어지거나 카드가 바뀔 때만 사고팝니다."
+        else:
+            txt = f"[단기] {p['since']}에 {p['avg']:,.0f}원에 샀고 지금 {pct(r)}. 위 모델 규칙대로 팔 때가 되면 아침 시가에 팝니다."
+        out["holdings"].append({**p, "ret": r, "plain": txt})
+    aw = S.get("aw")
+    if aw:
+        rg = aw["regime"]
+        sl = S.get("sleeves") or {}
+        out["aw"] = {"regime": rg, "share": (sl.get("aw") or {}).get("share"), "equity": (sl.get("aw") or {}).get("equity"),
+                     "live_equity": (sl.get("live") or {}).get("equity"),
+                     "plain": (f"계좌를 둘로 나눠 굴립니다. 절반은 위의 단기 갈아타기 모델, 절반은 '전천후 ETF 혼합'입니다. "
+                               f"전천후 몫은 성격이 다른 전략 카드 {len(aw['mix'])}장(지수·미국주식·금·달러·채권 보유, 추세·모멘텀·위험균형·급락반등·하락대비)을 "
+                               f"변동성 반비례로 섞어 매달 첫 거래일에 비중을 다시 맞춥니다. 분기마다 두 몫을 다시 반반으로 맞춥니다."),
+                     "regime_plain": (f"지금 시장은 '{rg['name']}'입니다 — {rg['desc']} (1년 고점 대비 {pct(rg['dd'])}, 200일선 대비 {pct(rg.get('trend200'))}, "
+                                      f"최근 60일 {pct(rg.get('r60'))}). 국면은 설명용입니다: 10년 자료에서 국면마다 1등 전략으로 갈아타는 방식은 지수 보유보다 못했습니다."),
+                     "target": aw["target_named"][:8], "cards": aw["mix"][:6], "backtest": aw.get("backtest")}
     if plan.get("orders"):
         head = f"내일 {len(plan['orders'])}건 주문합니다."
     elif acc.get("positions"):

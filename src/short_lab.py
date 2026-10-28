@@ -7,8 +7,8 @@
 비용 (2026년 기준, 한쪽씩)
   수수료 0.015% + 유관기관 제비용 ≈0.0036% → 0.0186%
   증권거래세+농특세 0.20% (코스피, 매도 때만) — 국내 주식형 ETF 는 면제
-  미끄러짐: 주식 0.05% · ETF 0.01% (동시호가 체결이라 실제로는 더 작을 수 있음 — 보수적으로)
-  → 주식 왕복 ≈0.34%, ETF 왕복 ≈0.06%.  stress=3 이면 미끄러짐 3배.
+  미끄러짐: 주식 0.05% · ETF 는 호가 반 칸 + 0.005% (allweather.costs — 2,000원 미만 1원·이상 5원 호가, 2026-10-28부터)
+  → 주식 왕복 ≈0.34%, KODEX 200 왕복 ≈0.06%, KODEX 인버스(1천원대) 왕복 ≈0.13%.  stress=3 이면 미끄러짐 3배.
 유니버스: 날짜마다 시가총액 상위 100 (short_panel). 지수 ETF 는 실제 가격이 없으면 시총가중 지수로 근사.
 
 명령
@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import allweather as AW  # noqa: E402
 import short_panel as SP  # noqa: E402
 
 OUT_DIR = "data/short"
@@ -274,54 +275,18 @@ def etf_targets(D, rule, pad=0):
     return wo, wc
 
 
+def pad_assets(w2):
+    """2자산(지수·인버스) 목표 → 전체 자산 목표 (나머지 0, 거래 안 하는 날은 NaN 그대로)."""
+    W = np.full((w2.shape[0], AW.A), np.nan)
+    W[:, :2] = w2
+    W[~np.isnan(w2[:, 0]), 2:] = 0.0
+    return W
+
+
 def run_etf(D, m, stress=1.0, record=False, t0=1, band=0.05, log=None):
+    """ETF 모델 — 전천후 모델과 같은 시뮬레이터 (자산별 호가 비용·이익 과세)."""
     wo, wc = etf_targets(D, m["rule"])
-    cb, cs = costs("etf", stress)
-    Op, Cp = D.Op, D.Cp
-    units = np.zeros(2)
-    cash = 1.0
-    E = np.ones(D.T)
-    traded = 0.0
-    nb = 0
-    hold = [None] * D.T if record else None
-
-    def reb(px, tgt, t=None, session=None):
-        nonlocal cash, traded, nb
-        eq = cash + (units * px).sum()
-        cur = units * px / eq
-        for j in range(2):
-            d = tgt[j] - cur[j]
-            if abs(d) <= band and tgt[j] > 0 and cur[j] > 0:
-                continue
-            if d < -1e-9:
-                v = -d * eq
-                units[j] -= v / px[j]
-                cash += v * (1 - cs)
-                traded += v
-                if log is not None:
-                    log.append({"t": t, "j": j, "side": "sell", "px": float(px[j]), "session": session})
-        eq = cash + (units * px).sum()
-        cur = units * px / eq
-        for j in range(2):
-            d = tgt[j] - cur[j]
-            if d > 1e-9 and not (abs(d) <= band and cur[j] > 0):
-                v = min(d * eq, cash / (1 + cb))
-                units[j] += v / px[j]
-                cash -= v * (1 + cb)
-                traded += v
-                nb += 1
-                if log is not None:
-                    log.append({"t": t, "j": j, "side": "buy", "px": float(px[j]), "session": session})
-
-    for t in range(t0, D.T):
-        if not np.isnan(wo[t, 0]):
-            reb(Op[t], wo[t], t, "open")
-        if not np.isnan(wc[t, 0]):
-            reb(Cp[t], wc[t], t, "close")
-        E[t] = cash + (units * Cp[t]).sum()
-        if record:
-            hold[t] = units.copy()
-    return {"E": E, "turnover": traded, "buys": nb, "hold": hold, "units": units, "cash": cash}
+    return AW.simulate(D.Op, D.Cp, pad_assets(wo), pad_assets(wc), t0=t0, band=band, stress=stress, record=record, log=log)
 
 
 def run(D, m, **kw):
@@ -415,8 +380,8 @@ def follow(D, models, choice, records, stress=1.0, t0=1):
     종목: 모델이 t+1일 시가 거래 뒤 보유한 종목을 같은 비중으로 / ETF: 모델의 시가·종가 목표 비중."""
     T, N = D.T, D.N
     cbS, csS = costs("stock", stress)
-    cbE, csE = costs("etf", stress)
-    O, Cf, Op, Cp = D.O, D.Cf, D.Op, D.Cp
+    O, Cf = D.O, D.Cf
+    Op, Cp = D.Op[:, :2], AW.ffill(D.Cp[:, :2])
     us = np.zeros(N)
     ue = np.zeros(2)
     cash = 1.0
@@ -439,6 +404,7 @@ def follow(D, models, choice, records, stress=1.0, t0=1):
         w = 1.0 / len(chs)
         po = O[t]
         trad = ~np.isnan(po)
+        cbE, csE = AW.costs(Op[t], stress)
         eq = cash + (us * np.where(trad, po, Cf[t - 1])).sum() + (ue * Op[t]).sum()
         # 시가 목표
         ts = np.zeros(N)
@@ -459,6 +425,8 @@ def follow(D, models, choice, records, stress=1.0, t0=1):
                     etf_open_set = True
                 tc += w * (wc[t] if not np.isnan(wc[t, 0]) else (wo[t] if not np.isnan(wo[t, 0]) else 0))
                 etf_close_set |= not np.isnan(wc[t, 0])
+        if not any(models[c]["kind"] == "etf" for c in chs) and ue.any():
+            etf_open_set = True                      # 종목 모델로 갈아탔으면 남은 ETF 는 시가에 판다 (모의투자와 같게)
         # 종목: 목표에 없는 것 매도, 목표에 새로 들어온 것 매수 (겹치는 종목은 그대로 — 실제 매매와 같게)
         sell = (us > 0) & trad & (ts == 0)
         if sell.any():
@@ -472,7 +440,7 @@ def follow(D, models, choice, records, stress=1.0, t0=1):
                 if d < -0.05 or (te[j] == 0 and ue[j] > 0):
                     v = min(-d * eq, ue[j] * Op[t, j])
                     ue[j] -= v / Op[t, j]
-                    cash += v * (1 - csE)
+                    cash += v * (1 - csE[j])
         buy = (ts > 0) & (us == 0) & trad
         if buy.any():
             need = (ts[buy] * eq).sum()
@@ -484,26 +452,27 @@ def follow(D, models, choice, records, stress=1.0, t0=1):
             for j in range(2):
                 d = te[j] - ue[j] * Op[t, j] / max(eq, 1e-12)
                 if d > 0.05 or (te[j] > 0 and ue[j] == 0 and d > 1e-9):
-                    v = min(d * eq, cash / (1 + cbE))
+                    v = min(d * eq, cash / (1 + cbE[j]))
                     if v > 0:
                         ue[j] += v / Op[t, j]
-                        cash -= v * (1 + cbE)
+                        cash -= v * (1 + cbE[j])
         # 종가 거래 (ETF 밤사이 모델)
         if etf_close_set:
+            cbE, csE = AW.costs(Cp[t], stress)
             eqc = cash + (us * Cf[t]).sum() + (ue * Cp[t]).sum()
             for j in range(2):
                 d = tc[j] - ue[j] * Cp[t, j] / eqc
                 if d < -0.05 or (tc[j] == 0 and ue[j] > 0):
                     v = min(-d * eqc, ue[j] * Cp[t, j])
                     ue[j] -= v / Cp[t, j]
-                    cash += v * (1 - csE)
+                    cash += v * (1 - csE[j])
             for j in range(2):
                 d = tc[j] - ue[j] * Cp[t, j] / eqc
                 if d > 0.05 or (tc[j] > 0 and ue[j] == 0 and d > 1e-9):
-                    v = min(d * eqc, cash / (1 + cbE))
+                    v = min(d * eqc, cash / (1 + cbE[j]))
                     if v > 0:
                         ue[j] += v / Cp[t, j]
-                        cash -= v * (1 + cbE)
+                        cash -= v * (1 + cbE[j])
         E[t] = cash + (us * Cf[t]).sum() + (ue * Cp[t]).sum()
     return E, switches
 
