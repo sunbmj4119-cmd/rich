@@ -37,11 +37,17 @@ MCAP = "data/marketcap.csv"
 STATUS = "data/collect_status.json"     # 마지막 수집 결과 — 자동매매·홈·해설이 '왜 자료가 낡았나'를 보여 줄 때 읽는다
 GAP_MAX_DAYS = 120                      # 매일 모드: 빠진 기간이 있으면 이만큼까지 거슬러 메운다
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+KRX_ERR = None
 try:
-    from pykrx import stock
+    from pykrx import stock      # KRX_ID 가 있으면 가져오는 순간 로그인 — KRX 가 IP 를 막으면 여기서 예외가 난다
 except ImportError:
     print("pykrx 필요: pip install pykrx")
     sys.exit(1)
+except Exception as _e:          # 로그인 응답이 JSON 이 아님(차단 페이지) 등 → 네이버 대체 경로만으로 진행
+    stock = None
+    KRX_ERR = f"{type(_e).__name__}: {str(_e)[:120]}"
+    print(f"⚠ KRX 접속 실패 ({KRX_ERR}) — 네이버 대체 경로로 받습니다")
 
 
 def get_universe():
@@ -52,9 +58,77 @@ def get_universe():
 
 
 def trading_dates(start, end):
-    """KRX 영업일 목록"""
-    return stock.get_previous_business_days(fromdate=start.replace("-", ""),
-                                            todate=end.replace("-", ""))
+    """영업일 목록 — KRX 가 안 되면 prices.csv 에 있는 날짜(네이버로 갱신됨), 그것도 없으면 평일."""
+    out = []
+    if stock is not None:
+        try:
+            out = list(stock.get_previous_business_days(fromdate=start.replace("-", ""), todate=end.replace("-", "")))
+        except Exception as ex:
+            print(f"    ⚠ KRX 영업일 조회 실패: {type(ex).__name__} {str(ex)[:80]}")
+    if not out:
+        d = pd.to_datetime(pd.read_csv(PRICES, usecols=["날짜"])["날짜"].unique())
+        out = sorted(x for x in d if pd.Timestamp(start) <= x <= pd.Timestamp(end))
+        if not out:
+            out = list(pd.bdate_range(start, end))
+        print(f"    영업일은 prices.csv/평일 기준으로 셈 ({len(out)}일)")
+    return out
+
+
+# ─────────────────────────────────────────────────────────
+# 네이버 대체 경로 — KRX 가 막혀 빠진 (날짜, 종목)만 채운다
+# ─────────────────────────────────────────────────────────
+def naver_fill_ohlcv(codes, dates, have):
+    """OHLCV·시총 빈칸 채우기. 거래대금 = 종가×거래량(근사), 시총 = 종가 × 마지막으로 알려진 상장주식수."""
+    import naver
+    want = {pd.Timestamp(d).strftime("%Y-%m-%d") for d in dates}
+    shares = {}
+    if os.path.exists(MCAP):
+        m = pd.read_csv(MCAP, dtype={"종목코드": str}, usecols=["날짜", "종목코드", "상장주식수"])
+        m["종목코드"] = m["종목코드"].str.zfill(6)
+        shares = m.sort_values("날짜").groupby("종목코드")["상장주식수"].last().to_dict()
+    n = max(10, len(want) + 10)
+    o_rows, c_rows, fails = [], [], []
+    for code in codes:
+        miss = {d for d in want if (d, code) not in have}
+        if not miss:
+            continue
+        try:
+            df = naver.daily(code, n)
+        except Exception:
+            fails.append(code)
+            continue
+        for _, r in df[df["날짜"].isin(miss)].iterrows():
+            if not r["종가"] or r["종가"] <= 0:
+                continue
+            o_rows.append({"날짜": r["날짜"], "종목코드": code, "시가": r["시가"], "고가": r["고가"], "저가": r["저가"],
+                           "종가": r["종가"], "거래량": r["거래량"], "거래대금": round(r["종가"] * r["거래량"])})
+            sh = shares.get(code)
+            if sh and sh > 0:
+                c_rows.append({"날짜": r["날짜"], "종목코드": code, "시가총액": round(r["종가"] * sh), "상장주식수": sh})
+        time.sleep(0.05)
+    return pd.DataFrame(o_rows), pd.DataFrame(c_rows), fails
+
+
+def naver_fill_flows(codes, start, end):
+    """외국인·기관 순매수 금액 근사 = 순매매 수량 × 종가. 개인 = -(외국인+기관) (기타법인 무시 — 근사)."""
+    import naver
+    pages = max(1, int(np.ceil(len(pd.bdate_range(start, end)) / 20)))
+    rows, fails = [], []
+    for code in codes:
+        try:
+            df = naver.investor(code, pages)
+        except Exception:
+            fails.append(code)
+            continue
+        df = df[(df["날짜"] >= start) & (df["날짜"] <= end)]
+        if df.empty:
+            fails.append(code)
+            continue
+        for _, r in df.iterrows():
+            f, i = r["외국인"] * r["종가"], r["기관"] * r["종가"]
+            rows.append({"날짜": r["날짜"], "종목코드": code, "외국인순매수": round(f), "기관순매수": round(i),
+                         "개인순매수": round(-(f + i))})
+    return pd.DataFrame(rows), fails
 
 
 def _pick(df, cands):
@@ -112,8 +186,15 @@ def collect_per_ticker(codes, start, end):
     flow_fails, short_fails = [], []
     s = start.replace("-", "")
     e = end.replace("-", "")
+    if stock is None:
+        return pd.DataFrame(), pd.DataFrame(), list(codes), list(codes)
+    blocked = 0
 
     for i, code in enumerate(codes):
+        if blocked >= 15:                     # 연속 15종목 실패 = KRX 차단 → 나머지는 네이버로
+            flow_fails.append(code)
+            short_fails.append(code)
+            continue
         # --- (1) 투자자별 순매수 ---
         try:
             df = stock.get_market_trading_value_by_date(s, e, code, detail=False)
@@ -130,10 +211,13 @@ def collect_per_ticker(codes, start, end):
                         "기관순매수": r[i_col] if i_col else np.nan,
                         "개인순매수": r[p_col] if p_col else np.nan,
                     })
+                blocked = 0
             else:
                 flow_fails.append(code)
+                blocked += 1
         except Exception:
             flow_fails.append(code)
+            blocked += 1
 
         time.sleep(0.3)  # KRX 차단 방지
 
@@ -169,6 +253,8 @@ def collect_per_ticker(codes, start, end):
 def collect_ohlcv_cap(codes, dates):
     code_set = set(codes)
     ohlcv_rows, cap_rows, fails = [], [], []
+    if stock is None:
+        return pd.DataFrame(), pd.DataFrame(), [str(d) for d in dates]
     for i, d in enumerate(dates):
         ds = d.strftime("%Y%m%d") if hasattr(d, "strftime") else str(d).replace("-", "")
         dstr = d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d)
@@ -322,26 +408,49 @@ def last_dates():
     return out
 
 
-def write_status(start, end, flows, ohlcv, log):
+def write_status(start, end, flows, ohlcv, log, filled=None):
+    """수집 결과 기록. 네이버로 빈칸을 다 메웠으면 정상(ok)이고, 무엇을 대신 받았는지 note 에 남긴다."""
     import json
+    filled = filled or {}
     text = "".join(log)
     lasts = last_dates()
-    problem = None
+    plast = None
+    try:
+        plast = str(pd.read_csv(PRICES, usecols=["날짜"])["날짜"].max())
+    except Exception:
+        pass
+    krx = None
     if "패스워드 변경" in text or "비밀번호 변경" in text:
-        problem = "KRX 로그인 실패 — KRX 계정이 '비밀번호 변경 필요' 상태입니다"
-    elif "로그인 실패" in text:
-        problem = "KRX 로그인 실패 — 아이디·비밀번호(GitHub Secrets KRX_ID/KRX_PW)를 확인하세요"
-    elif flows.empty and ohlcv.empty and len(pd.bdate_range(start, end)) > 1:   # 평일이 끼었는데 0건 (KRX 호출 없이 판단)
-        problem = "KRX에서 자료를 하나도 받지 못했습니다 (접속 장애 또는 로그인 문제)"
+        krx = "KRX 로그인 실패 — KRX 계정이 '비밀번호 변경 필요' 상태입니다"
+    elif KRX_ERR or "에러페이지 - 한국거래소" in text or "ip-block" in text:
+        krx = "KRX 가 GitHub 서버 접속을 막았습니다 (IP 차단 페이지)"
+    elif "로그인 실패" in text and "환경 변수" not in text:
+        krx = "KRX 로그인 실패 — 아이디·비밀번호(GitHub Secrets KRX_ID/KRX_PW)를 확인하세요"
+    problem = None
+    behind = [k for k, p in (("시세(OHLCV)", OHLCV), ("시가총액", MCAP), ("수급", FLOWS))
+              if plast and lasts.get(p) and lasts[p] < plast]
+    if behind:
+        problem = f"{'·'.join(behind)} 자료가 {min(lasts[p] for p in (OHLCV, MCAP, FLOWS) if lasts.get(p))}에서 멈춤" + (f" — {krx}" if krx else "")
+    elif flows.empty and ohlcv.empty and len(pd.bdate_range(start, end)) > 1 and not filled:
+        problem = krx or "KRX에서 자료를 하나도 받지 못했습니다 (접속 장애 또는 로그인 문제)"
+    note = None
+    if filled:
+        note = (f"{krx or 'KRX 일부 실패'} → 네이버로 대신 받음: " +
+                ", ".join(f"{k} {v}건" for k, v in filled.items() if v) +
+                " (거래대금·시총·수급 금액은 종가 기준 근사)")
+    fix = None
+    if problem:
+        fix = ("KRX 정보데이터시스템(data.krx.co.kr)에 로그인해 비밀번호를 바꾸거나 '다음에 변경'을 누른 뒤, "
+               "비밀번호를 바꿨다면 GitHub → Settings → Secrets → KRX_PW 도 새 값으로 바꿔 주세요. "
+               "다음 실행 때 빠진 날짜는 저절로 메웁니다.") if krx and "비밀번호" in krx else \
+              "다음 실행 때 빠진 날짜를 저절로 다시 받습니다. 이틀 넘게 계속되면 확인이 필요합니다."
     st = {"time": datetime.now().strftime("%Y-%m-%d %H:%M"), "start": start, "end": end,
-          "flows_rows": int(len(flows)), "ohlcv_rows": int(len(ohlcv)),
+          "flows_rows": int(len(flows)), "ohlcv_rows": int(len(ohlcv)), "prices_last": plast,
           "flows_last": lasts.get(FLOWS), "ohlcv_last": lasts.get(OHLCV), "marketcap_last": lasts.get(MCAP),
-          "ok": problem is None, "problem": problem,
-          "fix": ("KRX 정보데이터시스템(data.krx.co.kr)에 로그인해 비밀번호를 바꾸거나 '다음에 변경'을 누른 뒤, "
-                  "비밀번호를 바꿨다면 GitHub → Settings → Secrets → KRX_PW 도 새 값으로 바꿔 주세요. "
-                  "다음 실행 때 빠진 날짜는 저절로 메웁니다.") if problem else None}
+          "krx": krx, "filled": filled, "note": note,
+          "ok": problem is None, "problem": problem, "fix": fix}
     json.dump(st, open(STATUS, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    print(("✓ 수집 상태 정상" if st["ok"] else f"🔴 {problem}") + f" → {STATUS}")
+    print(("✓ 수집 상태 정상" if st["ok"] else f"🔴 {problem}") + (f" · {note}" if note else "") + f" → {STATUS}")
     return st
 
 
@@ -403,6 +512,12 @@ def main():
         print("    🔴 수급 0건! 기간이 너무 짧거나 KRX 접속불가 — 재시도 권장")
     if shorts.empty:
         print("    🔴 공매도 0건! KRX 로그인(KRX_ID/KRX_PW) 확인 필요")
+    filled = {}
+    if ff:
+        nfl, nff = naver_fill_flows(ff, start, end)
+        print(f"    네이버로 수급 대신 받음: {nfl['종목코드'].nunique() if len(nfl) else 0}/{len(ff)}종목" + (f" (실패 {len(nff)})" if nff else ""))
+        filled["수급"] = int(len(nfl))
+        flows = pd.concat([flows, nfl], ignore_index=True) if len(nfl) else flows
     save_merge(flows, FLOWS)
     save_merge(shorts, SHORTS)
 
@@ -413,10 +528,22 @@ def main():
     ohlcv, cap, of = collect_ohlcv_cap(codes, dates)
     if of:
         print(f"    OHLCV 실패 {len(of)}일")
+    want = {pd.Timestamp(d).strftime("%Y-%m-%d") for d in dates}
+    have = set(zip(ohlcv["날짜"], ohlcv["종목코드"])) if len(ohlcv) else set()
+    if os.path.exists(OHLCV):
+        o0 = pd.read_csv(OHLCV, dtype={"종목코드": str}, usecols=["날짜", "종목코드"])
+        o0 = o0[o0["날짜"].isin(want)]
+        have |= set(zip(o0["날짜"], o0["종목코드"].str.zfill(6)))
+    no, nc, nof = naver_fill_ohlcv(codes, dates, have)
+    if len(no):
+        print(f"    네이버로 OHLCV 대신 받음: {len(no)}행 ({no['날짜'].min()} ~ {no['날짜'].max()})" + (f" · 실패 {len(nof)}종목" if nof else ""))
+        filled["시세"] = int(len(no))
+        ohlcv = pd.concat([ohlcv, no], ignore_index=True)
+        cap = pd.concat([cap, nc], ignore_index=True) if len(nc) else cap
     save_merge(ohlcv, OHLCV)
     save_merge(cap, MCAP)
     sys.stdout = tee.out
-    write_status(start, end, flows, ohlcv, tee.buf)
+    write_status(start, end, flows, ohlcv, tee.buf, filled)
 
     check()
 
