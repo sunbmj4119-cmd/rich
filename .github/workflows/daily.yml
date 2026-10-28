@@ -1,11 +1,44 @@
 name: daily-run
 on:
   schedule:
-    # 평일 17:47 KST (UTC 08:47). 정각(0분)은 GitHub 예약이 몰려 5시간까지 늦게 시작했다(10-23: 22시 실행) → 정각을 피함
+    # 평일 17:47 KST (UTC 08:47). GitHub 예약은 몇 시간씩 늦거나 아예 빠진다(10-26 월요일: 실행 없음, 10-27: 23:55 시작)
+    #   → 같은 날 세 번 걸어 두고(17:47 · 19:47 · 22:17), 오늘 저녁 이미 끝났으면 뒤의 것은 바로 끝낸다(guard).
+    #   learn.yml 도 2시간마다 '오늘 daily 가 빠졌나'를 보고 빠졌으면 이 워크플로우를 직접 실행한다.
     - cron: "47 8 * * 1-5"
+    - cron: "47 10 * * 1-5"
+    - cron: "17 13 * * 1-5"
   workflow_dispatch:
+    inputs:
+      force:
+        description: "오늘 이미 돌았어도 다시 실행"
+        type: boolean
+        default: false
+concurrency:
+  group: daily
+  cancel-in-progress: false
 jobs:
+  guard:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.g.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: data/daily_done.txt
+          sparse-checkout-cone-mode: false
+      - id: g
+        run: |
+          # 오늘(KST) 16시 이후에 이미 끝난 기록이 있으면 건너뜀 (force 를 켜고 손으로 돌리면 언제나 실행)
+          skip=false
+          if [ "${{ inputs.force }}" != "true" ] && [ -f data/daily_done.txt ]; then
+            d=$(cut -c1-10 data/daily_done.txt); h=$(cut -c12-13 data/daily_done.txt)
+            [ "$d" = "$(TZ=Asia/Seoul date +%F)" ] && [ "$h" -ge 16 ] && skip=true
+          fi
+          echo "skip=$skip" >> $GITHUB_OUTPUT
+          echo "오늘 이미 실행됨: $skip ($(cat data/daily_done.txt 2>/dev/null))"
   run:
+    needs: guard
+    if: needs.guard.outputs.skip != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +57,7 @@ jobs:
           KRX_PW: ${{ secrets.KRX_PW }}
         run: python src/collect_flows.py || echo "수급 수집 실패(무시하고 계속)"
 
-      - name: 1-2-2) 지수 ETF 일봉 (KODEX 200·인버스 — 단기 모의투자용)
+      - name: 1-2-2) ETF 일봉 12종 (지수·레버리지·인버스·채권·달러·금·미국 — 전천후 모델용, 네이버 우선)
         env:
           KRX_ID: ${{ secrets.KRX_ID }}
           KRX_PW: ${{ secrets.KRX_PW }}
@@ -95,7 +128,8 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
+          TZ=Asia/Seoul date "+%F %H:%M" > data/daily_done.txt
           git add data/ docs/
-          git commit -m "daily $(date +%Y-%m-%d)" || { echo "no changes"; exit 0; }
+          git commit -m "daily $(TZ=Asia/Seoul date +%Y-%m-%d)" || { echo "no changes"; exit 0; }
           for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep $((i * 10)); done
           exit 1

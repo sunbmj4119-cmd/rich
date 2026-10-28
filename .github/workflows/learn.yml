@@ -1,5 +1,7 @@
 name: learn
-# 쉬지 않는 학습·진화 — 2시간마다 (하루 12번)
+# 쉬지 않는 학습·진화 — 2시간마다 걸어 둠. GitHub 예약이 자주 건너뛰어 실제로는 하루 4~6번 돈다(10-25~28 실측)
+#   → 한 번 돌 때 모델마다 LEARN_MINUTES(15분)만큼 세대를 이어 간다 (예전: 1분 남짓).
+#   0) daily 감시: 평일 19시(KST) 넘었는데 오늘 daily 가 안 돌았으면 daily.yml 을 직접 실행한다.
 #   1) 30일 자동매매 모델: 저장된 인구(data/evolve/population.json)에서 이어서 20세대 더 진화
 #      → 챔피언보다 확실히 나으면 도전자 등록 → 도전자들의 '등록 뒤' 성적으로 승격 판단 (조건 통과 시 자동 승격)
 #   2) 단기 모델: 저장된 인구에서 이어서 6세대 → 고정 후보보다 나으면 진화 후보 등록 (등록 뒤 성적만 셈)
@@ -14,9 +16,25 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      actions: write
+    env:
+      LEARN_MINUTES: "15"
     steps:
       - uses: actions/checkout@v4
+      - name: daily 감시 (빠졌으면 직접 실행)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          dow=$(TZ=Asia/Seoul date +%u); h=$(TZ=Asia/Seoul date +%H); today=$(TZ=Asia/Seoul date +%F)
+          d=$(cut -c1-10 data/daily_done.txt 2>/dev/null || true); dh=$(cut -c12-13 data/daily_done.txt 2>/dev/null || true)
+          if [ "$dow" -le 5 ] && [ "$h" -ge 19 ] && ! { [ "$d" = "$today" ] && [ "${dh:-0}" -ge 16 ]; }; then
+            gh workflow run daily.yml --ref main -R ${{ github.repository }} && echo "오늘 daily 가 아직 없음 → 직접 실행" | tee -a $GITHUB_STEP_SUMMARY
+          else
+            echo "daily 정상 (마지막: $d ${dh}시)"
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"

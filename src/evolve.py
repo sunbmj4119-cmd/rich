@@ -665,6 +665,8 @@ def weekly(cfg, pool, seed=None, pop=48, gens=14, label="주간 진화"):
     new_id = None
     if full:
         print(f"도전자 자리 없음 ({len(reg['challengers'])}/{max_ch}) — 기존 도전자의 전진 시험을 계속합니다")
+    elif label == "연속 진화" and any(c["born"] == today and c["id"].startswith("E") for c in reg["challengers"]):
+        print("오늘 자료로 이미 새 도전자를 등록했습니다 — 자료 하루에 하나만 (자리를 아껴 전진 시험을 끝까지)")
     elif bf["adj"] > cf["adj"] + HYST and near >= 0.15:
         used = {c["id"] for c in reg["challengers"] + reg["retired"]} | {champ["id"]}
         new_id = "E" + today.replace("-", "")
@@ -825,7 +827,17 @@ def main():
         if cmd in ("weekly", "all"):
             weekly(cfg, pool)
         if cmd == "step":
+            # 한 번 실행에 쓰는 시간 (LEARN_MINUTES, 기본 0 = 20세대 한 번).
+            # GitHub 예약은 2시간마다 걸어도 실제로는 하루 4~6번만 돈다 → 한 번 돌 때 시간만큼 세대를 더 돌린다.
+            budget = float(os.environ.get("LEARN_MINUTES", "0") or 0) * 60
+            t0 = time.time()
             weekly(cfg, pool, pop=48, gens=20, label="연속 진화")
+            spent = time.time() - t0
+            left = budget - spent
+            if left > spent * 1.5:
+                gens = int(min(400, 20 * left / max(spent, 1) * 0.8))
+                print(f"남은 시간 {left / 60:.0f}분 → {gens}세대 더")
+                weekly(cfg, pool, pop=48, gens=gens, label="연속 진화")
 
 
 if __name__ == "__main__":
