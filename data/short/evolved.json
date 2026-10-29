@@ -26,9 +26,9 @@
     "fit": 0.5745
    },
    "forward": {
-    "days": 3,
-    "ret": -0.0095,
-    "sharpe": -18.507
+    "days": 4,
+    "ret": 0.016,
+    "sharpe": 5.051
    },
    "eligible": false
   },
@@ -56,6 +56,38 @@
    "beat": {
     "id": "S:REV1:5:H10:trend",
     "fit": 0.3114
+   },
+   "forward": {
+    "days": 1,
+    "ret": 0.0,
+    "sharpe": null
+   },
+   "eligible": false
+  },
+  {
+   "id": "X261029a",
+   "born": "2026-10-29",
+   "genome": {
+    "w": {
+     "hi52": 2.0,
+     "rev1": 1.0,
+     "mom120": 1.0
+    },
+    "K": 5,
+    "hold": "H10",
+    "gate": "crash"
+   },
+   "fit_born": {
+    "fit": 0.8625,
+    "sharpe": 1.245,
+    "cagr": 0.3555,
+    "mdd": -0.3603,
+    "buys": 754,
+    "worst_regime": 0.846
+   },
+   "beat": {
+    "id": "S:REV1:5:H10:trend",
+    "fit": 0.3112
    },
    "forward": {
     "days": 0,
