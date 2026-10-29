@@ -43,7 +43,7 @@
   <section class="card hero" id="hero" aria-live="polite"><div class="skeleton" style="height:120px"></div></section>
 
   <div class="stick"><div class="tabs" id="tabs">
-    <button data-t="today">내일 주문</button><button data-t="aw">전천후</button><button data-t="models">모델 순위</button><button data-t="verify">검증 결과</button><button data-t="log">기록</button>
+    <button data-t="today">내일 주문</button><button data-t="aw">전천후</button><button data-t="us">미국</button><button data-t="models">모델 순위</button><button data-t="verify">검증 결과</button><button data-t="log">기록</button>
   </div></div>
 
   <div class="tabpane" data-tab="today">
@@ -72,6 +72,16 @@
       <div class="scroll"><table class="t-reg" id="aw-variants"></table></div>
       <p class="mut small">P = 블록 부트스트랩으로 '샤프가 KODEX 200 보유보다 낫지 않을' 확률. 작을수록 확실.</p>
     </div></details>
+  </div>
+
+  <div class="tabpane" data-tab="us">
+    <section class="card" id="us-acct"></section>
+    <section class="card" id="us-orders"></section>
+    <section class="card">
+      <header><h2>미국에서도 통하나 — 2016~2026 검증</h2><span class="mut small" id="us-sub"></span></header>
+      <div id="us-verdicts"></div>
+      <div class="scroll"><table class="t-reg" id="us-table"></table></div>
+    </section>
   </div>
 
   <div class="tabpane" data-tab="models">
@@ -187,6 +197,8 @@
       <div class="kv"><span>후보</span><b>${S.pool_size}개 모델</b></div>
       <div class="kv"><span>지금 모델을 고른 날</span><b>${U.esc(S.model.selected_at)}</b></div>
       <div class="kv"><span>최근 250일 샤프</span><b>${sh(S.model.sh250)}${top && !top.chosen ? ` (1등 ${sh(top.sh250)} — 재선택일에 바뀔 수 있음)` : ""}</b></div>
+      ${S.top_stock && !S.top_stock.chosen ? `<div class="kv"><span>종목 모델 1등</span><b>${U.esc(S.top_stock.desc)} (샤프 ${sh(S.top_stock.sh250)})</b></div>
+        <p class="mut small">이 모델을 따라갔다면 내일 들고 있을 종목: ${S.top_stock.next.map((x) => U.esc(x.name)).join(", ") || "없음"} — 지금은 위험 대비 성적에서 ${U.esc(S.model.desc)}에 밀려 따라가지 않습니다.</p>` : ""}
       <p class="note">매일 1등으로 바꾸면 교체 비용과 '우연히 잘 된 모델 쫓기' 때문에 과거 288가지 방식 중 열에 두세 개만 지수 보유를 이겼습니다.
         그래서 일주일에 한 번, 1년 성적의 위험 대비 효율로 고릅니다. 선택된 모델이 '급락장 제외'형이면 급락장(고점 대비 −15% 이하이면서 반등 전)에는 새로 사지 않습니다.</p>`;
 
@@ -224,6 +236,39 @@
         <span class="s">${U.esc(c.id)} · ${U.esc(c.born)} 등록 · 과거 적합도 ${(+c.fit_born.fit).toFixed(2)} (샤프 ${c.fit_born.sharpe})</span></span>
         <span class="r"><b class="${U.cls(f.ret)}">${f.days ? pctv(f.ret, 2) : "—"}</b><span class="mut">${c.eligible ? "선택 가능" : `시험 ${f.days || 0}/${X.incubate_days}일`}</span></span></div>`;
     }).join("") : `<div class="empty">아직 등록된 진화 후보가 없습니다.</div>`;
+  }
+
+  // 미국
+  let US = null;
+  try { US = await U.j("us.json"); } catch { US = null; }
+  if (US) {
+    const a = US.account, lead = a.ret_krw - a.spy_ret_krw;
+    U.$("#us-acct").innerHTML = `<header><h2>미국 모의 계좌</h2><span class="mut small">${U.esc(US.data_date)} 미국 장 마감 기준 · ${U.esc(US.start)} 시작 · 국내 계좌와 따로</span></header>
+      <div class="row" style="align-items:baseline;gap:8px;flex-wrap:wrap"><span class="big-num">${U.won(a.equity_krw)}</span><b class="${U.cls(a.ret_krw)}">${pctv(a.ret_krw, 2)}</b></div>
+      <div class="mut">$${a.equity_usd.toLocaleString("en-US")} · 환율 ${Math.round(a.fx).toLocaleString("ko-KR")}원 · 같은 날 SPY 를 샀다면 ${pctv(a.spy_ret_krw, 2)} (${lead >= 0 ? "앞섬" : "뒤짐"} ${U.pct(Math.abs(lead) * 100, 2, false)}p)</div>
+      <div class="model"><span class="eyebrow">따라가는 모델</span><b>${U.esc(US.model_desc)}</b><span class="mut small">미국 장 시가에 소수점 주식으로 체결 · 수수료 0.1% · 세금은 연 250만원 넘는 이익의 22% (예상액만 표시)</span></div>` +
+      (a.positions.length ? a.positions.map((x) => { const r = U.ok(x.last) ? x.last / x.avg - 1 : null;
+        return `<div class="li"><span class="main"><span class="t">${U.esc(x.code)}</span><span class="s">${x.qty}주 · 평단 $${x.avg} · ${U.esc(x.since || "")}부터</span></span>
+          <span class="r"><b class="${U.cls(r)}">${pctv(r)}</b><span class="mut">$${x.last}</span></span></div>`; }).join("") : `<div class="empty">아직 보유 없음 — 오늘 밤 미국 장 시가에 첫 매수</div>`);
+    const po = US.plan || { orders: [] };
+    U.$("#us-orders").innerHTML = `<header><h2>다음 미국 장 주문</h2><span class="mut small">${U.esc(po.made)} 미국 장 마감 뒤 계획 · 한국 시각 밤 시가</span></header>` +
+      (po.orders.length ? po.orders.map((o) => `<div class="li ord"><span class="st ${o.side === "buy" ? "st-매수" : "st-매도"} tag">${o.side === "buy" ? "매수" : "매도"}</span>
+        <span class="main"><span class="t">${U.esc(o.code)}</span><span class="s">${o.side === "buy" ? `약 $${o.usd.toLocaleString("en-US")}어치` : `${o.qty}주 전부`} · 어제 종가 $${o.est_price}</span></span></div>`).join("")
+        : `<div class="empty">주문 없음 — 보유를 그대로 둡니다.</div>`);
+    const R = (US.research || {}).rules || {}, B = ((US.research || {}).bench || {})["SPY 보유"], H = (US.research || {}).by_hold || {};
+    const top = ((US.research || {}).top_models || [])[0];
+    U.$("#us-sub").textContent = `S&P 100 · ${(US.research || {}).period ? US.research.period.join(" ~ ") : ""}`;
+    const UV = [
+      ["n", "국내식 단기 갈아타기 — 미국에선 손실", R.live ? `${U.esc(R.live.name)}: 연 ${pctv(R.live.usd.cagr)} · 샤프 ${sh(R.live.usd.sharpe)} (SPY 연 ${pctv(B?.usd?.cagr)} · ${sh(B?.usd?.sharpe)}). 미국 대형주는 며칠짜리 반전 효과가 수수료(왕복 약 0.26%)를 못 넘었습니다.` : ""],
+      ["y", "추세(6개월 추세 + 52주 고가) 상위 10 — 두 기간 모두 SPY 보다 나음", top ? `${U.esc(top.desc)}: 연 ${pctv(top.full.cagr)} · 샤프 ${sh(top.full.sharpe)} (2015~2022 ${sh(top.dev.sharpe)} / 2023~ ${sh(top.test.sharpe)}). 미리 정한 기준(앞 기간 1등)으로 골랐습니다.` : ""],
+      ["m", "하지만 생존편향 — 실제보다 좋게 나왔을 가능성", "종목 목록이 '지금의' S&P 100 이라 그동안 크게 오른 종목(팔란티어 등)이 처음부터 들어 있습니다. 추세 전략은 이 편향에 특히 유리합니다. 그래서 국내 계좌와 섞지 않고 따로 굴려 앞으로의 성적으로 확인합니다."],
+    ];
+    U.$("#us-verdicts").innerHTML = UV.map(([c, t, d]) => `<div class="verdict"><span class="ic ${c}">${c === "y" ? "✓" : c === "n" ? "✕" : "!"}</span><div><b>${t}</b><p>${d}</p></div></div>`).join("");
+    const HN = { H1: "매일 교체", H3: "3일 보유", H5: "5일 보유", H10: "10일 보유", BAND: "순위 유지(최대 20일)" };
+    U.$("#us-table").innerHTML = `<tr><th>보유</th><th>모델</th><th>수익 낸 모델</th><th>샤프 중앙값</th><th>2015~22</th><th>2023~</th></tr>` +
+      ["H1", "H3", "H5", "H10", "BAND"].filter((k) => H[k]).map((k) => `<tr><td>${HN[k]}</td><td>${H[k].n}</td><td>${H[k].positive}</td><td class="${H[k].sharpe_med > 0 ? "good" : "bad"}">${sh(H[k].sharpe_med)}</td><td>${sh(H[k].dev_med)}</td><td>${sh(H[k].test_med)}</td></tr>`).join("");
+  } else {
+    U.$("#us-acct").innerHTML = `<div class="empty">미국 모의 계좌는 다음 저녁 실행부터 채워집니다.</div>`;
   }
 
   // 전천후

@@ -448,6 +448,13 @@ def run(cfg=None, now=None):
                       "r20": round(float(r20[i]), 4), "r60": round(float(r60[i]), 4),
                       "cagr": st["cagr"], "mdd": st["mdd"], "chosen": i == mi})
     board.sort(key=lambda x: -x["sh250"])
+    top_stock = None                                   # 종목 모델 중 1등이 내일 들고 있을 종목 (따라가는 모델이 ETF 일 때도 보이게)
+    ts = [i for i in pool if models[i]["kind"] == "stock" and np.isfinite(sh250[i])]
+    if ts:
+        bi = max(ts, key=lambda i: sh250[i])
+        nxt = [D.P["codes"][j] for j in L.stock_next(D, models[bi], recs[bi])]
+        top_stock = {"id": models[bi]["id"], "desc": L.describe(models[bi]), "sh250": round(float(sh250[bi]), 3),
+                     "chosen": bi == mi, "next": [{"code": c, "name": nm.get(c, c)} for c in nxt]}
     sel_row = {"날짜": today, "모델": m["id"], "설명": L.describe(m), "최근250일샤프": round(float(sh250[mi]), 3), "바뀜": int(changed)}
     try:                                               # 같은 날 다시 돌리면 그날 줄을 바꿔 쓴다
         old = pd.read_csv(SELECTION)
@@ -512,7 +519,7 @@ def run(cfg=None, now=None):
                                     for c, p in acc.get("aw", {}).get("etf", {}).items()]},
           "model": {"id": m["id"], "desc": L.describe(m), "selected_at": acc["selected_at"], "changed_today": changed,
                     "sh250": round(float(sh250[mi]), 3)},
-          "plan": plan, "leaderboard": board[:20], "pool_size": len(pool), "shadow": shadow,
+          "plan": plan, "leaderboard": board[:20], "pool_size": len(pool), "shadow": shadow, "top_stock": top_stock,
           "fills_today": fills}
     try:
         e = pd.read_csv(EQUITY)

@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: "etf = ETF 전체 기간 받기 · allweather = 전천후 연구"
+        description: "etf = ETF 전체 기간 받기 · allweather = 전천후 연구 · us = 미국 주식 받기 + 미국 단기 연구"
         type: choice
-        options: [etf, allweather]
+        options: [etf, allweather, us]
         default: etf
 concurrency:
   group: research-${{ github.ref_name }}
@@ -33,11 +33,18 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           python src/allweather_lab.py 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: 미국 주식 (Yahoo/Stooq) + 미국 단기 연구
+        if: inputs.task == 'us'
+        run: |
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          python src/collect_us.py --backfill 2>&1 | tee -a $GITHUB_STEP_SUMMARY
+          python src/us_lab.py 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
       - name: 커밋
         run: |
           git config user.name github-actions
           git config user.email actions@github.com
-          git add data/etf_ohlcv.csv data/short/ docs/ 2>/dev/null || true
+          for f in data/etf_ohlcv.csv data/us_ohlcv.csv data/fx_usdkrw.csv data/short docs; do [ -e "$f" ] && git add "$f"; done
           git commit -q -m "research ${{ inputs.task }} $(date -u +%F' '%H:%M)" || { echo "no change"; exit 0; }
           for i in 1 2 3; do git pull -q --rebase origin ${{ github.ref_name }} && git push -q origin HEAD:${{ github.ref_name }} && exit 0; sleep $((i * 10)); done
           exit 1

@@ -38,7 +38,7 @@
   <details class="fold" id="warnbox" hidden><summary><div class="sum"><b id="warn-title"></b><span id="warn-first"></span></div></summary><div class="body" id="warns"></div></details>
 
   <div class="stick"><div class="tabs" id="tabs">
-    <button data-t="today">오늘 판단</button><button data-t="market">시장</button><button data-t="account">계좌·기록</button>
+    <button data-t="today">오늘 판단</button><button data-t="shadow">진화 모델</button><button data-t="market">시장</button><button data-t="account">계좌·기록</button>
   </div></div>
 
   <div class="tabpane" data-tab="today">
@@ -47,6 +47,15 @@
       <header><h2>종목별 판단</h2><span class="mut small">누르면 근거</span></header>
       <div class="chips scroll-x" id="filt"></div>
       <div id="dlist"></div>
+    </section>
+  </div>
+
+  <div class="tabpane" data-tab="shadow">
+    <section class="card">
+      <header><h2>진화 모델들의 그림자 계좌</h2><span class="mut small" id="sh-sub"></span></header>
+      <p class="mut" style="font-size:14px;line-height:1.6">쉬지 않고 진화한 '도전자' 설정마다 같은 자료·같은 판단 엔진·같은 체결 규칙(다음 거래일 종가)으로 모의 계좌를 따로 굴립니다.
+        지금 실제로 쓰는 설정(챔피언)과 무엇이 다르고, 오늘 무엇을 사고팔았는지 그대로 보여 줍니다. 승격은 등록 뒤 성적이 챔피언을 이겨야 자동으로 됩니다.</p>
+      <div id="shadows"></div>
     </section>
   </div>
 
@@ -150,6 +159,21 @@ U.nav("autotrade.html");
       ${rf ? `<details class="fold"><summary><div class="sum"><b>참고 지표</b><span>검증에서 탈락 — 결정에 쓰지 않음</span></div></summary><div class="body">${rf}</div></details>` : ""}
       <a class="btn" style="text-align:center;text-decoration:none" href="stock.html#c${x.code}">종목 분석 열기</a>`);
   });
+
+  // ── 진화 모델 그림자 계좌 ──
+  const SH = d.shadows || [];
+  U.$("#sh-sub").textContent = SH.length ? `${SH.length}개 · ${SH[0].start || ""}부터` : "";
+  U.$("#shadows").innerHTML = SH.length ? SH.map((x) => {
+    const od = x.orders.length ? x.orders.map((o) => `<div class="li"><span class="st st-${o.side === "buy" ? "매수" : "매도"}">${o.side === "buy" ? "매수" : "매도"}</span>
+        <span class="main"><span class="t">${U.esc(o.name)} <span class="small mut">${o.qty}주</span></span><span class="s">${U.esc(o.reason || "")}</span></span>
+        <span class="r"><b>${U.won(o.qty * (o.ref_price || 0))}</b></span></div>`).join("") : `<p class="mut small">내일 주문 없음</p>`;
+    const hd = x.positions.length ? x.positions.map((p) => `${U.esc(p.name)} ${p.shares}주${U.ok(p.last) ? ` (${U.pct((p.last / p.avg - 1) * 100)})` : ""}`).join(" · ") : "보유 없음";
+    return `<details class="fold"${x.orders.length ? " open" : ""}><summary><div class="sum"><b>${U.esc(x.id)} · ${U.won(x.equity)} <span class="${U.cls(x.ret)}">${U.pct(x.ret * 100, 2)}</span></b>
+        <span>${x.crash_gate ? "급락장 게이트 켬" : "급락장에도 매수 (게이트 끔)"} · 내일 주문 ${x.orders.length}건 · 보유 ${x.positions.length}</span></div></summary><div class="body">
+        <p class="small"><b>챔피언과 다른 점</b> ${x.diff.map(U.esc).join(" · ") || "없음"}</p>
+        <p class="small mut">${U.esc(x.source || "")} · ${U.esc(x.born || "")} 등록 · ${U.esc(x.status || "")}</p>
+        <p class="small"><b>보유</b> ${hd}</p>${od}</div></details>`;
+  }).join("") : `<div class="empty">아직 그림자 계좌가 없습니다 — 다음 저녁 실행부터 채워집니다.</div>`;
 
   // ── 시장 ──
   U.$("#gate-detail").innerHTML = `<h2>시장 게이트</h2><p class="small mut">${U.esc(g.reason)}</p><div class="facts">

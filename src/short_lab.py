@@ -31,12 +31,16 @@ import short_panel as SP  # noqa: E402
 OUT_DIR = "data/short"
 COMM = 0.000186
 TAX = 0.0020
-SLIP = {"stock": 0.0005, "etf": 0.0001}
+SLIP = {"stock": 0.0005, "etf": 0.0001, "us": 0.0003}
+COMM_US = 0.001                 # 미국 주식 수수료 한쪽 0.1% (국내 증권사 해외주식 보통 0.07~0.25%) · 매도 SEC 수수료 ≈0.003%
+SEC_US = 0.00003
 DEV_END = "2022-12-31"          # 개발 구간 끝 (이후 = 확인 구간)
 
 
 def costs(kind, stress=1.0):
     s = SLIP[kind] * stress
+    if kind == "us":
+        return COMM_US + s, COMM_US + s + SEC_US
     return COMM + s, COMM + s + (TAX if kind == "stock" else 0.0)
 
 
@@ -176,7 +180,7 @@ def run_stock(D, m, stress=1.0, record=False, t0=1, log=None):
     R = D.ranks(m["sel"], m.get("combo"))
     K, X, mn, mx = stock_params(m)
     ok = D.gate[m["gate"]]
-    cb, cs = costs("stock", stress)
+    cb, cs = costs(getattr(D, "cost_kind", "stock"), stress)
     T, N = D.T, D.N
     O, Cf = D.O, D.Cf
     units = np.zeros(N)
@@ -379,7 +383,7 @@ def follow(D, models, choice, records, stress=1.0, t0=1):
     """choice[t] = t일 저녁에 고른 모델 번호(또는 번호 목록=균등 혼합) → t+1일에 그 모델의 보유를 따라간다.
     종목: 모델이 t+1일 시가 거래 뒤 보유한 종목을 같은 비중으로 / ETF: 모델의 시가·종가 목표 비중."""
     T, N = D.T, D.N
-    cbS, csS = costs("stock", stress)
+    cbS, csS = costs(getattr(D, "cost_kind", "stock"), stress)
     O, Cf = D.O, D.Cf
     Op, Cp = D.Op[:, :2], AW.ffill(D.Cp[:, :2])
     us = np.zeros(N)
