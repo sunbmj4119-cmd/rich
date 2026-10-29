@@ -280,6 +280,30 @@ def test_evolve_fitness_penalizes_bad_regime():
     assert "worst_regime" in f and (f["worst_regime"] >= 0 or f["fit"] < f["sharpe"])
 
 
+def test_us_settle_fractional_and_costs():
+    """미국 모의: 다음 미국 장 시가에 소수점 4자리로 사고, 매도 땐 수수료·SEC 를 떼고 그해 실현손익에 쌓는다."""
+    import us_trader as UT
+    D = SimpleNamespace(dates=pd.DatetimeIndex(["2026-10-28", "2026-10-29"]), P={"codes": ["AAA", "BBB"]},
+                        O=np.array([[100.0, 50.0], [101.0, 55.0]]))
+    acc = {"cash": 1000.0, "positions": {"BBB": {"qty": 2.0, "avg": 50.0}}}
+    plan = {"made": "2026-10-28", "orders": [{"side": "buy", "code": "AAA", "usd": 300.0}, {"side": "sell", "code": "BBB", "qty": 2.0}]}
+    fills, t = UT.settle(D, acc, plan)
+    cb, cs = L.costs("us")
+    assert t == 1 and "BBB" not in acc["positions"]
+    q = acc["positions"]["AAA"]["qty"]
+    assert q == np.floor(300 / 101 * 10000) / 10000
+    assert abs(acc["cash"] - (1000 + 110 * (1 - cs) - q * 101 * (1 + cb))) < 1e-9
+    assert abs(acc["realized"]["2026"] - (110 * (1 - cs) - 100)) < 1e-9
+
+
+def test_us_after_tax_only_taxes_gains():
+    import us_lab as UL
+    dates = pd.DatetimeIndex(["2024-01-02", "2024-12-31", "2025-06-30", "2025-12-31"])
+    E = np.array([1.0, 1.2, 1.1, 1.0])                       # 2024 +20%, 2025 -16.7%
+    A = UL.after_tax(E, dates)
+    assert abs(A[1] - 1.2) < 1e-12 and abs(A[-1] - 1.0 * (1 + 0.2 * 0.78) / 1.2) < 1e-12
+
+
 if __name__ == "__main__":
     for k, fn in list(globals().items()):
         if k.startswith("test_"):

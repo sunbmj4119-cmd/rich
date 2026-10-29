@@ -99,6 +99,8 @@ def main():
         time.sleep(0.2)
     out = pd.concat([p for p in parts if len(p)], ignore_index=True)
     out = out.drop_duplicates(["날짜", "종목코드"], keep="last").sort_values(["종목코드", "날짜"])
+    for c in ("시가", "고가", "저가", "종가"):
+        out[c] = out[c].round(4)
     out.to_csv(OUT, index=False)
     print(f"미국 일봉: {len(out):,}행 · {out['종목코드'].nunique()}종목 · {out['날짜'].min()} ~ {out['날짜'].max()} · 자료원 {src_n}"
           + (f" · 실패 {bad}" if bad else ""))

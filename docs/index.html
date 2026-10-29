@@ -86,6 +86,13 @@
         <p class="mut" id="short-note" style="font-size:13.5px"></p>
       </a>
 
+      <!-- 미국 모의 -->
+      <a class="card" href="short.html#us" id="usc" style="color:inherit" hidden>
+        <header><span class="eyebrow">미국 모의 계좌 · S&amp;P 100 추세 상위 10</span><span class="chev" aria-hidden="true"></span></header>
+        <div class="row" style="align-items:baseline;gap:8px;flex-wrap:wrap"><span class="mid-num" id="us-eq">—</span><span class="mut" id="us-ret"></span></div>
+        <p class="mut" id="us-note" style="font-size:13.5px"></p>
+      </a>
+
       <!-- 학습·진화 -->
       <a class="card" href="report.html#evo" id="evo" style="color:inherit" hidden>
         <header><span class="eyebrow">학습·진화 · 하루 여러 번 15분씩 이어서</span><span class="chev" aria-hidden="true"></span></header>
@@ -129,6 +136,16 @@ U.nav("index.html");
   try { S = await U.j("short.json"); } catch { S = null; }
   try { EV = await U.j("evolve.json"); } catch { EV = null; }
   try { SE = await U.j("short_evo.json"); } catch { SE = null; }
+  let USJ = null;
+  try { USJ = await U.j("us.json"); } catch { USJ = null; }
+  if (USJ) {
+    const ua = USJ.account;
+    U.$("#usc").hidden = false;
+    U.$("#us-eq").textContent = U.won(ua.equity_krw);
+    U.$("#us-ret").innerHTML = `<span class="${U.cls(ua.ret_krw)}">${U.pct(ua.ret_krw * 100, 2)}</span> · SPY ${U.pct(ua.spy_ret_krw * 100, 2)} · ${U.esc(USJ.start)}부터`;
+    const uo = (USJ.plan || {}).orders || [];
+    U.$("#us-note").textContent = `보유 ${ua.positions.length}종목 · 다음 미국 장 주문 ${uo.length}건${uo.length ? " (" + uo.slice(0, 6).map((o) => (o.side === "buy" ? "매수 " : "매도 ") + o.code).join(", ") + (uo.length > 6 ? " …" : "") + ")" : ""}`;
+  }
 
   const m = D.market, items = D.items, rg = (D.regime || {}).current || {};
   const byCode = Object.fromEntries(items.map((i) => [i.code, i]));
