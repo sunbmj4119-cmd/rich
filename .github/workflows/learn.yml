@@ -28,12 +28,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          dow=$(TZ=Asia/Seoul date +%u); h=$(TZ=Asia/Seoul date +%H); today=$(TZ=Asia/Seoul date +%F)
-          d=$(cut -c1-10 data/daily_done.txt 2>/dev/null || true); dh=$(cut -c12-13 data/daily_done.txt 2>/dev/null || true)
-          if [ "$dow" -le 5 ] && [ "$h" -ge 19 ] && ! { [ "$d" = "$today" ] && [ "${dh:-0}" -ge 16 ]; }; then
+          dow=$(TZ=Asia/Seoul date +%u); h=$(TZ=Asia/Seoul date +%H); now_s=$(TZ=Asia/Seoul date -d '-9 hours' +%F)
+          m=$(cat data/daily_done.txt 2>/dev/null || true)
+          ms=$(echo "$m" | sed -n 's/.*session=\([0-9-]*\).*/\1/p')
+          mh=$(echo "$m" | sed -n 's/.*kst=[0-9-]* \([0-9][0-9]\):.*/\1/p')
+          done_today=false
+          if [ "$ms" = "$now_s" ] && [ -n "$mh" ] && { [ "$mh" -ge 16 ] || [ "$mh" -lt 9 ]; }; then done_today=true; fi
+          if [ "$dow" -le 5 ] && [ "$h" -ge 19 ] && [ "$done_today" != "true" ]; then
             gh workflow run daily.yml --ref main -R ${{ github.repository }} && echo "오늘 daily 가 아직 없음 → 직접 실행" | tee -a $GITHUB_STEP_SUMMARY
           else
-            echo "daily 정상 (마지막: $d ${dh}시)"
+            echo "daily 감시: 회차 $now_s · 마지막 기록 [$m]"
           fi
       - uses: actions/setup-python@v5
         with:

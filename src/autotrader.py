@@ -280,9 +280,79 @@ def send(plan, broker, cfg, dry):
 
 
 # ══════════════════════════════════════════════════════════════
+SHADOW_DIR = f"{DIR}/shadow"
+REGISTRY = "data/evolve/registry.json"
+
+
+def run_shadows(cfg, panel, feats0, t, flags, issues, dry):
+    """진화 도전자 그림자 모의 계좌 — 도전자마다 같은 자료·같은 판단 엔진·같은 체결 규칙(다음 거래일 종가)으로
+    자기 설정대로 실제로 사고판다. 승격 판단은 evolve.py 의 전진 시험이 하고, 이 계좌들은
+    '진화한 모델이라면 오늘 무엇을 샀을까'를 눈으로 보이게 하는 기록이다. 실제 계좌·챔피언 판단에는 영향 없음."""
+    import copy
+    import evolve as EV
+    reg = jload(REGISTRY, {})
+    champ = (reg.get("champion") or {}).get("genome")
+    asof = panel["dates"][t]
+    asof_s = str(asof.date())
+    close_t = panel["close"].iloc[t]
+    news = load_news()
+    pc = cfg.get("paper", {})
+    out = []
+    for ch in reg.get("challengers", []):
+        try:
+            st = {**cfg["strategy"], **EV.strategy_from_genome(ch["genome"])}
+            cfg_c = copy.deepcopy(cfg)
+            cfg_c["strategy"] = st
+            feats = F.apply_strategy(panel, feats0, st)
+            b = PaperBroker(pc.get("initial_cash", 10_000_000), pc.get("cost", 0.0015), path=f"{SHADOW_DIR}/{ch['id']}.json")
+            b.s.setdefault("start", asof_s)
+            fills = b.settle(lambda c: float(close_t[c]) if c in close_t and pd.notna(close_t[c]) else None, asof_s)
+            acct = b.account()
+            lp = f"{SHADOW_DIR}/{ch['id']}_ledger.json"
+            ledger = reconcile(jload(lp, {}), acct, asof_s)
+            pos = engine_positions(acct, ledger, panel)
+            mv = sum(p["shares"] * (float(close_t[c]) if c in close_t and pd.notna(close_t[c]) else p["avg"])
+                     for c, p in acct["positions"].items())
+            equity = acct["cash"] + mv
+            fl = {**flags, "account_halt": None,
+                  "recent_exits": {c: int(np.searchsorted(panel["dates"].values, np.datetime64(d)))
+                                   for c, d in ledger.get("_exits", {}).items()}}
+            decisions, gate = decide(t, panel, feats, pos, cfg_c, news=news, flags=fl)
+            plan = build_plan(decisions, acct, equity, cfg_c, asof)
+            if not issues:
+                for o in sorted(plan["orders"], key=lambda o: o["side"] != "sell"):
+                    b.order(o["side"], o["code"], o["qty"], o["kind"], o["price"], date=asof_s)
+            hist = [h for h in b.s.get("equity", []) if h["date"] != asof_s] + [{"date": asof_s, "equity": round(equity)}]
+            b.s["equity"] = hist[-400:]
+            if not dry:
+                b.save()
+                jsave(lp, ledger)
+            init = float(pc.get("initial_cash", 10_000_000))
+            out.append({
+                "id": ch["id"], "born": ch.get("born"), "status": ch.get("status"), "source": ch.get("source"),
+                "diff": EV.describe(ch["genome"], champ) if champ else EV.describe(ch["genome"]),
+                "start": b.s.get("start"), "equity": round(equity), "ret": round(equity / init - 1, 4),
+                "cash": round(acct["cash"]), "gate_open": bool(gate["open"]), "crash_gate": bool(st.get("crash_gate", True)),
+                "positions": [{"code": c, "name": panel["names"].get(c, c), "shares": p["shares"], "avg": round(p["avg"]),
+                               "last": float(close_t[c]) if c in close_t and pd.notna(close_t[c]) else None}
+                              for c, p in acct["positions"].items()],
+                "orders": [{k: o.get(k) for k in ("side", "code", "name", "qty", "ref_price", "reason")} for o in plan["orders"]],
+                "fills": [{k: f.get(k) for k in ("side", "code", "qty", "fill", "status")} for f in (fills or [])
+                          if f.get("status") == "체결"],
+                "watch": [{"name": d["name"], "rank": d.get("rank"), "reason": d.get("reason")} for d in decisions
+                          if d["state"] == WATCH][:5],
+                "curve": hist[-120:]})
+        except Exception as ex:                             # 그림자 계좌가 실패해도 실제 판단은 그대로
+            print(f"  (그림자 {ch.get('id')} 실패: {type(ex).__name__} {ex})")
+    for x in out:
+        print(f"  그림자 {x['id']}: 평가액 {x['equity']:,}원 ({x['ret'] * 100:+.2f}%) · 보유 {len(x['positions'])} · "
+              f"내일 주문 {len(x['orders'])}건" + ("" if x["crash_gate"] else " · 급락장 게이트 끔"))
+    return out
+
+
 def phase_decide(cfg, dry):
-    panel, feats = F.build_all()
-    feats = F.apply_strategy(panel, feats, cfg["strategy"])   # 진화 모델이 고른 순위 가중치 (없으면 종합점수)
+    panel, feats0 = F.build_all()
+    feats = F.apply_strategy(panel, feats0, cfg["strategy"])   # 진화 모델이 고른 순위 가중치 (없으면 종합점수)
     t = len(panel["dates"]) - 1
     asof = panel["dates"][t]
     asof_s = str(asof.date())
@@ -340,7 +410,8 @@ def phase_decide(cfg, dry):
         os.makedirs(DIR, exist_ok=True)
         eq.to_csv(EQUITY, index=False)
     write_decisions(decisions)
-    write_status(cfg, decisions, gate, plan, flags, issues, equity, dd, fills, sent, eq)
+    shadows = run_shadows(cfg, panel, feats0, t, flags, issues, dry)
+    write_status(cfg, decisions, gate, plan, flags, issues, equity, dd, fills, sent, eq, shadows)
     report(decisions, gate, plan, flags, issues, equity, fills)
     if not dry:
         alert_decide(cfg, plan, decisions, gate, issues, fills)
@@ -445,7 +516,7 @@ def write_decisions(decisions):
     pd.DataFrame(rows).to_csv(DECISIONS, index=False)
 
 
-def write_status(cfg, decisions, gate, plan, flags, issues, equity, dd, fills, sent, eq):
+def write_status(cfg, decisions, gate, plan, flags, issues, equity, dd, fills, sent, eq, shadows=None):
     bt = jload("data/engine_backtest.json", {})
     jsave(STATUS, {
         "asof": plan["date"], "generated": now_kst().isoformat(timespec="seconds"),
@@ -462,6 +533,7 @@ def write_status(cfg, decisions, gate, plan, flags, issues, equity, dd, fills, s
         "decisions": decisions, "orders": plan["orders"], "fills": fills,
         "sent": [{k: r.get(k) for k in ("side", "code", "name", "qty", "ok", "msg")} for r in sent],
         "equity_curve": eq[["date", "equity"]].to_dict("records") if len(eq) else [],
+        "shadows": shadows or [],
         "backtest": {k: {p: {m: v.get(m) for m in ("ann", "sharpe", "mdd", "win", "n_trades")}
                          for p, v in bt[k].items()} for k in bt if isinstance(bt.get(k), dict)
                      and "train" in bt[k]},

@@ -187,6 +187,8 @@
       <div class="kv"><span>후보</span><b>${S.pool_size}개 모델</b></div>
       <div class="kv"><span>지금 모델을 고른 날</span><b>${U.esc(S.model.selected_at)}</b></div>
       <div class="kv"><span>최근 250일 샤프</span><b>${sh(S.model.sh250)}${top && !top.chosen ? ` (1등 ${sh(top.sh250)} — 재선택일에 바뀔 수 있음)` : ""}</b></div>
+      ${S.top_stock && !S.top_stock.chosen ? `<div class="kv"><span>종목 모델 1등</span><b>${U.esc(S.top_stock.desc)} (샤프 ${sh(S.top_stock.sh250)})</b></div>
+        <p class="mut small">이 모델을 따라갔다면 내일 들고 있을 종목: ${S.top_stock.next.map((x) => U.esc(x.name)).join(", ") || "없음"} — 지금은 위험 대비 성적에서 ${U.esc(S.model.desc)}에 밀려 따라가지 않습니다.</p>` : ""}
       <p class="note">매일 1등으로 바꾸면 교체 비용과 '우연히 잘 된 모델 쫓기' 때문에 과거 288가지 방식 중 열에 두세 개만 지수 보유를 이겼습니다.
         그래서 일주일에 한 번, 1년 성적의 위험 대비 효율로 고릅니다. 선택된 모델이 '급락장 제외'형이면 급락장(고점 대비 −15% 이하이면서 반등 전)에는 새로 사지 않습니다.</p>`;
 

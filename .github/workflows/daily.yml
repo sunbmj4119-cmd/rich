@@ -28,14 +28,18 @@ jobs:
           sparse-checkout-cone-mode: false
       - id: g
         run: |
-          # 오늘(KST) 16시 이후에 이미 끝난 기록이 있으면 건너뜀 (force 를 켜고 손으로 돌리면 언제나 실행)
+          # 같은 '장 마감 회차'를 이미 장 마감 뒤(16시~다음날 9시 KST)에 돌렸으면 건너뜀 (force 를 켜고 손으로 돌리면 언제나 실행).
+          # 회차 = KST 시각에서 9시간 뺀 날짜 → 늦게 밀려 자정 넘어 시작한 전날 예약(10-28 → 10-29 00:36·04:01 실행)도 전날 회차로 센다.
           skip=false
-          if [ "${{ inputs.force }}" != "true" ] && [ -f data/daily_done.txt ]; then
-            d=$(cut -c1-10 data/daily_done.txt); h=$(cut -c12-13 data/daily_done.txt)
-            [ "$d" = "$(TZ=Asia/Seoul date +%F)" ] && [ "$h" -ge 16 ] && skip=true
+          now_s=$(TZ=Asia/Seoul date -d '-9 hours' +%F)
+          m=$(cat data/daily_done.txt 2>/dev/null || true)
+          ms=$(echo "$m" | sed -n 's/.*session=\([0-9-]*\).*/\1/p')
+          mh=$(echo "$m" | sed -n 's/.*kst=[0-9-]* \([0-9][0-9]\):.*/\1/p')
+          if [ "${{ inputs.force }}" != "true" ] && [ "$ms" = "$now_s" ] && [ -n "$mh" ] && { [ "$mh" -ge 16 ] || [ "$mh" -lt 9 ]; }; then
+            skip=true
           fi
           echo "skip=$skip" >> $GITHUB_OUTPUT
-          echo "오늘 이미 실행됨: $skip ($(cat data/daily_done.txt 2>/dev/null))"
+          echo "회차 $now_s · 마지막 기록 [$m] → 건너뜀: $skip"
   run:
     needs: guard
     if: needs.guard.outputs.skip != 'true'
@@ -128,8 +132,8 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          TZ=Asia/Seoul date "+%F %H:%M" > data/daily_done.txt
+          echo "session=$(TZ=Asia/Seoul date -d '-9 hours' +%F) kst=$(TZ=Asia/Seoul date '+%F %H:%M')" > data/daily_done.txt
           git add data/ docs/
-          git commit -m "daily $(TZ=Asia/Seoul date +%Y-%m-%d)" || { echo "no changes"; exit 0; }
+          git commit -m "daily $(TZ=Asia/Seoul date -d '-9 hours' +%Y-%m-%d)" || { echo "no changes"; exit 0; }
           for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep $((i * 10)); done
           exit 1

@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: "etf = ETF 전체 기간 받기 · allweather = 전천후 연구"
+        description: "etf = ETF 전체 기간 받기 · allweather = 전천후 연구 · us = 미국 주식 받기 + 미국 단기 연구"
         type: choice
-        options: [etf, allweather]
+        options: [etf, allweather, us]
         default: etf
 concurrency:
   group: research-${{ github.ref_name }}
@@ -32,6 +32,13 @@ jobs:
         run: |
           echo '```' >> $GITHUB_STEP_SUMMARY
           python src/allweather_lab.py 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: 미국 주식 (Yahoo/Stooq) + 미국 단기 연구
+        if: inputs.task == 'us'
+        run: |
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          python src/collect_us.py --backfill 2>&1 | tee -a $GITHUB_STEP_SUMMARY
+          python src/us_lab.py 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
       - name: 커밋
         run: |
