@@ -44,7 +44,7 @@ jobs:
         run: |
           git config user.name github-actions
           git config user.email actions@github.com
-          git add data/etf_ohlcv.csv data/short/ docs/ 2>/dev/null || true
+          git add data/etf_ohlcv.csv data/us_ohlcv.csv data/fx_usdkrw.csv data/short/ docs/ 2>/dev/null || true
           git commit -q -m "research ${{ inputs.task }} $(date -u +%F' '%H:%M)" || { echo "no change"; exit 0; }
           for i in 1 2 3; do git pull -q --rebase origin ${{ github.ref_name }} && git push -q origin HEAD:${{ github.ref_name }} && exit 0; sleep $((i * 10)); done
           exit 1
