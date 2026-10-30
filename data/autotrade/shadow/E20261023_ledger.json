@@ -1,3 +1,43 @@
 {
- "_exits": {}
+ "_exits": {},
+ "034730": {
+  "entry_date": "2026-10-30",
+  "partial_done": false,
+  "last_shares": 1
+ },
+ "078930": {
+  "entry_date": "2026-10-30",
+  "partial_done": false,
+  "last_shares": 11
+ },
+ "001450": {
+  "entry_date": "2026-10-30",
+  "partial_done": false,
+  "last_shares": 22
+ },
+ "028050": {
+  "entry_date": "2026-10-30",
+  "partial_done": false,
+  "last_shares": 15
+ },
+ "000990": {
+  "entry_date": "2026-10-30",
+  "partial_done": false,
+  "last_shares": 10
+ },
+ "009155": {
+  "entry_date": "2026-10-30",
+  "partial_done": false,
+  "last_shares": 2
+ },
+ "267250": {
+  "entry_date": "2026-10-30",
+  "partial_done": false,
+  "last_shares": 7
+ },
+ "006800": {
+  "entry_date": "2026-10-30",
+  "partial_done": false,
+  "last_shares": 37
+ }
 }

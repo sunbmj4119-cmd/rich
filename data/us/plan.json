@@ -1,76 +1,40 @@
 {
- "made": "2026-10-28",
+ "made": "2026-10-29",
  "model": "S:MOM:10:BAND:none",
  "orders": [
   {
-   "side": "buy",
+   "side": "sell",
    "code": "AAPL",
-   "usd": 753.69,
-   "est_price": 343.83
+   "qty": 2.1657,
+   "est_price": 348.91
   },
   {
-   "side": "buy",
-   "code": "ABBV",
-   "usd": 753.69,
-   "est_price": 285.99
-  },
-  {
-   "side": "buy",
-   "code": "AMGN",
-   "usd": 753.69,
-   "est_price": 451.83
-  },
-  {
-   "side": "buy",
-   "code": "KO",
-   "usd": 753.69,
-   "est_price": 91.73
-  },
-  {
-   "side": "buy",
-   "code": "LLY",
-   "usd": 753.69,
-   "est_price": 1288.3
-  },
-  {
-   "side": "buy",
+   "side": "sell",
    "code": "MSFT",
-   "usd": 753.69,
-   "est_price": 531.01
+   "qty": 1.3951,
+   "est_price": 530.14
   },
   {
    "side": "buy",
-   "code": "PLTR",
-   "usd": 753.69,
-   "est_price": 196.81
+   "code": "COP",
+   "usd": 754.91,
+   "est_price": 150.03
   },
   {
    "side": "buy",
-   "code": "PM",
-   "usd": 753.69,
-   "est_price": 202.64
-  },
-  {
-   "side": "buy",
-   "code": "TMO",
-   "usd": 753.69,
-   "est_price": 704.15
-  },
-  {
-   "side": "buy",
-   "code": "V",
-   "usd": 753.69,
-   "est_price": 400.6
+   "code": "MA",
+   "usd": 754.91,
+   "est_price": 635.7
   }
  ],
- "equity_usd": 7536.87,
+ "equity_usd": 7549.09,
  "target": [
-  "AAPL",
   "ABBV",
   "AMGN",
+  "COP",
   "KO",
   "LLY",
-  "MSFT",
+  "MA",
   "PLTR",
   "PM",
   "TMO",
