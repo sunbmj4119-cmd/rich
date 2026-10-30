@@ -26,9 +26,9 @@
     "fit": 0.5745
    },
    "forward": {
-    "days": 4,
-    "ret": 0.016,
-    "sharpe": 5.051
+    "days": 5,
+    "ret": 0.027,
+    "sharpe": 7.342
    },
    "eligible": false
   },
@@ -58,9 +58,9 @@
     "fit": 0.3114
    },
    "forward": {
-    "days": 1,
-    "ret": 0.0,
-    "sharpe": null
+    "days": 2,
+    "ret": 0.039,
+    "sharpe": 36.212
    },
    "eligible": false
   },
@@ -90,7 +90,7 @@
     "fit": 0.3112
    },
    "forward": {
-    "days": 0,
+    "days": 1,
     "ret": 0.0,
     "sharpe": null
    },
