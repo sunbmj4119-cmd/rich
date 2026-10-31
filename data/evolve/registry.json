@@ -76,7 +76,8 @@
      "sharpe": 0.0,
      "mdd": 0.0
     },
-    "p": null
+    "p": null,
+    "msprt": null
    },
    "fit_now": {
     "fit": 0.138,
@@ -96,6 +97,11 @@
      "days": false,
      "beat": false,
      "p": false
+    },
+    "C": {
+     "days": false,
+     "beat": false,
+     "evidence": false
     }
    }
   },
@@ -147,7 +153,8 @@
      "sharpe": 0.0,
      "mdd": 0.0
     },
-    "p": null
+    "p": null,
+    "msprt": null
    },
    "fit_now": {
     "fit": 0.5496,
@@ -167,6 +174,11 @@
      "days": false,
      "beat": false,
      "p": false
+    },
+    "C": {
+     "days": false,
+     "beat": false,
+     "evidence": false
     }
    }
   },
@@ -218,7 +230,8 @@
      "sharpe": 0.0,
      "mdd": 0.0
     },
-    "p": null
+    "p": null,
+    "msprt": null
    },
    "fit_now": {
     "fit": 0.472,
@@ -238,6 +251,11 @@
      "days": false,
      "beat": false,
      "p": false
+    },
+    "C": {
+     "days": false,
+     "beat": false,
+     "evidence": false
     }
    }
   },
@@ -289,7 +307,8 @@
      "sharpe": 0.0,
      "mdd": 0.0
     },
-    "p": null
+    "p": null,
+    "msprt": null
    },
    "fit_now": {
     "fit": 0.5328,
@@ -309,10 +328,15 @@
      "days": false,
      "beat": false,
      "p": false
+    },
+    "C": {
+     "days": false,
+     "beat": false,
+     "evidence": false
     }
    }
   }
  ],
  "retired": [],
- "n_evaluated": 218449
+ "n_evaluated": 235275
 }

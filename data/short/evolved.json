@@ -95,6 +95,39 @@
     "sharpe": null
    },
    "eligible": false
+  },
+  {
+   "id": "X261030a",
+   "born": "2026-10-30",
+   "genome": {
+    "w": {
+     "hi52": 2.0,
+     "fip": 1.0,
+     "rev1": 1.5,
+     "rev3": 1.0
+    },
+    "K": 5,
+    "hold": "H10",
+    "gate": "crash"
+   },
+   "fit_born": {
+    "fit": 1.047,
+    "sharpe": 1.582,
+    "cagr": 0.4376,
+    "mdd": -0.2861,
+    "buys": 755,
+    "worst_regime": 0.762
+   },
+   "beat": {
+    "id": "S:REV1:5:H10:trend",
+    "fit": 0.311
+   },
+   "forward": {
+    "days": 0,
+    "ret": 0.0,
+    "sharpe": null
+   },
+   "eligible": false
   }
  ],
  "retired": []
