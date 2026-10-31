@@ -238,6 +238,8 @@ SIGNAL_INFO = {
     "mom120": "6개월 추세",
     "hi52": "52주 고가 근접",
     "for20": "외국인 20일 순매수",
+    "for5": "외국인 5일 순매수 (시총 대비)",
+    "fip": "조금씩 꾸준히 오른 정도 (Frog in the Pan)",
 }
 
 
@@ -260,6 +262,9 @@ def signals(P):
             "mom120": _lag(C, 5) / _lag(C, 120) - 1,
             "hi52": C / _roll(C, 252, "max"),
             "for20": _roll(P["FOR"], 20, "sum") / MC,
+            "for5": _roll(P["FOR"], 5, "sum") / MC,
+            # Da, Gurun & Warachka 2014: 정보 이산성 ID = sign(누적수익)·(하락일 비율 − 상승일 비율) → 부호를 뒤집어 '꾸준할수록 큼'
+            "fip": -np.sign(_lag(C, 5) / _lag(C, 250) - 1) * (_lag(_roll((r1 < 0).astype(float), 245), 5) - _lag(_roll((r1 > 0).astype(float), 245), 5)),
         }
     for k in S:
         S[k][~np.isfinite(S[k])] = np.nan

@@ -1,0 +1,65 @@
+{
+ "updated": "2026-10-31",
+ "note": "5개 분야로 나눠 논문·책·강연·블로그를 찾고, 제목·저자·연도·링크를 검색으로 확인했습니다. 본문을 직접 열 수 없었던 곳(일부 학술 출판사·arXiv·블로그)은 초록·요약 기준입니다. '우리에게'는 이 저장소 자료로 직접 검증한 결과입니다.",
+ "fields": [
+  {"name": "재무·경제학", "items": [
+   {"t": "Momentum Crashes", "who": "Daniel & Moskowitz · JFE 2016", "url": "https://doi.org/10.1016/j.jfineco.2015.12.002", "key": "추세 전략은 급락 뒤 반등하는 '공포 국면'에 크게 무너진다 — 일부 예측 가능", "us": "미국 추세 계좌에 '공포 국면 절반' 시험 → 기각 (표본에 붕괴가 1~2번뿐)"},
+   {"t": "Momentum has its moments", "who": "Barroso & Santa-Clara · JFE 2015", "url": "https://doi.org/10.1016/j.jfineco.2014.11.010", "key": "추세 전략을 자기 변동성으로 조절하면 붕괴가 거의 사라진다", "us": "미국 추세 계좌 변동성 관리 → 낙폭 −30%→−23%, 샤프는 그대로 (기각)"},
+   {"t": "Evaporating Liquidity", "who": "Nagel · RFS 2012", "url": "https://www.nber.org/papers/w17653", "key": "단기 반전 수익은 유동성 공급의 대가 — 변동성(VIX) 높을 때 크다", "us": "변동성 높을 때만 반전 → 두 기간 모두 개선, 확신 부족 → 진화 재료(hivol 필터)로 추가"},
+   {"t": "Volatility-Managed Portfolios", "who": "Moreira & Muir · JF 2017", "url": "https://doi.org/10.1111/jofi.12513", "key": "변동성이 높을 때 비중을 줄이면 위험 대비 수익이 오른다 (반론: Cederburg et al. 2020 — 실시간으론 103개 중 72개에서 오히려 낮아짐)", "us": "단기 몫·KODEX 200·미국 추세 모두 낙폭은 줄고 샤프는 같거나 낮음 → 기각"},
+   {"t": "A Tug of War: Overnight versus Intraday Expected Returns", "who": "Lou, Polk & Skouras · JFE 2019", "url": "https://doi.org/10.1016/j.jfineco.2019.03.011", "key": "추세 수익은 밤사이, 다른 이상현상은 장중에 난다", "us": "국내 추세 모델을 종가 체결로 → 원 P 0.019 였지만 앞 기간에서 못하고 보정 뒤 기각"},
+   {"t": "Betting Against Beta", "who": "Frazzini & Pedersen · JFE 2014", "url": "https://doi.org/10.1016/j.jfineco.2013.10.005", "key": "저위험 주식이 위험 대비 더 번다 (한국 KOSPI200 도 Pyo & Lee 2018)", "us": "국내·미국 저변동성 10종목 → 추세보다 크게 못함 (기각)"},
+   {"t": "Factor Momentum and the Momentum Factor", "who": "Ehsani & Linnainmaa · JF 2022", "url": "https://doi.org/10.1111/jofi.13131", "key": "요인(전략) 자체의 과거 1년 성적이 앞으로를 예측", "us": "전천후 카드에 적용 → 샤프 1.20→1.09 (기각)"},
+   {"t": "Do foreign investors destabilize stock markets? The Korean experience in 1997", "who": "Choe, Kho & Stulz · JFE 1999 / RFS 2005", "url": "https://doi.org/10.1016/S0304-405X(99)00037-9", "key": "외국인은 추세를 따라 사고 군집하지만 시장을 불안하게 하지는 않음; 외국인이 매수에서 21bp 더 낸다", "us": "외국인 5일 순매수 신호(시장·종목) → 기각, 진화 재료(for5)로만 추가"},
+   {"t": "한국 이상현상 26개와 투자자 유형 (PBFJ 90, 제목 미확인)", "who": "Kim, Kang & Roh · PBFJ 2025", "url": "https://doi.org/10.1016/j.pacfin.2024.102622", "key": "한국 이상현상 26개 — 개인이 가격을 틀어놓고 외국인·운용사가 이용", "us": "개인 5일 순매수 상위 → 기각"},
+   {"t": "Equity Returns at the Turn of the Month", "who": "McConnell & Xu · FAJ 2008", "url": "https://doi.org/10.2469/faj.v64.n2.11", "key": "월말 1일+월초 3일 수익이 크다 (35개국 중 31개)", "us": "KODEX 200 2014~ → 기각"},
+   {"t": "The Halloween Indicator, 'Sell in May and Go Away'", "who": "Bouman & Jacobsen · AER 2002", "url": "https://doi.org/10.1257/000282802762024683", "key": "11~4월 수익이 5~10월보다 크다", "us": "두 기간 모두 개선, 확신 부족 (8번뿐) → 앞으로 추적"},
+   {"t": "Replicating Anomalies", "who": "Hou, Xue & Zhang · RFS 2020", "url": "https://doi.org/10.1093/rfs/hhy131", "key": "이상현상 452개 중 65%가 재현 실패", "us": "→ 우리도 Holm 보정·두 기간 일치를 통과 기준으로"},
+   {"t": "Does Academic Research Destroy Stock Return Predictability?", "who": "McLean & Pontiff · JF 2016", "url": "https://doi.org/10.1111/jofi.12365", "key": "발표 뒤 이상현상 수익 58% 감소", "us": "→ 가설마다 '등록 뒤 성적'을 따로 센다"},
+   {"t": "The Adaptive Markets Hypothesis", "who": "Lo · JPM 2004 (책 2017)", "url": "https://papers.ssrn.com/abstract=602222", "key": "효율성은 시장 생태에 따라 변한다 — 전략 수익은 생기고 사라진다", "us": "→ 쉬지 않는 진화 + 다양한 전략 섞기 (빠른 국면 갈아타기 X)"}
+  ]},
+  {"name": "통계학·수학", "items": [
+   {"t": "The Deflated Sharpe Ratio", "who": "Bailey & López de Prado · JPM 2014", "url": "https://doi.org/10.3905/jpm.2014.40.5.094", "key": "N개를 시도해 1등을 골랐다면 샤프를 그만큼 깎아 봐야 한다", "us": "국내 단기 채택 규칙 DSR 0.77 · 미국 추세 0.00 (시도 270개 성적 차이가 커서 1.04 는 우연과 구분 안 됨)"},
+   {"t": "The Probability of Backtest Overfitting", "who": "Bailey, Borwein, López de Prado & Zhu · J. Comput. Finance 2017", "url": "https://doi.org/10.21314/JCF.2016.322", "key": "과거 1등을 고르면 앞으로 중간 아래로 떨어질 확률 (CSCV)", "us": "국내 단기 후보 PBO 26% (과거 1등 샤프 1.24 → 뒤 기간 0.49) · 미국 4%"},
+   {"t": "Always Valid Inference: Continuous Monitoring of A/B Tests", "who": "Johari, Koomen, Pekelis & Walsh · Oper. Res. 2022", "url": "https://doi.org/10.1287/opre.2021.2135", "key": "매일 들여다봐도 거짓 결론 확률이 α 를 넘지 않는 순차검정", "us": "30일 모델 승격에 '길 C' 추가 — 시뮬레이션 거짓 승격 0.7% (500일, 매일 확인)"},
+   {"t": "Robust performance hypothesis testing with the Sharpe ratio", "who": "Ledoit & Wolf · J. Empirical Finance 2008", "url": "https://doi.org/10.1016/j.jempfin.2008.03.002", "key": "두 전략 샤프 차이의 강건한 검정", "us": "→ 다음 단계 (지금은 블록 부트스트랩)"},
+   {"t": "A Reality Check for Data Snooping / SPA", "who": "White · Econometrica 2000 · Hansen · JBES 2005", "url": "https://doi.org/10.1111/1468-0262.00152", "key": "여러 모델 중 최고가 진짜 지수를 이기는지", "us": "→ 다음 단계 (Holm 보정으로 대신)"},
+   {"t": "Building Diversified Portfolios that Outperform Out of Sample (HRP)", "who": "López de Prado · JPM 2016", "url": "https://doi.org/10.3905/jpm.2016.42.4.059", "key": "상관 군집으로 나눠 위험 배분 — 역행렬 없이 안정적", "us": "전천후 몫에 적용 → 샤프 1.20→1.01 (기각)"},
+   {"t": "Stock Market Prices Do Not Follow Random Walks: Evidence from a Simple Specification Test", "who": "Lo & MacKinlay · RFS 1988", "url": "https://web.mit.edu/Alo/www/Papers/lo-mackinlay-88.html", "key": "분산비 <1 이면 되돌림, >1 이면 추세", "us": "분산비로 반전·추세 갈아타기 → 기각 (VR 이 거의 늘 1 미만)"},
+   {"t": "Bayesian Online Changepoint Detection", "who": "Adams & MacKay · 2007", "url": "https://arxiv.org/abs/0710.3742", "key": "체제 변화 실시간 감지", "us": "→ 다음 단계 후보 (챔피언 이상 감지)"}
+  ]},
+  {"name": "물리학·복잡계·정보이론", "items": [
+   {"t": "Principal Components as a Measure of Systemic Risk (흡수비율)", "who": "Kritzman, Li, Page & Rigobon · JPM 2011", "url": "https://papers.ssrn.com/abstract=1633027", "key": "종목들이 한 방향으로 쏠리면(상위 고유값 비중↑) 큰 하락이 잦다", "us": "KODEX 200 낙폭 −42%→−22%, 샤프 0.76→0.88 이지만 뒤 기간은 개선 없음 → 기각·추적"},
+   {"t": "Skulls, Financial Turbulence, and Risk Management", "who": "Kritzman & Li · FAJ 2010", "url": "https://ideas.repec.org/a/taf/ufajxx/v66y2010i5p30-41.html", "key": "자산들이 평소와 다르게 움직이는 정도(마할라노비스)가 높으면 위험", "us": "두 기간 모두 개선, 확신 부족 → 앞으로 추적 (전천후 카드로 넣으면 오히려 나빠져 넣지 않음)"},
+   {"t": "Noise Dressing of Financial Correlation Matrices (랜덤행렬이론)", "who": "Laloux, Cizeau, Bouchaud & Potters · PRL 1999", "url": "https://arxiv.org/abs/cond-mat/9810255", "key": "상관행렬 대부분은 잡음 — 걸러내면 위험 추정이 좋아진다", "us": "→ 위험 관리용 (수익 예측 아님)"},
+   {"t": "Early-warning signals for critical transitions", "who": "Scheffer et al. · Nature 2009", "url": "https://doi.org/10.1038/nature08227", "key": "체제 전환 전 자기상관·분산이 오른다 (금융에선 근거 약함 — Guttal et al. 2016)", "us": "KODEX 200 → 차이 없음 (기각)"},
+   {"t": "Crashes as critical points (LPPL)", "who": "Johansen, Ledoit & Sornette · IJTAF 2000", "url": "https://doi.org/10.1142/S0219024900000115", "key": "거품의 로그주기 패턴 — 검정이 부풀려졌다는 반론(Grobys 2026)", "us": "한국 거품은 1번뿐 → 시험하지 않음"},
+   {"t": "Measuring Information Transfer (전이 엔트로피)", "who": "Schreiber · PRL 2000", "url": "https://doi.org/10.1103/PhysRevLett.85.461", "key": "한 시계열이 다른 시계열에 주는 정보 흐름", "us": "미국→한국: 시가에 이미 반영(t=15.7), 장중 따라가기·되돌림 모두 기각"},
+   {"t": "Kelly criterion (A New Interpretation of Information Rate)", "who": "Kelly · BSTJ 1956 · Thorp 2006", "url": "https://doi.org/10.1002/j.1538-7305.1956.tb03809.x", "key": "장기 성장 최대 비중 = μ/σ² — 추정오차 때문에 실전은 ¼~½", "us": "→ 계좌 비중 결정의 상한 참고 (다음 단계)"}
+  ]},
+  {"name": "생물·생태·화학·지구과학·행동과학", "items": [
+   {"t": "Market force, ecology and evolution", "who": "Farmer · ICC 2002", "url": "https://arxiv.org/abs/adap-org/9812005", "key": "전략들은 먹이사슬처럼 서로를 잡아먹는다 — 붐비면 수익이 줄어든다", "us": "→ 혼잡 측정(comomentum) 시험"},
+   {"t": "Comomentum: Inferring Arbitrage Activity from Return Correlations", "who": "Lou & Polk · RFS 2022", "url": "https://doi.org/10.1093/rfs/hhab117", "key": "추세 종목끼리 같이 움직일수록 추세가 되돌아간다", "us": "국내 추세 붐빔 때 끄기 → 기각"},
+   {"t": "Frog in the Pan: Continuous Information and Momentum", "who": "Da, Gurun & Warachka · RFS 2014", "url": "https://doi.org/10.1093/rfs/hhu003", "key": "조금씩 꾸준히 오른 종목의 추세가 더 오래 간다 (냄비 속 개구리)", "us": "국내 두 기간 모두 개선(샤프 0.78→0.91), 확신 부족 → 진화 재료(fip)로 추가 · 미국은 기각"},
+   {"t": "An examination of herd behavior in equity markets: An international perspective", "who": "Chang, Cheng & Khorana · JBF 2000", "url": "https://doi.org/10.1016/S0378-4266(99)00096-5", "key": "한국에서 군집 행동이 유의 (미국·홍콩은 아님)", "us": "군집 뒤 현금 · 투매 군집 뒤 매수 → 모두 기각"},
+   {"t": "Pairs Trading: Performance of a Relative-Value Arbitrage Rule", "who": "Gatev, Goetzmann & Rouwenhorst · RFS 2006", "url": "https://doi.org/10.1093/rfs/hhj020", "key": "평형에서 벌어진 짝이 돌아온다 (Ornstein–Uhlenbeck 반감기)", "us": "우선주 괴리 되돌림·갈아타기 → 기각 (삼성 우선주 반감기 약 94일 — 너무 느림)"},
+   {"t": "Maxing out: Stocks as lotteries", "who": "Bali, Cakici & Whitelaw · JFE 2011", "url": "https://doi.org/10.1016/j.jfineco.2010.08.014", "key": "최근 하루에 크게 오른 '복권 주식'은 다음 달 못한다", "us": "반전 매수에서 제외 → 차이 없음 (상위 100 대형주라 효과 약함)"},
+   {"t": "Good Day Sunshine", "who": "Hirshleifer & Shumway · JF 2003", "url": "https://doi.org/10.1111/1540-6261.00556", "key": "아침 햇빛이 많으면 수익이 높다 — 비용 넣으면 사라짐, 한국은 1997년 뒤 소멸", "us": "시험하지 않음 (비용보다 작음)"},
+   {"t": "Are investors moonstruck? Lunar phases and stock returns", "who": "Yuan, Zheng & Zhu · JEF 2006", "url": "https://doi.org/10.1016/j.jempfin.2005.06.001", "key": "새달 무렵 수익이 보름달보다 높다 (반론: Keef & Khaled 2011)", "us": "검증 장치가 '가짜 신호를 걸러내는지' 보는 대조군 — 기각됨 (정상)"},
+   {"t": "Winter Blues: A SAD Stock Market Cycle", "who": "Kamstra, Kramer & Levi · AER 2003", "url": "https://doi.org/10.1257/000282803321455322", "key": "계절성 우울 — 반론: Kelly & Meschke 2010 (모형 설정 탓)", "us": "시험하지 않음"},
+   {"t": "Predicting anomaly performance with politics, the weather, global warming, sunspots, and the stars", "who": "Novy-Marx · JFE 2014", "url": "https://doi.org/10.1016/j.jfineco.2014.02.002", "key": "흑점·행성 배열도 이상현상을 '예측'한다 — 가짜 회귀의 경고", "us": "→ 하늘 신호는 대조군으로만"}
+  ]},
+  {"name": "책·강연·실무 (국내 포함)", "items": [
+   {"t": "Advances in Financial Machine Learning", "who": "López de Prado · Wiley 2018", "url": "https://www.oreilly.com/library/view/advances-in-financial/9781119482086/", "key": "삼중 장벽 라벨·메타 라벨링·정화 교차검증·HRP", "us": "HRP 기각 · 메타 라벨링은 표본이 작아 보류"},
+   {"t": "Systematic Trading", "who": "Robert Carver · Harriman 2015", "url": "https://www.panmacmillan.com/authors/robert-carver/systematic-trading/9780857195005", "key": "예측을 크기 맞춰 섞고 변동성 목표로 운용", "us": "'좋은 후보 전부 섞기' → 매주 1등보다 크게 못함 (기각)"},
+   {"t": "Algorithmic Trading / Quantitative Trading 2nd ed.", "who": "Ernest Chan · Wiley 2013/2021", "url": "https://www.oreilly.com/library/view/algorithmic-trading-winning/9781118746912/", "key": "되돌림 반감기·허스트·켈리·국면별 파라미터", "us": "반감기 → 우선주 시험에 사용"},
+   {"t": "Investing Amid Low Expected Returns", "who": "Antti Ilmanen · Wiley 2022", "url": "https://spe.org.uk/reading-room/book-reviews/investing-amid-low-expected-returns/", "key": "여러 스타일 프리미엄 분산, 기대는 낮게", "us": "→ 전천후 섞기 유지"},
+   {"t": "A Man for All Markets / Kelly 논문", "who": "Edward Thorp · 2017 / 2006", "url": "https://sites.oxy.edu/lengyel/M330/thorp/paper.htm", "key": "켈리의 일부만 걸어라", "us": "→ 다음 단계"},
+   {"t": "Bold Asset Allocation (카나리아)", "who": "Keller · SSRN 4166845 2022", "url": "https://www.quantconnect.com/forum/discussion/14190/bold-asset-allocation-baa-keller/p1", "key": "카나리아 자산 하나라도 꺾이면 방어", "us": "국내판 카나리아 → 크게 못함 (기각)"},
+   {"t": "할 수 있다! 퀀트 투자", "who": "강환국 · 에프엔미디어 2017", "url": "https://ebook-product.kyobobook.co.kr/dig/epd/ebook/E000002997763", "key": "가치 4지표·퀄리티·모멘텀 조합, 11~4월 투자 (소형주 백테스트는 과장 가능)", "us": "11~4월 → 유망·추적"},
+   {"t": "주식투자 리스타트", "who": "systrader79 · 2015", "url": "https://wikidocs.net/book/16915", "key": "장세 판단 먼저 · 종가 베팅", "us": "종가 베팅은 실제 ETF 가격으로 이점 없음 (3-6-5)"},
+   {"t": "MIT 15.401 Finance Theory (강의)", "who": "Andrew Lo · MIT OCW 2008", "url": "https://ocw.mit.edu/courses/15-401-finance-theory-i-fall-2008/", "key": "적응적 시장·위험과 수익의 기본", "us": "→ 진화·분산 설계의 이론 배경"},
+   {"t": "The Man Who Solved the Market", "who": "Zuckerman · 2019", "url": "https://en.wikipedia.org/wiki/The_Man_Who_Solved_the_Market", "key": "약한 신호 여럿을 아주 많은 거래로 — '50.75% 맞히기'", "us": "→ 우리 규모(일봉·100종목)에선 비용이 먼저"}
+  ]}
+ ]
+}

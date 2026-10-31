@@ -66,7 +66,9 @@ SEL_NAME = {"REV1": "1일 반전", "REVID": "장중 반전", "REVC": "반전 종
 # (최소 보유, 최대 보유, 이탈 순위 배수)
 HOLDS = {"H1": (1, 1, 1), "H3": (3, 3, 2), "H5": (5, 5, 2), "H10": (10, 10, 3), "BAND": (1, 20, 3)}
 HOLD_NAME = {"H1": "매일 교체", "H3": "3일 보유", "H5": "5일 보유", "H10": "10일 보유", "BAND": "순위 유지 시 보유(최대 20일)"}
-GATES = {"none": "항상", "trend": "지수 120일선 위", "crash": "급락장 제외"}
+GATES = {"none": "항상", "trend": "지수 120일선 위", "crash": "급락장 제외",
+         "hivol": "시장 변동성이 평소보다 높을 때만"}       # hivol: 진화 전용 (Nagel 2012 — 변동성 높을 때 반전 보상이 큼)
+FIXED_GATES = ("none", "trend", "crash")                  # 고정 후보 모델(341개)은 이 셋만 — 후보군을 늘리면 고르는 데서 생기는 과최적화가 커진다
 
 ETF_RULES = {
     "hold": "지수 ETF 계속 보유 (기준)",
@@ -89,7 +91,7 @@ def stock_models(quick=False):
     for s in sels:
         for K in (5, 10):
             for h in HOLDS:
-                for g in (("none", "trend") if quick else GATES):
+                for g in (("none", "trend") if quick else FIXED_GATES):
                     out.append({"id": f"S:{s}:{K}:{h}:{g}", "kind": "stock", "sel": s, "K": K, "hold": h, "gate": g})
     return out
 
@@ -123,9 +125,11 @@ class Data:
         self.Op, self.Cp, self.legs = SP.etf_prices(P)
         self.M = SP.market_signals(P, self.legs)
         mk = SP.market(P)
+        vol = pd.Series(mk["idx"]).pct_change().rolling(20, min_periods=15).std()
         self.gate = {"none": np.ones(self.T, bool),
                      "trend": np.nan_to_num(self.M["m_trend120"], nan=1) > 0,
-                     "crash": ~mk["crash_off"]}
+                     "crash": ~mk["crash_off"],
+                     "hivol": (vol > vol.expanding(min_periods=120).median()).to_numpy()}
         self._rk = {}
         self._pr = {}
 
