@@ -304,6 +304,35 @@ def test_us_after_tax_only_taxes_gains():
     assert abs(A[1] - 1.2) < 1e-12 and abs(A[-1] - 1.0 * (1 + 0.2 * 0.78) / 1.2) < 1e-12
 
 
+def test_overfit_tools():
+    """통계 도구: 무작위 전략들 중 1등의 PBO 는 약 0.5, 진짜 우위가 있는 하나가 끼면 낮다. Holm 은 단조·1 이하. 순차검정은 차이 0 에서 거의 안 터진다."""
+    import science_lab as SL
+    import evolve as EV
+    rng = np.random.default_rng(0)
+    R = rng.normal(0, 0.01, (1200, 40))
+    p_noise = SL.pbo(R, S=10)["pbo"]
+    R2 = R.copy()
+    R2[:, 0] += 0.003
+    p_edge = SL.pbo(R2, S=10)["pbo"]
+    assert 0.3 < p_noise < 0.7 and p_edge < 0.1
+    d, _ = SL.dsr(R2[:, 0], [np.mean(R2[:, i]) / np.std(R2[:, i]) for i in range(40)])
+    assert d > 0.9
+    adj = SL.holm([0.01, 0.04, None, 0.03])
+    assert adj[2] is None and adj[0] == 0.03 and all(a <= 1 for a in adj if a is not None)
+    assert abs(SL._nppf(0.975) - 1.959964) < 1e-4 and abs(SL._ncdf(1.959964) - 0.975) < 1e-4
+    hits = sum(1 for k in range(100) if (lambda r: r and r["lambda"] >= 20)(EV.msprt(rng.normal(0, 0.006, 300))))
+    assert hits <= 5
+
+
+def test_new_research_signals_dont_grow_fixed_pool():
+    """연구에서 넣은 재료(fip·for5 신호, hivol 필터)는 진화 전용 — 고정 후보 330개는 그대로 (고르는 데서 생기는 과최적화를 키우지 않게)."""
+    assert len(L.stock_models()) == 330
+    D = data()
+    assert "fip" in D.S and "for5" in D.S and "hivol" in D.gate and "hivol" in L.GATES
+    import short_evolve as SE
+    assert "hivol" in SE.CH["gate"] and "fip" in SE.SIGS
+
+
 if __name__ == "__main__":
     for k, fn in list(globals().items()):
         if k.startswith("test_"):

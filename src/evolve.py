@@ -500,6 +500,26 @@ def boot_p(x, y, B=3000, L=20, seed=11):
     return round(cnt / B, 4)
 
 
+def msprt(d, tau_ratio=1 / 16, nw_lag=5):
+    """혼합 순차확률비 검정 (Robbins 1970; Johari et al. 2022 'Always-valid inference'): 도전자 − 챔피언 일별 수익 차이 d 로
+    '차이가 0' 가설에 대한 증거 Λ. 매일 다시 봐도 잘못 승격할 확률이 α 를 넘지 않는다 (지금처럼 매일 보면서 P<0.10 을 보는 것과 달리).
+    Λ_n = √(σ²/(σ²+nτ²))·exp(n²τ²d̄²/(2σ²(σ²+nτ²))), σ² = Newey–West 장기분산, τ = σ/16 (연 샤프 차이 1 정도를 예상 크기로)."""
+    d = np.asarray(d, float)
+    d = d[np.isfinite(d)]
+    n = len(d)
+    if n < 20:
+        return None
+    m = d.mean()
+    x = d - m
+    s2 = x.var()
+    for k in range(1, nw_lag + 1):
+        s2 += 2 * (1 - k / (nw_lag + 1)) * (x[k:] * x[:-k]).mean()
+    s2 = max(s2, 1e-18)
+    tau2 = s2 * tau_ratio ** 2
+    loglam = 0.5 * np.log(s2 / (s2 + n * tau2)) + n * n * tau2 * m * m / (2 * s2 * (s2 + n * tau2))
+    return {"lambda": round(float(np.exp(min(loglam, 20.0))), 3), "mean_bp": round(float(m * 1e4), 2), "n": n}
+
+
 def check(cfg):
     from engine_backtest import run
     p, f = F.build_all()
@@ -691,8 +711,12 @@ def weekly(cfg, pool, seed=None, pop=48, gens=14, label="주간 진화"):
         beat = bool(n >= 2 and sc["sharpe"] is not None and sc["sharpe"] > sh["sharpe"] and sc["total"] > sh["total"])
         ok_a = {"days": n >= min_fwd, "beat": beat, "fit": c["fit_now"]["fit"] >= cf["fit"] - 0.10, "meta": trusted}
         ok_b = {"days": n >= long_fwd, "beat": beat, "p": p_fwd is not None and p_fwd < 0.10}
-        c["checks"] = {"A": ok_a, "B": ok_b}
-        if all(ok_a.values()) or all(ok_b.values()):
+        # 길 C (2026-10-31, 통계 연구): 순차검정 — 매일 봐도 유효한 증거가 1/α=20 을 넘고 차이가 플러스면 (최소 20거래일)
+        sq = msprt(rc - rh) if n >= 20 and len(rc) == len(rh) else None
+        c["forward"]["msprt"] = sq
+        ok_c = {"days": n >= 20, "beat": beat, "evidence": bool(sq and sq["lambda"] >= 20 and sq["mean_bp"] > 0)}
+        c["checks"] = {"A": ok_a, "B": ok_b, "C": ok_c}
+        if all(ok_a.values()) or all(ok_b.values()) or all(ok_c.values()):
             c["status"] = "승격 후보"
             proposals.append(c)
         elif (n >= long_fwd and not beat) or (n >= 120 and sc["sharpe"] is not None and sc["sharpe"] < sh["sharpe"] - 0.5):

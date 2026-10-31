@@ -48,10 +48,17 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
       - name: 미국 단기 검증 (us_lab — S&P 100 · 모델 270개 · 고르는 방식)
         run: python src/us_lab.py 2>&1 | grep -v Warning | grep -E "^■|^□|미국 자료" | tee -a $GITHUB_STEP_SUMMARY || echo "미국 검증 실패(무시하고 계속)"
+      - name: 다분야 가설 검증 (science_lab — 논문·책 가설 36개 · Holm 보정 · 과최적화 PBO/DSR · 등록 뒤 성적)
+        run: |
+          echo "## 🔬 다분야 가설" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          python src/science_lab.py 2>&1 | grep -v Warning | grep -E "통과|유망|과최적화|끝" | tee -a $GITHUB_STEP_SUMMARY || echo "가설 검증 실패(무시하고 계속)"
+          echo '```' >> $GITHUB_STEP_SUMMARY
       - name: 커밋
         run: |
           git config user.name github-actions
           git config user.email actions@github.com
+          git add data/science/ docs/science.json 2>/dev/null || true
           git add data/short/allweather.json docs/allweather.json 2>/dev/null || true
           git add data/short/us_lab.json docs/us_lab.json 2>/dev/null || true
           git add data/evolve/ docs/evolve.json data/short/lab.json docs/short_lab.json

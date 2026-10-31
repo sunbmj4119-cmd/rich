@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>연구 노트</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="ui.css">
+<style>
+.tally { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px }
+.tally > div { background: var(--soft); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px }
+.tally b { font-size: 22px; font-variant-numeric: tabular-nums }
+.vd { font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; white-space: nowrap }
+.vd-통과 { background: var(--pos-bg); color: var(--green) }
+.vd-유망 { background: var(--warn-bg); color: var(--orange) }
+.vd-기각 { background: var(--soft); color: var(--mut) }
+.hyp summary .sum b { font-size: 15px; line-height: 1.45 }
+.hyp .kv span:first-child { white-space: nowrap }
+.src { padding-block: 11px; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.6 }
+.src:last-child { border-bottom: 0 }
+.src a { font-weight: 700 }
+.src .who { color: var(--mut); font-size: 12.5px }
+.src .us { margin-top: 4px; background: var(--soft); border-radius: 10px; padding: 6px 10px; font-size: 13px }
+.big2 { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums }
+.verdict { display: flex; gap: 12px; padding-block: 12px; border-bottom: 1px solid var(--line) }
+.verdict:last-child { border-bottom: 0 }
+.verdict .ic { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px }
+.verdict .ic.y { background: var(--pos-bg); color: var(--green) } .verdict .ic.n { background: var(--neg-bg); color: var(--red) } .verdict .ic.m { background: var(--warn-bg); color: var(--orange) }
+.verdict b { font-size: 15.5px; display: block; margin-bottom: 2px }
+.verdict .ic.pct { width: auto; min-width: 44px; padding: 0 8px; border-radius: 14px; font-size: 13px }
+.verdict p { font-size: 14px; color: var(--mut); line-height: 1.6 }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav" id="topnav" aria-label="페이지"></nav>
+  <header class="phead"><h1>연구 노트 · 다분야</h1><div class="mut small" id="sub">불러오는 중…</div></header>
+
+  <section class="card hero" id="hero"><div class="skeleton" style="height:120px"></div></section>
+
+  <div class="stick"><div class="tabs" id="tabs">
+    <button data-t="sum">결론</button><button data-t="hyp">가설 검증</button><button data-t="over">과최적화 진단</button><button data-t="src">출처</button>
+  </div></div>
+
+  <div class="tabpane" data-tab="sum">
+    <section class="card"><header><h2>무엇을 바꿨나</h2></header><div id="changed"></div></section>
+    <section class="card"><header><h2>잣대</h2></header>
+      <p style="font-size:14px;line-height:1.7">모든 아이디어를 같은 잣대에 올렸습니다 — 그날 저녁까지의 자료로만 판단하고 다음 거래일에 체결, 비용 포함(국내 주식 왕복 0.34% · ETF 호가 반 칸 · 미국 0.26%),
+      '아무것도 안 하고 들고 있기'와 위험 대비 수익(샤프)을 비교해 블록 부트스트랩 P, 여러 가설을 한꺼번에 봤으니 Holm 보정(가족 오류율 5%), 그리고 앞·뒤 두 기간 모두 같은 방향.
+      셋을 다 넘으면 '통과', 방향만 맞으면 '유망(확신 부족)'. 처음 검증한 날을 기록해 두고 그 뒤 성적을 매일 밤 따로 셉니다 — 논문이 나온 뒤 수익이 평균 58% 줄었다는 연구(McLean & Pontiff 2016) 때문입니다.</p>
+    </section>
+  </div>
+
+  <div class="tabpane" data-tab="hyp">
+    <section class="card">
+      <header><h2>가설별 결과</h2><span class="mut small" id="hyp-sub"></span></header>
+      <div class="chips scroll-x" id="hf"></div>
+      <div id="hyps" style="display:flex;flex-direction:column;gap:10px;margin-top:10px"></div>
+    </section>
+  </div>
+
+  <div class="tabpane" data-tab="over">
+    <section class="card" id="ov"></section>
+  </div>
+
+  <div class="tabpane" data-tab="src">
+    <section class="card"><p class="mut" id="src-note" style="font-size:13.5px;line-height:1.6"></p></section>
+    <div id="srcs" style="display:flex;flex-direction:column;gap:12px"></div>
+  </div>
+
+  <p class="foot">매일 밤(evolve.yml) 가설 전부를 새 자료로 다시 재고, 등록 뒤 성적을 더합니다 · <a href="short.html">모의투자</a> · <a href="report.html#evo">모델 진화</a> · <a href="index.html">홈</a></p>
+</div>
+<script src="ui.js"></script>
+<script>
+(async () => {
+  U.nav("report.html");
+  let S = null, R = null;
+  try { S = await U.j("science.json"); } catch { S = null; }
+  try { R = await U.j("research_sources.json"); } catch { R = null; }
+  const sh = (x) => U.ok(x) ? (+x).toFixed(2) : "—";
+  const pc = (x, d = 1) => U.pct(U.ok(x) ? x * 100 : null, d);
+  const vk = (v) => v.startsWith("통과") ? "통과" : v.startsWith("유망") ? "유망" : "기각";
+  if (!S) { U.$("#hero").innerHTML = `<div class="empty">아직 검증 결과가 없습니다.</div>`; return; }
+  const H = S.hypotheses || [];
+  const n = { 통과: 0, 유망: 0, 기각: 0 };
+  H.forEach((h) => n[vk(h.verdict)]++);
+  const nsrc = R ? R.fields.reduce((a, f) => a + f.items.length, 0) : 0;
+  U.$("#sub").textContent = `${S.generated} 계산 · 국내·ETF·미국 일봉`;
+  U.$("#hero").innerHTML = `<span class="eyebrow">재무·경제 · 통계·수학 · 물리·복잡계 · 생물·지구·행동 · 책·강연·실무</span>
+    <div class="mut" style="font-size:14.5px;line-height:1.6">${nsrc}개 출처에서 뽑은 가설 ${H.length}개를 우리 자료로 검증했습니다.</div>
+    <div class="tally"><div><span class="mut small">통과</span><b>${n.통과}</b></div><div><span class="mut small">유망 (확신 부족)</span><b>${n.유망}</b></div><div><span class="mut small">기각</span><b>${n.기각}</b></div></div>
+    <p class="note">유명한 아이디어 대부분이 우리 비용·우리 시장에선 '들고 있기'를 못 이겼습니다. 이건 실패가 아니라 쓸데없는 매매로 돈을 잃지 않게 걸러낸 결과입니다.
+      유망한 것은 바로 돈을 넣지 않고 ① 진화의 재료로 넣어 '등록 뒤 성적'으로 시험하고 ② 매일 밤 다시 재며 추적합니다.</p>`;
+  const prom = H.filter((h) => vk(h.verdict) === "유망");
+  const C = [
+    ["y", "진화의 재료 3가지 추가 (국내 단기 모델)", "'조금씩 꾸준히 오른 정도'(Da·Gurun·Warachka 2014) · '외국인 5일 순매수'(Choe·Kho·Stulz) · '시장 변동성 높을 때만 사기'(Nagel 2012). 진화가 이 재료를 섞어 새 모델을 만들면, 등록 뒤 125거래일 성적이 쌓여야만 실제로 고를 수 있습니다."],
+    ["y", "모델 교체 판정을 통계적으로 바르게 (30일 모델)", "지금까지는 매일 들여다보며 P<0.10 을 확인 — 매일 보면 우연히 통과할 확률이 커집니다. '매일 봐도 유효한 순차검정'(혼합 SPRT, Johari 외 2022)을 승격의 세 번째 길로 넣었습니다. 시뮬레이션에서 차이가 없을 때 잘못 승격할 확률 0.7%(500일, 매일 확인)."],
+    ["y", "과최적화 진단을 매일 밤", "고른 모델이 '진짜 실력'일 확률(DSR)과 과거 1등을 골랐을 때 앞으로 중간 아래로 떨어질 확률(PBO)을 계산해 보여 줍니다. 국내 단기 규칙은 PBO 26% — 기대치를 낮춰 잡아야 한다는 뜻입니다."],
+    ["m", "유망하지만 아직 안 쓰는 것 " + prom.length + "가지", prom.map((h) => h.name).join(" · ") + " — 두 기간 모두 나았지만 여러 가설을 함께 본 보정을 넘지 못했습니다. 매일 밤 다시 재며 등록 뒤 성적을 쌓습니다."],
+    ["n", "걸러낸 것들", "달의 위상·연휴 효과·월말 효과·카나리아 경보·HRP·우선주 괴리·군집·저변동성·미국→한국 장중 따라가기 등 — 비용을 넣으면 '들고 있기'를 못 이겼습니다. 달의 위상은 원래 '가짜 신호를 잘 걸러내는지' 보는 대조군이었고, 걸러졌습니다."],
+  ];
+  U.$("#changed").innerHTML = C.map(([c, t, d]) => `<div class="verdict"><span class="ic ${c}">${c === "y" ? "✓" : c === "n" ? "✕" : "!"}</span><div><b>${t}</b><p>${U.esc(d)}</p></div></div>`).join("");
+  // 가설
+  const fields = [...new Set(H.map((h) => h.field.split(" · ")[0]))];
+  let fsel = "전체";
+  const draw = () => {
+    const L = H.filter((h) => fsel === "전체" || h.field.startsWith(fsel));
+    U.$("#hyp-sub").textContent = `${L.length}개`;
+    U.$("#hyps").innerHTML = L.map((h) => {
+      const k = vk(h.verdict), f = h.forward || {};
+      return `<details class="fold hyp"><summary><div class="sum"><b>${U.esc(h.name)} <span class="vd vd-${k}">${k === "유망" ? "유망" : k}</span></b>
+        <span>샤프 ${sh(h.new?.sharpe)} vs ${sh(h.baseline?.sharpe)} · 낙폭 ${pc(h.new?.mdd, 0)} vs ${pc(h.baseline?.mdd, 0)}</span></div></summary><div class="body">
+        <div class="kv"><span>분야</span><b>${U.esc(h.field)}</b></div>
+        <div class="kv"><span>출처</span><b>${U.esc(h.source)}</b></div>
+        <p style="font-size:14px;line-height:1.6">${U.esc(h.rule)}</p>
+        <div class="kv"><span>비교 기준</span><b>${U.esc(h.base)}</b></div>
+        <div class="kv"><span>연수익</span><b>${pc(h.new?.cagr)} vs ${pc(h.baseline?.cagr)}</b></div>
+        <div class="kv"><span>앞 기간 샤프</span><b>${sh(h.dev?.[0])} vs ${sh(h.dev?.[1])}</b></div>
+        <div class="kv"><span>뒤 기간 샤프 (${U.esc(h.split)} 뒤)</span><b>${sh(h.test?.[0])} vs ${sh(h.test?.[1])}</b></div>
+        <div class="kv"><span>P · Holm 보정</span><b>${h.p ?? "—"} · ${h.p_holm ?? "—"}</b></div>
+        <div class="kv"><span>등록 뒤</span><b>${f.days ? `${f.days}일 · ${pc(f.new, 2)} vs ${pc(f.base, 2)}` : `${U.esc(h.registered || "")} 등록 — 내일부터`}</b></div>
+        <p class="mut small">${U.esc(h.period[0])} ~ ${U.esc(h.period[1])}</p></div></details>`;
+    }).join("");
+  };
+  U.$("#hf").innerHTML = ["전체", ...fields].map((f) => `<button class="chip${f === "전체" ? " on" : ""}" data-f="${U.esc(f)}">${U.esc(f)}</button>`).join("");
+  U.$("#hf").addEventListener("click", (e) => { const b = e.target.closest("[data-f]"); if (!b) return; fsel = b.dataset.f;
+    U.$("#hf").querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c === b)); draw(); });
+  draw();
+  // 과최적화
+  const O = S.overfit || {};
+  const ob = (o, title) => o ? `<div class="verdict"><span class="ic pct ${o.pbo < 0.25 ? "y" : "m"}">${Math.round(o.pbo * 100)}%</span><div><b>${title}</b>
+    <p>${U.esc(o.what)} · 백테스트 샤프 ${sh(o.sharpe)}</p>
+    <p>PBO(과거 1등을 고르면 앞으로 중간 아래로 떨어질 확률) <b>${Math.round(o.pbo * 100)}%</b> — 반으로 나눈 조합 ${o.combos}개에서 앞 절반 1등의 샤프 중앙값 ${sh(o.is_sharpe_best_med)} → 뒤 절반 ${sh(o.oos_sharpe_of_is_best_med)}.</p>
+    <p>DSR(시도한 수를 감안해 진짜 실력일 확률) <b>${o.dsr == null ? "—" : Math.round(o.dsr * 100) + "%"}</b> — 이만큼 시도하면 운으로도 연 샤프 ${sh(o.sr0_annual)}는 나온다는 기준과 비교.</p></div></div>` : "";
+  U.$("#ov").innerHTML = `<header><h2>우리 모델은 얼마나 '운'인가</h2></header>` + ob(O.kr_short, "국내 단기 갈아타기 규칙") + ob(O.us, "미국 추세 상위 10") +
+    `<p class="note">국내 단기: 고를 때 1등 샤프 ${sh(O.kr_short?.is_sharpe_best_med)}가 뒤 기간엔 ${sh(O.kr_short?.oos_sharpe_of_is_best_med)} 정도로 — 백테스트 숫자의 절반 아래를 기대하는 게 맞습니다. 그래서 계좌 절반을 전천후 혼합으로 나눠 둔 것이 중요합니다.
+    미국 추세: 과거 1등이 뒤에서도 대체로 상위였지만(PBO ${Math.round((O.us?.pbo || 0) * 100)}%), 모델 270개의 성적 차이가 워낙 커서 샤프 ${sh(O.us?.sharpe)} 자체는 '운과 구분되는 수준'이 아닙니다(DSR ${O.us?.dsr == null ? "—" : Math.round(O.us.dsr * 100) + "%"}) — 별도 계좌로 앞으로의 성적을 지켜보는 이유입니다.</p>`;
+  // 출처
+  if (R) {
+    U.$("#src-note").textContent = R.note;
+    U.$("#srcs").innerHTML = R.fields.map((f) => `<details class="fold"><summary><div class="sum"><b>${U.esc(f.name)}</b><span>${f.items.length}개</span></div></summary><div class="body">` +
+      f.items.map((x) => `<div class="src"><a href="${U.esc(x.url)}" target="_blank" rel="noopener">${U.esc(x.t)}</a><div class="who">${U.esc(x.who)}</div>
+        <div>${U.esc(x.key)}</div><div class="us">우리에게: ${U.esc(x.us)}</div></div>`).join("") + `</div></details>`).join("");
+  }
+  U.tabs(U.$("#tabs"), "research");
+})();
+</script>
+</body>
+</html>
