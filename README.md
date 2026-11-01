@@ -9,7 +9,7 @@
 - **모의투자 (단기 50 + 전천후 50): `docs/short.html`** (단기 몫: 매일 후보 모델 전부 재시뮬레이션 → 주 1회 모델 선택 · 전천후 몫: ETF 12종을 전략 카드 20장 변동성 반비례로 섞어 들기 · 분기마다 반반 · 국면 표시)
 - **미국 모의 계좌: `docs/short.html#us`** (S&P 100 추세 상위 10 · 다음 미국 장 시가 · 국내 계좌와 별도 · 전략서 3-6-8)
 - **진화 모델 그림자 계좌: `docs/autotrade.html` '진화 모델' 탭** (도전자마다 같은 엔진으로 실제로 사고파는 모의 계좌)
-- **연구 노트: `docs/research.html`** (논문·책·강연 49개 출처 · 가설 36개 검증 · 과최적화 진단 · 전략서 3-6-9)
+- **연구 노트: `docs/research.html`** (논문·책·강연 49개 출처 · 가설 36개 검증 · 과최적화 진단 · 전략서 3-6-9 · **긴 역사 탭**: 설계에 안 쓴 1997~2018 자료로 다시 재기, 전략서 3-6-10)
 - **학습·진화: `docs/report.html#evo` · `docs/short.html`** (2시간마다 이어서 진화 · 등록 뒤 성적으로만 승격)
 - **쉬운 해설: `docs/explain.html`** (하단 '해설' 탭) — 오늘 무엇을 어떤 기준으로 걸렀나(100종목→매수 거름망) · 종목마다 왜 샀나/기다렸나/팔았나와 그 숫자 ·
   순위 점수의 구성 · 규칙집 · 같은 규칙으로 과거에 사고판 예시 · 단기 모델의 오늘 조건 점검 · 무엇을 얼마나 참고하나(직접/안전장치/참고만 0%) · 용어.
@@ -153,6 +153,7 @@
 | 다음날 08:40 | `src/autotrader.py --phase execute` (`autotrade.yml`) | `plan.json` → 증권사 | 한국투자증권 주문 (kis_* 설정 시) |
 | 2시간마다 | `src/evolve.py step` · `src/short_evolve.py step` (`learn.yml`) | 저장된 인구 → `data/evolve/` · `data/short/evolved.json` | **쉬지 않는 진화**: 이어서 진화 → 도전자·진화 후보 등록 → 등록 뒤 성적으로 승격 (전략서 3-6-6) |
 | 매일 밤 | `src/science_lab.py` (`evolve.yml`) | 위 데이터 → `data/science/` · `docs/science.json` | 다분야 가설 재검증 (Holm 보정 · 등록 뒤 성적) · 과최적화 진단(PBO·DSR) (전략서 3-6-9) |
+| 매일 밤 | `src/history_lab.py` (`evolve.yml`) | `data/history/` (Yahoo 1990~, `research.yml` task=history · history_kr 로 한 번 받음) → `data/history/lab.json` · `gate.json` · `docs/history.json` | 설계에 안 쓴 옛 자료(1997~2018)로 표본 외 검증 · 종목 모델 전부 · 시작일별 · 위기별 · 업종 · **긴 역사 관문**(옛 시대 손해 모델을 단기 후보에서 제외) (전략서 3-6-10) |
 | 매일 밤 | `src/evolve.py all` · `src/short_lab.py` · `src/allweather_lab.py` (`evolve.yml`) | 위 데이터 → `data/evolve/meta.json` · `data/short/lab.json` · `data/short/allweather.json` | 진화 자체의 재검증 · 단기매매 검증 · 전천후(국면 스위칭 vs 섞기) 검증 다시 재기 (전략서 3-6-7) |
 
 `src/thesis.py`는 실행 스크립트가 아니라 `build_data.py`가 import하는 **판단 엔진**입니다

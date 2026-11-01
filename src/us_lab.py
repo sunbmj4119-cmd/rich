@@ -31,16 +31,22 @@ US_TAX = 0.22
 NO_FLOW = ("REVC_FLOW", "FOR20")          # 미국엔 수급 자료가 없다
 
 
-def load_panel(min_date="2015-01-01"):
-    """short_panel.load() 와 같은 모양의 P (미국판). 수급 행렬은 NaN, 시총 대신 60일 평균 거래대금."""
-    o = pd.read_csv(US)
-    bench = o[o["종목코드"].isin(BENCH)]
-    o = o[~o["종목코드"].isin(BENCH)]
+def load_panel(min_date="2015-01-01", path=None, max_date=None, bench=BENCH, market="us"):
+    """short_panel.load() 와 같은 모양의 P (미국판). 수급 행렬은 NaN, 시총 대신 60일 평균 거래대금.
+    path: 다른 파일(긴 역사 data/history/us_stocks.csv · kr_stocks.csv — 기준 지수는 hist.csv 에서)."""
+    o = pd.read_csv(path or US, dtype={"종목코드": str})
+    if path:
+        h = pd.read_csv("data/history/hist.csv")
+        o = pd.concat([o, h[h["종목코드"].isin(bench)][o.columns.intersection(h.columns)]], ignore_index=True)
+    if max_date:
+        o = o[o["날짜"] <= max_date]
+    bench_df = o[o["종목코드"].isin(bench)]
+    o = o[~o["종목코드"].isin(bench)]
     o = o[o["날짜"] >= min_date]
     o["날짜"] = pd.to_datetime(o["날짜"])
     dates = pd.DatetimeIndex(sorted(o["날짜"].unique()))
     codes = sorted(o["종목코드"].unique())
-    P = {"dates": dates, "codes": codes, "market": "us"}
+    P = {"dates": dates, "codes": codes, "market": market}
 
     def piv(col):
         return (o.pivot_table(index="날짜", columns="종목코드", values=col, aggfunc="last")
@@ -58,9 +64,9 @@ def load_panel(min_date="2015-01-01"):
     rank = np.argsort(np.argsort(-np.nan_to_num(mc, nan=-1), axis=1), axis=1)
     P["U"] = (rank < 100) & ~np.isnan(mc)
     P["Cf"] = pd.DataFrame(P["C"]).ffill().to_numpy(copy=True)
-    bench["날짜"] = pd.to_datetime(bench["날짜"])
-    P["bench"] = {b: bench[bench["종목코드"] == b].set_index("날짜")["종가"].reindex(dates).ffill().to_numpy(float)
-                  for b in BENCH}
+    bench_df = bench_df.assign(날짜=pd.to_datetime(bench_df["날짜"]))
+    P["bench"] = {b: bench_df[bench_df["종목코드"] == b].drop_duplicates("날짜").set_index("날짜")["종가"].reindex(dates).ffill().to_numpy(float)
+                  for b in bench}
     return P
 
 
@@ -124,7 +130,7 @@ def main():
     for key, (name, rule) in {"live": ("매주 · 최근 250일 샤프 1등 (느린 후보군) — 국내와 같은 규칙", L.LIVE_RULE),
                               "monthly": ("매달 · 최근 250일 샤프 1등", {**L.LIVE_RULE, "every": 21}),
                               "top3": ("매주 · 최근 250일 샤프 상위 3개 섞기", {**L.LIVE_RULE, "k": 3})}.items():
-        E, sw, ch = L.apply_rule(D, ms, recs, R, rule, start)
+        E, sw, ch = L.apply_rule(D, ms, recs, R, rule, start, gate=set())   # 긴 역사 관문은 국내 모델용
         e = E / E[start]
         res = {"name": name, "switches": sw, "usd": L.stats(e[start:], D.dates[start:]),
                "test": L.stats(e, D.dates, a="2023-01-01"), "years": L.yearly(e[start:], D.dates[start:]),

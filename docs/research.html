@@ -29,6 +29,11 @@
 .verdict b { font-size: 15.5px; display: block; margin-bottom: 2px }
 .verdict .ic.pct { width: auto; min-width: 44px; padding: 0 8px; border-radius: 14px; font-size: 13px }
 .verdict p { font-size: 14px; color: var(--mut); line-height: 1.6 }
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px }
+.cmp > div { background: var(--soft); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0 }
+.cmp b { font-size: 20px; font-variant-numeric: tabular-nums }
+td.dim, th.dim { color: var(--mut) }
+td.hl { font-weight: 700 }
 </style>
 </head>
 <body>
@@ -39,7 +44,7 @@
   <section class="card hero" id="hero"><div class="skeleton" style="height:120px"></div></section>
 
   <div class="stick"><div class="tabs" id="tabs">
-    <button data-t="sum">결론</button><button data-t="hyp">가설 검증</button><button data-t="over">과최적화 진단</button><button data-t="src">출처</button>
+    <button data-t="sum">결론</button><button data-t="hist">긴 역사</button><button data-t="hyp">가설 검증</button><button data-t="over">과최적화 진단</button><button data-t="src">출처</button>
   </div></div>
 
   <div class="tabpane" data-tab="sum">
@@ -49,6 +54,17 @@
       '아무것도 안 하고 들고 있기'와 위험 대비 수익(샤프)을 비교해 블록 부트스트랩 P, 여러 가설을 한꺼번에 봤으니 Holm 보정(가족 오류율 5%), 그리고 앞·뒤 두 기간 모두 같은 방향.
       셋을 다 넘으면 '통과', 방향만 맞으면 '유망(확신 부족)'. 처음 검증한 날을 기록해 두고 그 뒤 성적을 매일 밤 따로 셉니다 — 논문이 나온 뒤 수익이 평균 58% 줄었다는 연구(McLean & Pontiff 2016) 때문입니다.</p>
     </section>
+  </div>
+
+  <div class="tabpane" data-tab="hist">
+    <section class="card" id="h-top"><div class="skeleton" style="height:120px"></div></section>
+    <section class="card" id="h-aw"></section>
+    <section class="card" id="h-etf"></section>
+    <section class="card" id="h-stock"></section>
+    <section class="card" id="h-roll"></section>
+    <section class="card" id="h-crisis"></section>
+    <section class="card" id="h-sector"></section>
+    <section class="card" id="h-lim"></section>
   </div>
 
   <div class="tabpane" data-tab="hyp">
@@ -141,6 +157,98 @@
     U.$("#srcs").innerHTML = R.fields.map((f) => `<details class="fold"><summary><div class="sum"><b>${U.esc(f.name)}</b><span>${f.items.length}개</span></div></summary><div class="body">` +
       f.items.map((x) => `<div class="src"><a href="${U.esc(x.url)}" target="_blank" rel="noopener">${U.esc(x.t)}</a><div class="who">${U.esc(x.who)}</div>
         <div>${U.esc(x.key)}</div><div class="us">우리에게: ${U.esc(x.us)}</div></div>`).join("") + `</div></details>`).join("");
+  }
+
+  // 긴 역사
+  let HI = null;
+  try { HI = await U.j("history.json"); } catch { HI = null; }
+  if (!HI) { U.$("#h-top").innerHTML = `<div class="empty">아직 긴 역사 검증 결과가 없습니다.</div>`; }
+  else {
+    const st = (x) => x ? `샤프 ${sh(x.sharpe)} · 연 ${pc(x.cagr)} · 낙폭 ${pc(x.mdd, 0)}` : "—";
+    const A = HI.aw || {}, E = HI.etf_rules || {}, K = HI.kr_models, US = HI.us_models, G = HI.gate, CB = HI.combined;
+    const ko = K?.old_new, uo = US?.old_new, km = K?.meta?.periods || {};
+    const oo = E.oo_rev || {};
+    const V = [
+      ["y", `전천후 혼합 — 처음 보는 시대에도 같은 성적`, `${A.from?.slice(0, 4)}~2013(설계에 안 쓴 자료): ${st(A.oos)}. 2014~: ${st(A.design)}. 같은 기간 코스피는 낙폭 ${pc(A.idx_oos?.mdd, 0)}. 2008 금융위기 구간에도 플러스였습니다.`],
+      ["n", `'전날 내렸으면 지수 보유' — 옛날에도 지금도 손해`, `지금 단기 몫이 따라가던 규칙입니다. 1997~2013: ${st(oo.oos)} / 2014~: ${st(oo.design)}. 최근 1~2년에만 잘 돼서 '최근 250일 1등'으로 뽑혔던 것 — 긴 역사 관문으로 후보에서 뺐습니다.`],
+      ["y", `옛 시대에 실패한 모델은 새 시대에도 실패`, `옛 자료로만 갈랐을 때, 옛날에 손해였던 모델의 새 시대 샤프 중앙값: 국내 ${sh(ko?.neg_old_new_median)} · 미국 ${sh(uo?.neg_old_new_median)}. 옛날에 벌었던 모델: 국내 ${sh(ko?.pos_old_new_median)} · 미국 ${sh(uo?.pos_old_new_median)}. → '긴 역사 관문'으로 옛 시대 실패 모델 ${G ? G.n_fail : "—"}개를 단기 후보에서 뺍니다.`],
+      ["m", `단기 고르기 규칙 — 가격 신호만으로는 지수를 못 이김`, `국내 대형주로 2002~2018: ${Object.entries(km).filter(([k]) => /~/.test(k) && k !== "설계 기간").map(([k, v]) => `${k} 샤프 ${sh(v.stats?.sharpe)}(지수 ${sh(v.bench?.sharpe)})`).join(" · ")}. 실제 자료(2019~)에선 외국인 수급 모델이 성적의 큰 몫인데, 2018년 전 수급 자료가 없어 그 부분은 옛날로 검증하지 못했습니다.`],
+      ["m", `지금 계좌 방식(단기 50 + 전천후 50) — 전천후 단독보다 낮음`, CB ? `대용 자산으로 ${CB.from?.slice(0, 4)}~2013: ${st(CB.oos)} / 2014~: ${st(CB.design)}. 전천후 단독(${sh(A.oos?.sharpe)} / ${sh(A.design?.sharpe)})보다 낮습니다 — 단기 몫이 옛날 자료에선 위험만 더했습니다.` : "국내 대형주 자료가 있어야 계산합니다."],
+      ["n", `업종 돌려 타기(최근 잘 오른 업종) — 효과 없음`, `국내 업종 ETF·미국 업종 SPDR 모두 변형 6개씩, 여러 번 본 것을 보정하면 유의한 것이 없습니다. 국내는 KODEX 200 보유보다 못했습니다.`],
+    ];
+    U.$("#h-top").innerHTML = `<header><h2>설계에 안 쓴 옛 자료로 다시 재 보기</h2><span class="mut small">${U.esc(HI.generated)}</span></header>
+      <p style="font-size:14px;line-height:1.7">규칙은 2014년 뒤(종목 모델은 2019년 뒤) 자료로 만들었습니다. 그 전 자료 — IMF·닷컴·2008 금융위기 — 는 한 번도 안 봤으니,
+      규칙을 그대로 두고 돌리면 '시험지를 처음 보는 시험'입니다. 지금 쓰는 시뮬레이터·비용·세금 그대로입니다.</p>` +
+      V.map(([c, t, d]) => `<div class="verdict"><span class="ic ${c}">${c === "y" ? "✓" : c === "n" ? "✕" : "!"}</span><div><b>${U.esc(t)}</b><p>${U.esc(d)}</p></div></div>`).join("");
+    // 전천후
+    const yrs = Object.entries(A.years || {});
+    U.$("#h-aw").innerHTML = `<header><h2>전천후 혼합 (대용 자산)</h2><span class="mut small">${U.esc(A.from || "")} ~</span></header>
+      <div class="cmp"><div><span class="mut small">처음 보는 자료 ~2013</span><b>${sh(A.oos?.sharpe)}</b><span class="small">연 ${pc(A.oos?.cagr)} · 낙폭 ${pc(A.oos?.mdd, 0)}</span></div>
+      <div><span class="mut small">설계 기간 2014~</span><b>${sh(A.design?.sharpe)}</b><span class="small">연 ${pc(A.design?.cagr)} · 낙폭 ${pc(A.design?.mdd, 0)}</span></div></div>
+      <div class="scroll" style="margin-top:10px"><table><tr><th>해</th>${yrs.map(([y]) => `<th>${y.slice(2)}</th>`).join("")}</tr>
+      <tr><td>수익</td>${yrs.map(([, v]) => `<td class="${v < 0 ? "neg" : ""}">${(v * 100).toFixed(0)}</td>`).join("")}</tr></table></div>
+      <p class="note">같은 카드 21장·같은 국면 판정·같은 '변동성 반비례' 섞기를 그대로. 2014년 전엔 국내 ETF 가 없어 대용(코스피+배당 1.5% · 인버스/레버리지=지수 일수익 배수 · 단기채 연 3% · 국고채=미국 IEF/TLT · 달러=원/달러 · 금=GLD · S&P=SPY · 나스닥=QQQ×환율)으로 '같은 방법'을 시험했습니다. 정확한 재현이 아닙니다.</p>`;
+    // ETF 규칙
+    const er = Object.entries(E).sort((a, b) => ((b[1].oos || {}).sharpe ?? -9) - ((a[1].oos || {}).sharpe ?? -9));
+    U.$("#h-etf").innerHTML = `<header><h2>국내 지수 ETF 규칙 10개</h2><span class="mut small">코스피 1997~ · 두 기간 순위 상관 ${sh(HI.etf_rank_corr)}</span></header>
+      <div class="scroll"><table><tr><th>규칙</th><th>~2013 샤프</th><th>연</th><th>낙폭</th><th class="dim">2014~ 샤프</th><th class="dim">연</th></tr>` +
+      er.map(([k, v]) => `<tr><td class="wrap-cell">${U.esc(v.name)}${(G?.etf_fail || []).includes("E:" + k) ? ` <span class="vd vd-기각">관문 탈락</span>` : ""}</td>
+        <td class="hl">${sh(v.oos?.sharpe)}</td><td class="${(v.oos?.cagr || 0) < 0 ? "neg" : ""}">${pc(v.oos?.cagr)}</td><td>${pc(v.oos?.mdd, 0)}</td>
+        <td class="dim">${sh(v.design?.sharpe)}</td><td class="dim">${pc(v.design?.cagr)}</td></tr>`).join("") + `</table></div>
+      <p class="note">'밤사이 보유, 지수 120일선 위일 때만'과 '120일선 위면 보유'가 두 시대 모두 꾸준했습니다(보유 대비 위험이 크게 작음). 두 기간 순위가 거의 같다는 것(상관 ${sh(HI.etf_rank_corr)})은 이 규칙들의 좋고 나쁨이 우연이 아니라는 뜻입니다.</p>`;
+    // 종목 모델
+    const sm = (X, title, note) => {
+      if (!X) return "";
+      const P = Object.entries(X.by_period || {});
+      const o = X.old_new || {};
+      return `<h3 style="margin:14px 0 6px;font-size:15.5px">${title}</h3>
+        <div class="scroll"><table><tr><th>기간</th><th>수익 낸 모델</th><th>샤프 중앙값</th><th>지수 샤프</th><th>설계 기간과 순위 상관</th></tr>` +
+        P.map(([k, v]) => `<tr><td>${U.esc(k)}</td><td>${v.positive}/${v.n}</td><td>${sh(v.sharpe_med)}</td><td>${sh(v.bench?.sharpe)}</td><td>${k === "설계 기간" ? "—" : sh(X.rank_corr?.[k])}</td></tr>`).join("") +
+        `</table></div>
+        <div class="kv"><span>옛 자료(${U.esc((o.old || []).join("~"))})로 상위 10 → 새 시대 샤프 중앙값</span><b>${sh(o.top10_new_median)} (전체 ${sh(o.all_new_median)})</b></div>
+        <div class="kv"><span>옛날 손해였던 모델 → 새 시대</span><b>${sh(o.neg_old_new_median)}</b></div>
+        <div class="kv"><span>지금 고르기 규칙(매주 250일 샤프 1등)</span><b>${Object.entries(X.meta?.periods || {}).filter(([k]) => k !== "전체").map(([k, v]) => `${k} ${sh(v.stats?.sharpe)}`).join(" · ")}</b></div>
+        <p class="mut small" style="margin-top:6px">${U.esc(note)}</p>`;
+    };
+    U.$("#h-stock").innerHTML = `<header><h2>종목 모델 전부, 2000년부터</h2></header>
+      <p style="font-size:14px;line-height:1.7">신호 9가지 × 종목 수 2 × 보유 방식 5 × 걸러내기 3 = 모델 270개(국내는 ETF 규칙 10개 포함)를 하나씩 전부 돌렸습니다. 지금 '좋다'고 본 모델이 옛날에도 좋았나를 봅니다.</p>` +
+      sm(K, `국내 대형주 ${K?.n_stocks ?? ""}종목`, `최근 코스피 100 에 든 적 있는 종목만(2001년엔 ${K?.alive_2001 ?? "—"}종목) → 지금 살아남은 회사만 보는 생존편향이 있어 옛 성적이 실제보다 좋게 나옵니다. 외국인·기관 수급 신호는 2018년 전 자료가 없어 뺐습니다.`) +
+      sm(US, `미국 S&P 100 ${US?.n_stocks ?? ""}종목`, `지금 S&P 100 구성(2001년엔 ${US?.alive_2001 ?? "—"}종목)만 → 생존편향. 설계 기간(2015~) 미국 모델은 270개 중 지수보다 샤프가 높은 것이 거의 없습니다.`);
+    // 언제 시작했어도
+    const RO = Object.entries(HI.rolling || {});
+    const cell = (x) => x ? `<td class="hl">${Math.round(x.p_loss * 100)}%</td><td>${pc(x.median, 0)}</td><td class="neg">${pc(x.worst, 0)}</td>` : `<td>—</td><td>—</td><td>—</td>`;
+    U.$("#h-roll").innerHTML = `<header><h2>언제 시작했어도</h2><span class="mut small">모든 날을 시작일로</span></header>
+      <div class="scroll"><table><tr><th></th><th colspan="3">1년 들고 가면</th><th colspan="3">3년 들고 가면</th></tr>
+      <tr><th>전략</th><th>손실 확률</th><th>중앙값</th><th>최악</th><th>손실 확률</th><th>중앙값</th><th>최악</th></tr>` +
+      RO.map(([k, v]) => `<tr><td class="wrap-cell">${U.esc(k)}</td>${cell(v["1y"])}${cell(v["3y"])}</tr>`).join("") + `</table></div>
+      <p class="note">'언제 넣었느냐'에 따라 결과가 얼마나 갈리는지입니다. 전천후 혼합은 3년을 들고 가면 어느 날 시작했든 손실이 없었습니다(대용 자산 기준). 지수는 1년 기준 셋 중 한 번꼴로 손실.</p>`;
+    // 위기
+    const CR = HI.crises || [];
+    const keys = CR.length ? Object.keys(CR[0].vals) : [];
+    U.$("#h-crisis").innerHTML = `<header><h2>위기 구간별 수익</h2></header>
+      <div class="scroll"><table><tr><th>구간</th>${keys.map((k) => `<th style="white-space:normal;min-width:72px">${U.esc(k)}</th>`).join("")}</tr>` +
+      CR.map((r) => `<tr><td>${U.esc(r.name)}<div class="mut small">${U.esc(r.from.slice(0, 7))}~${U.esc(r.to.slice(0, 7))}</div></td>` +
+        keys.map((k) => { const v = r.vals[k]; return v ? `<td class="${v.ret < 0 ? "neg" : "pos"}">${pc(v.ret, 0)}</td>` : `<td class="dim">—</td>`; }).join("") + `</tr>`).join("") +
+      `</table></div><p class="mut small" style="margin-top:6px">— = 그 전략의 자료가 그 구간에 없음. 미국 쪽은 달러 기준.</p>`;
+    // 업종
+    const sec = (X) => {
+      if (!X) return "";
+      const best = Object.entries(X.variants).sort((a, b) => (b[1].stats?.sharpe ?? -9) - (a[1].stats?.sharpe ?? -9))[0];
+      const minp = Math.min(...Object.values(X.variants).map((v) => v.p_holm ?? 1));
+      return `<div class="kv"><span>${U.esc(X.label)} · ${U.esc(X.from.slice(0, 4))}~</span><b>가장 나은 변형 ${U.esc(best[0])} 샤프 ${sh(best[1].stats?.sharpe)} vs 지수 ${sh(X.bench?.stats?.sharpe)} · 보정 P 최소 ${(+minp).toFixed(2)}</b></div>`;
+    };
+    const KA = HI.kr_attr || [];
+    U.$("#h-sector").innerHTML = `<header><h2>업종</h2></header>` + sec(HI.sector_kr) + sec(HI.sector_us) +
+      `<p class="note">'최근 많이 오른 업종을 산다'(업종 모멘텀)는 유명한 논문(Moskowitz·Grinblatt 1999) 결과지만, 우리 비용·우리 기간에선 지수를 확실히 이기지 못했습니다.</p>` +
+      (KA.length ? `<h3 style="margin:14px 0 6px;font-size:15.5px">국내 단기 모델이 어느 업종에서 벌었나 (2019~ 실제 매매 합산)</h3>
+      <div class="scroll"><table><tr><th>업종</th><th>매매</th><th>1회 평균</th><th>이긴 비율</th></tr>` +
+      KA.map((r) => `<tr><td>${U.esc(r.sector)}</td><td>${r.trades.toLocaleString()}</td><td class="${r.avg_bp < 0 ? "neg" : "pos"}">${(r.avg_bp / 100).toFixed(2)}%</td><td>${Math.round(r.win * 100)}%</td></tr>`).join("") +
+      `</table></div><p class="mut small" style="margin-top:6px">설명용입니다 — 같은 자료로 '잘 된 업종만 고르기'를 하면 과최적화라 규칙에 넣지 않았습니다.</p>` : "");
+    U.$("#h-lim").innerHTML = `<header><h2>한계 — 무엇을 믿고 무엇을 덜 믿을지</h2></header>
+      <p style="font-size:14px;line-height:1.75">① 종목은 지금 살아남은 대형주만(생존편향) → 옛 종목 성적은 실제보다 좋게 나옵니다. 그래서 '옛날에 실패했다'는 신호는 더 믿을 만하고, '옛날에 성공했다'는 덜 믿을 만합니다.<br>
+      ② 2014년 전 국내 ETF·국고채·단기금리는 대용입니다(배당 연 ${((HI.assumptions?.div || 0) * 100).toFixed(1)}% · 단기채 연 ${((HI.assumptions?.cash || 0) * 100).toFixed(0)}%).<br>
+      ③ 세금·수수료는 지금 기준입니다(옛날 거래세는 더 높았음 → 매매가 잦은 모델은 실제론 더 나빴을 것).<br>
+      ④ 외국인·기관 수급 신호는 2018년 전 자료가 없어 검증하지 못했습니다 — 지금 단기 몫에서 가장 많이 뽑히는 신호라 가장 큰 빈칸입니다.</p>`;
   }
   U.tabs(U.$("#tabs"), "research");
 })();
