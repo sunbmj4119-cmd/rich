@@ -308,8 +308,91 @@ def models_long(path, bench, market, design_from, periods, meta_from="2002-01-02
             pd.Series(np.where(np.arange(len(rm)) > st, rm, np.nan), index=dates))
 
 
+KRX = {k: os.path.join("data/history", f"krx_{k}.csv.gz") for k in ("universe", "ohlcv", "flows")}
+
+
+def krx_panel():
+    """KRX 긴 역사(collect_krx_history.py)로 '그때 실제 대형주' 패널: 해마다 시총 상위 100 = 유니버스(상장폐지 포함),
+    외국인·기관·개인 순매수, 시가총액 ≈ 연말 시총 × 종가 비율. 파일이 없으면 None."""
+    if not all(os.path.exists(v) for v in KRX.values()):
+        return None
+    u = pd.read_csv(KRX["universe"], dtype={"종목코드": str})
+    o = pd.read_csv(KRX["ohlcv"], dtype={"종목코드": str})
+    f = pd.read_csv(KRX["flows"], dtype={"종목코드": str})
+    o = o[o["종가"] > 0]
+    dates = pd.DatetimeIndex(sorted(pd.to_datetime(o["날짜"]).unique()))
+    codes = sorted(o["종목코드"].unique())
+    P = {"dates": dates, "codes": codes, "market": "kr"}
+
+    def piv(df, col):
+        x = df.assign(날짜=pd.to_datetime(df["날짜"])).pivot_table(index="날짜", columns="종목코드", values=col, aggfunc="last")
+        return x.reindex(index=dates, columns=codes).to_numpy(dtype=float, copy=True)
+    for k, col in [("O", "시가"), ("H", "고가"), ("L", "저가"), ("C", "종가"), ("V", "거래량")]:
+        P[k] = piv(o, col)
+    for k in ("O", "H", "L", "C"):
+        P[k][~(P[k] > 0)] = np.nan
+    P["VAL"] = P["C"] * P["V"]
+    # 시가총액: 해마다 기준일 시총 × (종가 / 기준일 종가) — 그 해 안에선 주식 수가 같다고 근사
+    MC = np.full(P["C"].shape, np.nan)
+    U = np.zeros(P["C"].shape, bool)
+    ci = {c: j for j, c in enumerate(codes)}
+    u["기준일"] = pd.to_datetime(u["기준일"])
+    for d0, g in u.groupby("기준일"):
+        t0 = int(np.searchsorted(dates, d0, side="right")) - 1
+        nxt = u["기준일"][u["기준일"] > d0]
+        t1 = int(np.searchsorted(dates, nxt.min(), side="right")) if len(nxt) else len(dates)
+        if t0 < 0:
+            continue
+        for _, r in g.iterrows():
+            j = ci.get(r["종목코드"])
+            if j is None or not np.isfinite(P["C"][t0, j]):
+                continue
+            MC[t0 + 1:t1, j] = r["시가총액"] * P["C"][t0 + 1:t1, j] / P["C"][t0, j]
+            if r["순위"] <= 100:
+                U[t0 + 1:t1, j] = True                       # 기준일 다음 날부터 다음 기준일까지 (그날 이후 정보 없음)
+    P["MC"], P["U"] = MC, U & ~np.isnan(MC)
+    r = P["C"][1:] / P["C"][:-1] - 1
+    lim = np.where(dates[1:] < pd.Timestamp("2015-06-15"), 0.16, 0.31)[:, None]
+    P["breaks"] = np.r_[np.zeros((1, len(codes)), bool), np.nan_to_num(np.abs(r) > lim, nan=False).astype(bool)]
+    for k, col in (("FOR", "외국인순매수"), ("INS", "기관순매수"), ("IND", "개인순매수")):
+        P[k] = piv(f, col)
+    P["Cf"] = pd.DataFrame(P["C"]).ffill().to_numpy(copy=True)
+    ks = series(load_hist(), "^KS11").reindex(dates).ffill().to_numpy(float)
+    P["bench"] = {"^KS11": ks}
+    return P
+
+
+def pit_report(meta_from="2002-01-02", end="2018-12-31"):
+    """상장폐지 포함·수급 포함 긴 역사로: 모든 모델(수급 모델 포함)의 옛 시대 성적 · 지금 단기 몫 고르기 규칙(수급 포함/제외)."""
+    P = krx_panel()
+    if P is None:
+        return None
+    D = L.Data(P)
+    ms = L.stock_models() + [m for m in L.etf_models() if m["rule"] != "overnight_for"]
+    with flat_slip():
+        recs = [L.run(D, m, record=True) for m in ms]
+    dates = D.dates
+    e = cut(dates, end) + 1
+    sh = {m["id"]: (L.stats(r["E"][:e], dates[:e], "2001-01-02") or {}).get("sharpe") for m, r in zip(ms, recs)}
+    R = np.c_[[L.rets(r["E"]) for r in recs]].T
+    st = cut(dates, meta_from)
+    flow = {m["id"] for m in ms if m.get("sel") in ("REVC_FLOW", "FOR20")}
+    out = {"from": str(dates[0].date()), "to": str(dates[min(e, len(dates)) - 1].date()), "n_codes": len(P["codes"]),
+           "old_sharpe": {k: (None if v is None else round(float(v), 3)) for k, v in sh.items()},
+           "flow_models": {k: sh[k] for k in sorted(flow) if sh.get(k) is not None}}
+    b = P["bench"]["^KS11"]
+    rb = np.r_[0, b[1:] / b[:-1] - 1]
+    for name, gate in (("수급 포함 (지금과 같음)", set()), ("가격 신호만", flow)):
+        with flat_slip():
+            E, sw, ch = L.apply_rule(D, ms, recs, R, L.LIVE_RULE, st, gate=gate)
+        E = E[:e] / E[st]
+        out.setdefault("meta", {})[name] = {"stats": L.stats(E[st:], dates[st:e]), "bench": stats_r(rb[st:e], dates[st:e]),
+                                           "p": L.boot_p(L.rets(E)[st:], rb[st:e]), "switches": sw}
+    return out
+
+
 def combine(r_short, r_aw, start, share=0.5, cost=0.0025):
-    """지금 계좌 방식: 단기 몫 + 전천후 몫, 분기 첫 거래일에 50:50 으로 다시 맞춤 (allweather_lab.rebalanced 와 같은 방식)."""
+    """지금 계좌 방식: 단기 몫 + 전천후 몫, 분기 첫 거래일에 목표 비율로 다시 맞춤 (allweather_lab.rebalanced 와 같은 방식)."""
     import allweather_lab as AL
     x = pd.concat([r_short, r_aw], axis=1).dropna()
     x = x[x.index >= start]
@@ -454,11 +537,23 @@ def main():
                                                   {**pers, "2014~2018": ("2014-01-02", "2018-12-31")})
             res["kr_models"] = kr
             smap["단기 몫 고르기 규칙 (국내, 2002~)"] = kr_meta
-            rc, Ec = combine(kr_meta, r_aw, "2005-01-03")
-            smap["지금 계좌 방식 (단기50+전천후50, 2005~)"] = rc
+            try:
+                import settings
+                share = float((settings.load().get("short") or {}).get("aw_share", 0.5))
+            except Exception:
+                share = 0.5
+            res["combined_by_share"] = {}
+            for sh_ in sorted({0.5, 0.65, share, 0.9, 1.0}):
+                rc_, Ec_ = combine(kr_meta, r_aw, "2005-01-03", share=sh_)
+                e_ = cut(rc_.index, OOS_END) + 1
+                res["combined_by_share"][f"{sh_:.2f}"] = {"all": L.stats(Ec_, rc_.index), "oos": L.stats(Ec_[:e_], rc_.index[:e_]),
+                                                         "design": L.stats(Ec_[e_ - 1:], rc_.index[e_ - 1:]),
+                                                         "p_loss_3y": (rolling_origin(rc_).get("3y") or {}).get("p_loss")}
+            rc, Ec = combine(kr_meta, r_aw, "2005-01-03", share=share)
+            smap[f"지금 계좌 방식 (단기{round((1 - share) * 100)}+전천후{round(share * 100)}, 2005~)"] = rc
             e = cut(rc.index, OOS_END) + 1
-            res["combined"] = {"from": str(rc.index[0].date()), "oos": L.stats(Ec[:e], rc.index[:e]), "design": L.stats(Ec[e - 1:], rc.index[e - 1:]),
-                               "years": L.yearly(Ec, rc.index)}
+            res["combined"] = {"from": str(rc.index[0].date()), "share": share, "oos": L.stats(Ec[:e], rc.index[:e]),
+                               "design": L.stats(Ec[e - 1:], rc.index[e - 1:]), "years": L.yearly(Ec, rc.index)}
             print("  국내 옛→새:", {k: v for k, v in kr["old_new"].items() if k != "top10_old"})
             for b in kr["old_new"]["top10_old"]:
                 print("     ", b)
@@ -493,16 +588,27 @@ def main():
         print("■ 국내 단기 모델 업종별:", res["kr_attr"][:4], "…", res["kr_attr"][-3:])
     except Exception as ex:
         print("업종별 기여 건너뜀:", type(ex).__name__, ex)
+    try:
+        pit = pit_report()
+        if pit:
+            res["kr_pit"] = {k: v for k, v in pit.items() if k != "old_sharpe"}
+            print("■ 상장폐지·수급 포함 긴 역사:", {k: (v["stats"], v["bench"] and v["bench"]["sharpe"], v["p"]) for k, v in pit["meta"].items()})
+    except Exception as ex:
+        pit = None
+        print("상장폐지·수급 포함 검증 건너뜀:", type(ex).__name__, ex)
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     if "kr_models" in res:
         on = res["kr_models"]["old_new"]
         osh = on.pop("old_sharpe")
+        if pit:                                        # 생존편향 없는 자료가 있으면 그것으로 판정 (수급 모델도 관문 대상이 된다)
+            osh = {**osh, **{k: v for k, v in pit["old_sharpe"].items() if v is not None}}
         for k, v in res["etf_rules"].items():           # 지수 ETF 규칙은 생존편향 없는 코스피 지수(1997~2013)로 판정
             osh[f"E:{k}"] = (v["oos"] or {}).get("sharpe")
         fail = sorted(k for k, v in osh.items() if v is not None and v < 0)
         gate = {"generated": res["generated"], "era": {"stock": on["old"], "etf": [str(dates[0].date()), OOS_END]},
                 "rule": "설계에 안 쓴 옛 시대 샤프 < 0 이면 단기 몫 후보에서 뺀다",
-                "source": {"stock": "국내 대형주 2001~2018 (야후 수정가 · 지금 쓰는 시뮬레이터·비용 · 생존편향 있음)",
+                "source": {"stock": ("KRX 그때 실제 대형주 2001~2018 (상장폐지·수급 포함)" if pit else
+                                     "국내 대형주 2001~2018 (야후 수정가 · 지금 쓰는 시뮬레이터·비용 · 생존편향 있음)"),
                            "etf": "코스피 지수 1997~2013 + 배당 근사 (지금 쓰는 시뮬레이터·비용)"},
                 "fail": fail, "sharpe": osh}
         json.dump(gate, open(GATE, "w", encoding="utf-8"), ensure_ascii=False, indent=1)

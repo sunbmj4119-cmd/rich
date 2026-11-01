@@ -74,15 +74,39 @@ def psr(r, sr0=0.0):
     return _ncdf((sr - sr0) * math.sqrt(T - 1) / den)
 
 
-def dsr(r_best, all_sr_daily):
+def dsr(r_best, all_sr_daily, n_trials=None):
     """Deflated Sharpe Ratio: N 개를 시도해 1등을 골랐다는 사실을 반영한 기준선 SR0 로 PSR.
-    SR0 = sqrt(V[SR]) · ((1-γ)·Φ⁻¹(1-1/N) + γ·Φ⁻¹(1-1/(N·e)))."""
+    SR0 = sqrt(V[SR]) · ((1-γ)·Φ⁻¹(1-1/N) + γ·Φ⁻¹(1-1/(N·e))). V[SR] 은 손에 있는 후보들의 샤프 분산,
+    N 은 n_trials(시도 장부의 전체 시도 수)가 있으면 그것 (후보 수보다 작으면 후보 수)."""
     s = np.asarray([x for x in all_sr_daily if np.isfinite(x)])
-    N = len(s)
+    N = max(len(s), int(n_trials or 0))
     if N < 2:
         return None, None
     sr0 = math.sqrt(s.var()) * ((1 - EULER) * _nppf(1 - 1 / N) + EULER * _nppf(1 - 1 / (N * math.e)))
     return psr(r_best, sr0), sr0 * math.sqrt(252)
+
+
+def random_baseline(D, r_live, start, n=120, seed=11):
+    """무작위 진입 기준선 (jesse·TradingAgents 재현 교훈): 같은 유니버스에서 '아무 종목이나' 5·10개를 5·10일 들고 바꾸는 모델을
+    n 번 돌려 2019~ 샤프 분포를 만들고, 채택 규칙이 그 중 몇 % 위인지."""
+    rng = np.random.default_rng(seed)
+    out = []
+    try:
+        for i in range(n):
+            K, hold = [(5, "H5"), (10, "H10"), (5, "H10"), (10, "H5")][i % 4]
+            x = np.where(D.P["U"], rng.random(D.P["U"].shape), np.nan)
+            rk = pd.DataFrame(-x).rank(axis=1, method="first").to_numpy(copy=True)
+            rk[np.isnan(rk)] = np.inf
+            D.ranks = lambda sel, combo=None, _rk=rk: _rk          # noqa: E731 — 이 인스턴스만 잠시 무작위 순위로
+            E = L.run_stock(D, {"id": "R", "kind": "stock", "sel": "REV1", "K": K, "hold": hold, "gate": "none"})["E"]
+            r = L.rets(E)[start:]
+            out.append(float(np.nanmean(r) / (np.nanstd(r) + 1e-12) * np.sqrt(252)))
+    finally:
+        D.__dict__.pop("ranks", None)
+    live = float(np.nanmean(r_live[start:]) / (np.nanstd(r_live[start:]) + 1e-12) * np.sqrt(252))
+    a = np.array(out)
+    return {"n": n, "live": round(live, 3), "pct": round(float((a < live).mean()), 3),
+            "median": round(float(np.median(a)), 3), "p95": round(float(np.percentile(a, 95)), 3)}
 
 
 def pbo(R, S=16, max_combos=4000, seed=0):
@@ -1039,9 +1063,22 @@ def main():
     Rs = R[start:][:, pool]
     srs = [np.nanmean(Rs[:, i]) / np.nanstd(Rs[:, i]) for i in range(Rs.shape[1])]
     p_d, sr0 = dsr(r_live[start:], srs)
+    try:
+        import trials as TR
+        tri = TR.main()
+        n_all = int(tri["kr_short_effective"])
+    except Exception as ex:
+        print("  시도 장부 실패:", type(ex).__name__, ex)
+        n_all = None
+    p_all, sr0_all = dsr(r_live[start:], srs, n_all) if n_all else (None, None)
+    rnd = random_baseline(D, r_live, start)
     res["overfit"]["kr_short"] = {"what": f"국내 단기 후보 {len(pool)}개 + 고르는 방식 288가지 중 채택 규칙",
                                   "dsr": round(p_d, 3) if p_d is not None else None, "sr0_annual": round(sr0, 3) if sr0 else None,
+                                  "n_trials_all": n_all, "dsr_all": round(p_all, 3) if p_all is not None else None,
+                                  "sr0_annual_all": round(sr0_all, 3) if sr0_all else None, "random": rnd,
                                   "sharpe": round(sh(r_live[start:]), 3), **pbo(Rs)}
+    print(f"  시도 전체 {n_all}번으로 DSR {res['overfit']['kr_short']['dsr_all']} (후보 수만: {res['overfit']['kr_short']['dsr']}) · "
+          f"무작위 선택 대비 백분위 {rnd and rnd.get('pct')}")
     print(f"  국내 단기 과최적화: DSR {res['overfit']['kr_short']['dsr']} · PBO {res['overfit']['kr_short']['pbo']}")
     res["absorption_now"] = round(float(ar[-1]), 4) if np.isfinite(ar[-1]) else None
     os.makedirs(os.path.dirname(OUT), exist_ok=True)

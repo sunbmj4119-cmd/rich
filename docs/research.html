@@ -158,7 +158,9 @@ td.hl { font-weight: 700 }
   const ob = (o, title) => o ? `<div class="verdict"><span class="ic pct ${o.pbo < 0.25 ? "y" : "m"}">${Math.round(o.pbo * 100)}%</span><div><b>${title}</b>
     <p>${U.esc(o.what)} · 백테스트 샤프 ${sh(o.sharpe)}</p>
     <p>PBO(과거 1등을 고르면 앞으로 중간 아래로 떨어질 확률) <b>${Math.round(o.pbo * 100)}%</b> — 반으로 나눈 조합 ${o.combos}개에서 앞 절반 1등의 샤프 중앙값 ${sh(o.is_sharpe_best_med)} → 뒤 절반 ${sh(o.oos_sharpe_of_is_best_med)}.</p>
-    <p>DSR(시도한 수를 감안해 진짜 실력일 확률) <b>${o.dsr == null ? "—" : Math.round(o.dsr * 100) + "%"}</b> — 이만큼 시도하면 운으로도 연 샤프 ${sh(o.sr0_annual)}는 나온다는 기준과 비교.</p></div></div>` : "";
+    <p>DSR(시도한 수를 감안해 진짜 실력일 확률) <b>${o.dsr == null ? "—" : Math.round(o.dsr * 100) + "%"}</b> — 이만큼 시도하면 운으로도 연 샤프 ${sh(o.sr0_annual)}는 나온다는 기준과 비교.</p>
+    ${o.dsr_all != null ? `<p><b>시도 전체 ${(+o.n_trials_all).toLocaleString("ko-KR")}번</b>(후보 × 고르는 방식 + 진화 유전자, 시도 장부)을 반영하면 DSR <b>${Math.round(o.dsr_all * 100)}%</b> — 운으로도 연 샤프 ${sh(o.sr0_annual_all)}까지 나온다. 그래서 이 몫은 계좌의 20% 에 모의로만 둡니다.</p>` : ""}
+    ${o.random ? `<p>무작위로 종목을 고르는 모델 ${o.random.n}개(같은 유니버스·같은 보유 방식)와 비교: 채택 규칙 샤프 ${sh(o.random.live)} 는 그 중 상위 ${Math.round((1 - o.random.pct) * 100)}% (무작위 중앙값 ${sh(o.random.median)} · 95% ${sh(o.random.p95)}). 단, 이 비교는 '고른 뒤'의 성적이라 위 DSR 이 더 엄격한 잣대입니다.</p>` : ""}</div></div>` : "";
   U.$("#ov").innerHTML = `<header><h2>우리 모델은 얼마나 '운'인가</h2></header>` + ob(O.kr_short, "국내 단기 갈아타기 규칙") + ob(O.us, "미국 추세 상위 10") +
     `<p class="note">국내 단기: 고를 때 1등 샤프 ${sh(O.kr_short?.is_sharpe_best_med)}가 뒤 기간엔 ${sh(O.kr_short?.oos_sharpe_of_is_best_med)} 정도로 — 백테스트 숫자의 절반 아래를 기대하는 게 맞습니다. 그래서 계좌 절반을 전천후 혼합으로 나눠 둔 것이 중요합니다.
     미국 추세: 과거 1등이 뒤에서도 대체로 상위였지만(PBO ${Math.round((O.us?.pbo || 0) * 100)}%), 모델 270개의 성적 차이가 워낙 커서 샤프 ${sh(O.us?.sharpe)} 자체는 '운과 구분되는 수준'이 아닙니다(DSR ${O.us?.dsr == null ? "—" : Math.round(O.us.dsr * 100) + "%"}) — 별도 계좌로 앞으로의 성적을 지켜보는 이유입니다.</p>`;
@@ -184,7 +186,7 @@ td.hl { font-weight: 700 }
       ["n", `'전날 내렸으면 지수 보유' — 옛날에도 지금도 손해`, `지금 단기 몫이 따라가던 규칙입니다. 1997~2013: ${st(oo.oos)} / 2014~: ${st(oo.design)}. 최근 1~2년에만 잘 돼서 '최근 250일 1등'으로 뽑혔던 것 — 긴 역사 관문으로 후보에서 뺐습니다.`],
       ["y", `옛 시대에 실패한 모델은 새 시대에도 실패`, `옛 자료로만 갈랐을 때, 옛날에 손해였던 모델의 새 시대 샤프 중앙값: 국내 ${sh(ko?.neg_old_new_median)} · 미국 ${sh(uo?.neg_old_new_median)}. 옛날에 벌었던 모델: 국내 ${sh(ko?.pos_old_new_median)} · 미국 ${sh(uo?.pos_old_new_median)}. → '긴 역사 관문'으로 옛 시대 실패 모델 ${G ? G.n_fail : "—"}개를 단기 후보에서 뺍니다.`],
       ["m", `단기 고르기 규칙 — 가격 신호만으로는 지수를 못 이김`, `국내 대형주로 2002~2018: ${Object.entries(km).filter(([k]) => /~/.test(k) && k !== "설계 기간").map(([k, v]) => `${k} 샤프 ${sh(v.stats?.sharpe)}(지수 ${sh(v.bench?.sharpe)})`).join(" · ")}. 실제 자료(2019~)에선 외국인 수급 모델이 성적의 큰 몫인데, 2018년 전 수급 자료가 없어 그 부분은 옛날로 검증하지 못했습니다.`],
-      ["m", `지금 계좌 방식(단기 50 + 전천후 50) — 전천후 단독보다 낮음`, CB ? `대용 자산으로 ${CB.from?.slice(0, 4)}~2013: ${st(CB.oos)} / 2014~: ${st(CB.design)}. 전천후 단독(${sh(A.oos?.sharpe)} / ${sh(A.design?.sharpe)})보다 낮습니다 — 단기 몫이 옛날 자료에선 위험만 더했습니다.` : "국내 대형주 자료가 있어야 계산합니다."],
+      ["m", `계좌 비율 — 50:50 은 전천후 단독보다 낮아 단기 ${Math.round((1 - (CB?.share ?? 0.5)) * 100)} : 전천후 ${Math.round((CB?.share ?? 0.5) * 100)} 으로 바꿈`, HI.combined_by_share ? Object.entries(HI.combined_by_share).map(([k, v]) => `전천후 ${Math.round(k * 100)}%: 샤프 ${sh(v.all?.sharpe)} · 낙폭 ${pc(v.all?.mdd, 0)} · 3년 손실 ${Math.round((v.p_loss_3y || 0) * 100)}%`).join(" / ") + ` (대용 자산 2005~). 비율은 성적이 가장 좋은 값을 고르지 않고 '두 몫의 변동성 반비례'(77~84%)로 정했습니다 — 단기 몫 20% 는 옛 자료로 검증 못 한 수급 신호를 앞으로 시험하는 자리입니다.` : (CB ? `대용 자산으로 ${CB.from?.slice(0, 4)}~2013: ${st(CB.oos)} / 2014~: ${st(CB.design)}.` : "국내 대형주 자료가 있어야 계산합니다.")],
       ["n", `업종 돌려 타기(최근 잘 오른 업종) — 효과 없음`, `국내 업종 ETF·미국 업종 SPDR 모두 변형 6개씩, 여러 번 본 것을 보정하면 유의한 것이 없습니다. 국내는 KODEX 200 보유보다 못했습니다.`],
     ];
     U.$("#h-top").innerHTML = `<header><h2>설계에 안 쓴 옛 자료로 다시 재 보기</h2><span class="mut small">${U.esc(HI.generated)}</span></header>

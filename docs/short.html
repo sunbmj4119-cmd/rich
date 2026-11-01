@@ -53,6 +53,7 @@
   </div>
 
   <div class="tabpane" data-tab="cmt">
+    <section class="card" id="cmt-ready"></section>
     <section class="card" id="cmt-dec"><div class="skeleton" style="height:90px"></div></section>
     <section class="card" id="cmt-debate"></section>
     <section class="card" id="cmt-risk"></section>
@@ -309,7 +310,7 @@
       ["n", "모든 국면에서 버는 전략 하나 — 없었음", `전략 카드 21장 중 네 국면 모두에서 플러스였던 카드는 ${losers.length ? losers.join("·") + " (거의 현금)" : "없음"}. 특히 '횡보'(200일선 위인데 60일 수익 마이너스)에는 거의 모든 카드가 잃었고, 그때 번 인버스·달러는 다른 국면에서 크게 잃었습니다.`],
       ["n", "국면마다 그때 1등 전략으로 갈아타기 — 불리", best1.map((x) => `${x.name}: 샤프 ${sh(x.all.sharpe)}·연 ${pctv(x.all.cagr)}`).join(" / ") + ` (KODEX 200 보유 샤프 ${sh(idx.all.sharpe)}·연 ${pctv(idx.all.cagr)}). 국면이 자주 바뀌고 같은 국면 표본이 적어 '과거 그 국면 1등'이 다음에도 1등이 아니었습니다.`],
       ["y", "성격이 다른 카드 섞기 — 채택", rp ? `카드 21장 변동성 반비례: 연 ${pctv(rp.all.cagr)} · 샤프 ${sh(rp.all.sharpe)} · 최대낙폭 ${pctv(rp.all.mdd, 0)} (P=${rp.p_vs_idx}). 국면별 ${RG.map((g) => rp.regime[g] ? `${g} ${pctv(rp.regime[g].ann, 0)}` : "").join(" · ")}. 수익은 낮지만 흔들림이 지수의 5분의 1.` : ""],
-      ["y", "단기 갈아타기 50 + 전천후 50 (분기마다 맞춤) — 이 계좌", row ? `${cb.from}~: 연 ${pctv(row.all.cagr)} · 샤프 ${sh(row.all.sharpe)} · 최대낙폭 ${pctv(row.all.mdd, 0)} · 손실 난 해 ${Object.values(row.years).filter((v) => v < 0).length}/${Object.keys(row.years).length} (KODEX 200: ${pctv(cb.rows["KODEX 200 보유"].all.cagr)} · ${sh(cb.rows["KODEX 200 보유"].all.sharpe)} · ${pctv(cb.rows["KODEX 200 보유"].all.mdd, 0)} · 손실 난 해 ${Object.values(cb.rows["KODEX 200 보유"].years).filter((v) => v < 0).length}). 지수 대비 P=${row.p_vs_idx} — 낫다는 확신은 아직 '거의' 수준.` : ""],
+      ["y", (row ? Object.keys(cb.rows)[0].replace("모의 계좌 ", "").replace(/[()]/g, "") : "단기 + 전천후") + " — 이 계좌", row ? `${cb.from}~: 연 ${pctv(row.all.cagr)} · 샤프 ${sh(row.all.sharpe)} · 최대낙폭 ${pctv(row.all.mdd, 0)} · 손실 난 해 ${Object.values(row.years).filter((v) => v < 0).length}/${Object.keys(row.years).length} (KODEX 200: ${pctv(cb.rows["KODEX 200 보유"].all.cagr)} · ${sh(cb.rows["KODEX 200 보유"].all.sharpe)} · ${pctv(cb.rows["KODEX 200 보유"].all.mdd, 0)} · 손실 난 해 ${Object.values(cb.rows["KODEX 200 보유"].years).filter((v) => v < 0).length}). 지수 대비 P=${row.p_vs_idx} — 낫다는 확신은 아직 '거의' 수준.` : ""],
       ["m", "그래도 '어떤 환경에서도 수익'은 약속할 수 없음", row ? `이 계좌 방식도 횡보 국면에선 연 ${pctv(row.regime["횡보"]?.ann, 0)}였습니다. 할 수 있는 것은 '어느 국면에서도 크게 잃지 않게' 만드는 것까지이고, 그 대가로 강세장 수익은 지수보다 낮습니다.` : ""],
     ];
     U.$("#aw-verdicts").innerHTML = AV.map(([c, t, d]) => `<div class="verdict"><span class="ic ${c}">${c === "y" ? "✓" : c === "n" ? "✕" : "!"}</span><div><b>${t}</b><p>${d}</p></div></div>`).join("");
@@ -379,6 +380,17 @@
   if (!C) {
     U.$("#cmt-dec").innerHTML = `<div class="empty">투자위원회 기록은 다음 평일 저녁 실행부터 쌓입니다.</div>`;
   } else {
+    const RD = C.readiness;
+    if (RD) {
+      const nOk = RD.items.filter((x) => x.ok).length;
+      U.$("#cmt-ready").innerHTML = `<header><h2>실제 돈 준비도 — ${U.esc(RD.verdict)}</h2><span class="mut small">${nOk}/${RD.items.length} 통과 · 증권사가 따라 할 몫: ${RD.sleeves.map((x) => x === "aw" ? "전천후" : "단기").join("·")}</span></header>` +
+        RD.items.map((x) => `<div class="verdict"><span class="ic ${x.ok ? "y" : "n"}">${x.ok ? "✓" : "✕"}</span><div><b>${U.esc(x.name)}</b>
+          <p>지금 ${U.esc(String(x.now))} · 기준 ${U.esc(String(x.need))}${x.eta ? ` · 빨라야 ${U.esc(x.eta)}` : ""}${x.info ? `<br>${U.esc(x.info)}` : ""}</p></div></div>`).join("") +
+        `<div class="note"><b>순서</b><br>${RD.plan.map(U.esc).join("<br>")}<br>모두 ✓ 가 되기 전엔 실계좌 주문이 잠겨 있습니다 (설정 live_trading · 저장소 변수 AUTOTRADE_CONFIRM 과 함께 네 겹).
+          단기 몫은 시도 전체를 반영한 '진짜 실력일 확률'(DSR)이 낮아 모의로만 둡니다.</div>` +
+        (C.mirror ? `<div class="kv"><span>거울 계좌</span><b>${U.esc(C.mirror.broker)} · 자본 ${U.won(C.mirror.capital)} · 배율 ${(+C.mirror.scale).toFixed(4)} · ${U.esc(C.mirror.date)} 연결</b></div>` : "") +
+        (C.recon && C.recon.mode ? `<div class="kv"><span>잔고 대사 (${U.esc(C.recon.date || "")})</span><b>${U.esc(C.recon.mode)} · ${U.esc(C.recon.state || "")} · ${U.esc((C.recon.why || []).join("; "))}${C.recon.slippage_med_bp != null ? ` · 체결 비용 ${C.recon.slippage_med_bp}bp` : ""}</b></div>` : "");
+    }
     const dc = { "승인": "pos", "축소 승인": "warn", "매도만": "neg", "정지": "neg", "할 일 없음": "" };
     U.$("#cmt-dec").innerHTML = `<header><h2>오늘의 결정</h2><span class="mut small">${U.esc(C.date)} 저녁 · 같은 자료면 언제 돌려도 같은 결론</span></header>` +
       C.decisions.map((d) => `<div class="kv"><span>${U.esc(d.name)}</span><b class="${dc[d.decision] === "pos" ? "good" : dc[d.decision] ? "bad" : ""}">${U.esc(d.decision)}${d.orders ? ` · 매수 ${d.buys} · 매도 ${d.sells}` : ""}</b></div>`).join("") +

@@ -162,7 +162,7 @@ def rebalanced(dates, rl, ra, share, s, cost=0.0025):
 
 def combined(dates, Op, Cp, F, share=0.5, start="2019-01-02"):
     """채택안: 단기 갈아타기(short_lab.LIVE_RULE, 2018~ 패널) + 전천후 혼합(allweather.live_mix 와 같은 고르기).
-    두 몫을 각각 정확히 시뮬레이션하고 분기마다 50:50 으로 다시 맞춘다 (단기 쪽 자료가 시작되는 2019년부터).
+    두 몫을 각각 정확히 시뮬레이션하고 분기마다 목표 비율(config short.aw_share)로 다시 맞춘다 (단기 쪽 자료가 시작되는 2019년부터).
     (맞추지 않으면 단기 몫이 커져 위험이 다시 커진다 — 샤프 0.99, 낙폭 -27%. 분기 맞춤: 1.11, -20%)"""
     D = L.Data()
     models = L.stock_models() + L.etf_models()
@@ -179,7 +179,7 @@ def combined(dates, Op, Cp, F, share=0.5, start="2019-01-02"):
     reg_prev = np.r_[-1, reg[:-1]]
     te = int(np.searchsorted(D.dates, pd.Timestamp("2023-01-02")))
     out = {"from": str(D.dates[s].date()), "to": str(D.dates[-1].date()), "share_aw": share, "rows": {}}
-    for name, e in (("모의 계좌 (단기 50 + 전천후 50, 분기마다 맞춤)", E), ("단기 갈아타기만", a), ("전천후 혼합만", b), ("KODEX 200 보유", c)):
+    for name, e in ((f"모의 계좌 (단기 {round((1 - share) * 100)} + 전천후 {round(share * 100)}, 분기마다 맞춤)", E), ("단기 갈아타기만", a), ("전천후 혼합만", b), ("KODEX 200 보유", c)):
         r = L.rets(e)
         out["rows"][name] = {"all": L.stats(e[s:], D.dates[s:]), "test": L.stats(e, D.dates, a="2023-01-01"),
                              "years": L.yearly(e[s:], D.dates[s:]), "regime": by_regime(r[s + 1:], reg_prev[s + 1:]),
@@ -279,8 +279,13 @@ def main():
         rob[f"{k}·비용3배"] = summarize(m["E"], dates, s, reg_prev, idx_r, te)
     for k, v in rob.items():
         print(f"  점검 {k:28s} " + json.dumps(v["all"], ensure_ascii=False) + f" P={v.get('p_vs_idx')}")
-    # 4) 채택안 정확 재현: 모의 계좌 = 단기 갈아타기(지금 규칙) 50% + 전천후 혼합 50% (따로 굴리고 분기마다 50:50)
-    combo = combined(dates, Op, Cp, F)
+    # 4) 채택안 정확 재현: 모의 계좌 = 단기 갈아타기(지금 규칙) + 전천후 혼합 (따로 굴리고 분기마다 목표 비율로)
+    try:
+        import settings
+        share = float((settings.load().get("short") or {}).get("aw_share", 0.5))
+    except Exception:
+        share = 0.5
+    combo = combined(dates, Op, Cp, F, share=share)
     now = AW.regime_now(F)
     res = {"generated": time.strftime("%Y-%m-%d %H:%M"), "period": [str(dates[0].date()), str(dates[-1].date())],
            "meta_start": str(dates[s].date()), "dev_end": DEV_END, "assets": {c: AW.ASSETS[c] for c in AW.CODES},

@@ -70,7 +70,7 @@ jobs:
           git config user.email actions@github.com
           git add data/science/ docs/science.json 2>/dev/null || true
           git add data/history/lab.json data/history/gate.json docs/history.json 2>/dev/null || true
-          git add data/lookahead.json docs/lookahead.json data/community/ docs/community.json 2>/dev/null || true
+          git add data/lookahead.json docs/lookahead.json data/community/ docs/community.json data/trials.json 2>/dev/null || true
           git add data/short/allweather.json docs/allweather.json 2>/dev/null || true
           git add data/short/us_lab.json docs/us_lab.json 2>/dev/null || true
           git add data/evolve/ docs/evolve.json data/short/lab.json docs/short_lab.json

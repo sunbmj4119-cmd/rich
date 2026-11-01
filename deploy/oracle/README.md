@@ -88,3 +88,19 @@ bash ~/rich/deploy/oracle/setup.sh --collect
   알려져 있습니다(무료 한도 안의 자원은 계속 0원이지만, 한도를 넘는 자원을 만들면 과금되니 주의). 공식 문서로는 확인하지 못했습니다.
 - 이 서버에는 GitHub 실행기(self-hosted runner)를 설치하지 않습니다. 저장소가 공개라 다른 사람의 코드가 서버에서 돌 위험이 있기 때문입니다.
   서버는 정해진 시각에 코드를 받아 주문만 보내고 결과만 올립니다.
+
+## 긴 역사 자료 받기 (한 번)
+
+GitHub 서버는 KRX 가 막아서 2018년 전 외국인·기관 수급과 상장폐지 종목을 못 받습니다. 이 서버에서 한 번 받으면 됩니다.
+
+1. `~/.rich/secrets.env` 에 `KRX_ID=...` 와 `KRX_PW=...` 두 줄이 있는지 확인 (GitHub Secrets 에 넣은 것과 같은 값 — 채팅에 붙여 넣지 마세요)
+2. `bash ~/rich/deploy/oracle/collect_history.sh` — 1~2시간. 끊기면 같은 명령을 다시 실행하면 이어 받습니다 (`screen` 이나 `tmux` 안에서 돌리면 접속이 끊겨도 계속)
+3. 끝나면 자동으로 GitHub 에 올리고, 그날 밤 긴 역사 검증이 수급 모델까지 잽니다
+
+## 단기·전천후 몫 증권사 연결 (모의투자부터)
+
+1. 한국투자증권 모의투자 계좌를 하나 더 만들고(30일 엔진과 다른 계좌), GitHub Secrets 에 `KIS_ACCOUNT_SHORT` 로 넣습니다 (앱 키·시크릿은 기존 `KIS_APP_KEY`·`KIS_APP_SECRET`)
+2. `config/autotrade.yaml` → `short.broker: kis_demo`
+3. Actions → autotrade-control → `short_link` 실행 (증권사 계좌가 비어 있어야 함)
+4. 다음 날 아침부터 주문, 저녁마다 대사 — 모의투자 화면 '위원회' 탭의 '실제 돈 준비도'가 모두 ✓ 가 될 때까지 지켜봅니다
+
