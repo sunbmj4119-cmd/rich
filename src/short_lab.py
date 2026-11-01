@@ -517,10 +517,27 @@ SHADOW_RULES = {
 POOL_NAME = {"ALL": "모든 후보", "SLOW": "느린 후보군 (5·10일 보유 종목 모델 + ETF 모델)"}
 
 
-def pool_index(models, pool):
+GATE_FILE = "data/history/gate.json"
+
+
+def long_gate():
+    """긴 역사 관문 (history_lab): 설계에 안 쓴 옛 시대(국내 2001~2018)에 샤프가 0 아래였던 모델 id 집합.
+    옛 자료가 없는 모델(수급 신호·진화 후보)은 여기 없으니 그대로 후보로 남는다. 파일이 없으면 빈 집합."""
+    try:
+        return set(json.load(open(GATE_FILE, encoding="utf-8"))["fail"])
+    except (OSError, ValueError, KeyError):
+        return set()
+
+
+def pool_index(models, pool, gate=None):
+    """후보군 번호. gate = 뺄 모델 id 집합 (기본: 긴 역사 관문). 관문 때문에 비면 관문 없이."""
+    gate = long_gate() if gate is None else gate
     if pool == "ALL":
-        return list(range(len(models)))
-    return [i for i, m in enumerate(models) if m["kind"] == "etf" or m["hold"] in ("H5", "H10")]
+        idx = list(range(len(models)))
+    else:
+        idx = [i for i, m in enumerate(models) if m["kind"] == "etf" or m["hold"] in ("H5", "H10")]
+    kept = [i for i in idx if models[i]["id"] not in gate]
+    return kept or idx
 
 
 def rule_name(r):
@@ -559,8 +576,8 @@ def choose(R, start, every, L, how, k, sticky=0.0, **_):
     return ch
 
 
-def apply_rule(D, models, recs, R, rule, start, stress=1.0):
-    pool = pool_index(models, rule["pool"])
+def apply_rule(D, models, recs, R, rule, start, stress=1.0, gate=None):
+    pool = pool_index(models, rule["pool"], gate)
     ch = choose(R[:, pool], start, **rule)
     ch = [None if c is None else (pool[c] if isinstance(c, int) else [pool[i] for i in c]) for c in ch]
     E, sw = follow(D, models, ch, recs, stress=stress, t0=start)

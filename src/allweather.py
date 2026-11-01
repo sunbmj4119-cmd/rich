@@ -560,9 +560,10 @@ def excess_over_cash(R, rules):
     return R - rc[:, None]
 
 
-def live_mix(upto=None, stress=1.0):
-    """반환 dict: 날짜·가격·특징, 카드, 혼합 고르기(날짜별), 혼합 자산곡선, 내일 목표 비중, 오늘 국면."""
-    dates, Op, Cp = load_prices()
+def live_mix(upto=None, stress=1.0, prices=None, start=None):
+    """반환 dict: 날짜·가격·특징, 카드, 혼합 고르기(날짜별), 혼합 자산곡선, 내일 목표 비중, 오늘 국면.
+    prices=(dates, Op, Cp) 를 주면 그 자료로 (긴 역사 검증용 대용 자산), start 로 고르기 시작일."""
+    dates, Op, Cp = prices if prices is not None else load_prices()
     if upto is not None:
         keep = dates <= pd.Timestamp(upto)
         dates, Op, Cp = dates[keep], Op[keep], Cp[keep]
@@ -570,7 +571,7 @@ def live_mix(upto=None, stress=1.0):
     rules, Ws, recs, R = card_returns(dates, Op, Cp, F, stress=stress)
     Rx = excess_over_cash(R, rules)
     cash = rules.index("H:CASH")
-    s = int(np.searchsorted(dates, pd.Timestamp(MIX_START)))
+    s = int(np.searchsorted(dates, pd.Timestamp(start or MIX_START)))
     resched = month_start(dates, pad=1)
     ch = choose_mix(Rx, F["reg"], s, cash=cash, resched=resched, **LIVE_MIX)
     P = [desired(W) for W in Ws]

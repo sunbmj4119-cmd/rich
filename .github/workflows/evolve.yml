@@ -54,11 +54,16 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           python src/science_lab.py 2>&1 | grep -v Warning | grep -E "통과|유망|과최적화|끝" | tee -a $GITHUB_STEP_SUMMARY || echo "가설 검증 실패(무시하고 계속)"
           echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: 긴 역사 검증 (history_lab — 1997~ 설계에 안 쓴 자료 · 종목 모델 전부 · 시작일별 · 위기별 · 긴 역사 관문)
+        run: |
+          [ -f data/history/hist.csv ] || { echo "긴 역사 자료 없음 (research.yml task=history 로 받기)"; exit 0; }
+          python src/history_lab.py 2>&1 | grep -v Warning | grep -E "^■|관문|끝" | tee -a $GITHUB_STEP_SUMMARY || echo "긴 역사 검증 실패(무시하고 계속)"
       - name: 커밋
         run: |
           git config user.name github-actions
           git config user.email actions@github.com
           git add data/science/ docs/science.json 2>/dev/null || true
+          git add data/history/lab.json data/history/gate.json docs/history.json 2>/dev/null || true
           git add data/short/allweather.json docs/allweather.json 2>/dev/null || true
           git add data/short/us_lab.json docs/us_lab.json 2>/dev/null || true
           git add data/evolve/ docs/evolve.json data/short/lab.json docs/short_lab.json

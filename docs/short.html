@@ -195,6 +195,7 @@
     U.$("#why").innerHTML = `<header><h2>왜 이 모델?</h2></header>
       <div class="kv"><span>고르는 방식</span><b>${U.esc(S.rule_name)}</b></div>
       <div class="kv"><span>후보</span><b>${S.pool_size}개 모델</b></div>
+      ${S.long_gate && S.long_gate.removed.length ? `<p class="mut small">긴 역사 관문: 설계에 안 쓴 옛 시대(1997~2018)에 손해였던 ${S.long_gate.removed.length}개는 후보에서 뺐습니다 — ${S.long_gate.removed.map((x) => U.esc(x.desc)).join(" · ")}. <a href="research.html#hist">자세히</a></p>` : ""}
       <div class="kv"><span>지금 모델을 고른 날</span><b>${U.esc(S.model.selected_at)}</b></div>
       <div class="kv"><span>최근 250일 샤프</span><b>${sh(S.model.sh250)}${top && !top.chosen ? ` (1등 ${sh(top.sh250)} — 재선택일에 바뀔 수 있음)` : ""}</b></div>
       ${S.top_stock && !S.top_stock.chosen ? `<div class="kv"><span>종목 모델 1등</span><b>${U.esc(S.top_stock.desc)} (샤프 ${sh(S.top_stock.sh250)})</b></div>

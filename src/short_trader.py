@@ -415,7 +415,9 @@ def run(cfg=None, now=None):
         if mm.get("born"):
             R[:int(np.searchsorted(D.dates, pd.Timestamp(mm["born"]), side="right")), i] = np.nan
     rule = sc["rule"]
-    pool = L.pool_index(models, rule["pool"])
+    pool = L.pool_index(models, rule["pool"])          # 긴 역사 관문(옛 시대에 손해였던 모델) 적용
+    gate = L.long_gate()
+    gated = [models[i]["id"] for i in L.pool_index(models, rule["pool"], set()) if models[i]["id"] in gate]
     if D.legs["source"] != "etf":                      # 실제 ETF 가격이 없으면 ETF 모델은 체결할 수 없어 뺀다
         pool = [i for i in pool if models[i]["kind"] == "stock"]
     start = max(1, s0)
@@ -520,6 +522,7 @@ def run(cfg=None, now=None):
           "model": {"id": m["id"], "desc": L.describe(m), "selected_at": acc["selected_at"], "changed_today": changed,
                     "sh250": round(float(sh250[mi]), 3)},
           "plan": plan, "leaderboard": board[:20], "pool_size": len(pool), "shadow": shadow, "top_stock": top_stock,
+          "long_gate": {"n_fail": len(gate), "removed": [{"id": k, "desc": L.describe(next(x for x in models if x["id"] == k))} for k in gated]},
           "fills_today": fills}
     try:
         e = pd.read_csv(EQUITY)

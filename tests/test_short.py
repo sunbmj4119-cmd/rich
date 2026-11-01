@@ -333,6 +333,39 @@ def test_new_research_signals_dont_grow_fixed_pool():
     assert "hivol" in SE.CH["gate"] and "fip" in SE.SIGS
 
 
+def test_long_gate_removes_old_failures_from_pool():
+    """긴 역사 관문: 옛 시대에 손해였던 모델만 후보에서 빠지고, 다 빠지면 관문 없이."""
+    ms = L.stock_models() + L.etf_models()
+    full = L.pool_index(ms, "SLOW", set())
+    drop = {"E:oo_rev", ms[full[0]]["id"]}
+    kept = L.pool_index(ms, "SLOW", drop)
+    assert len(kept) == len(full) - 2 and not drop & {ms[i]["id"] for i in kept}
+    assert L.pool_index(ms, "SLOW", {ms[i]["id"] for i in full}) == full
+    with tempfile.TemporaryDirectory() as d:
+        old = L.GATE_FILE
+        try:
+            L.GATE_FILE = os.path.join(d, "gate.json")
+            assert L.long_gate() == set()                      # 파일 없으면 빈 관문
+            json.dump({"fail": ["E:oo_rev"]}, open(L.GATE_FILE, "w"))
+            assert L.long_gate() == {"E:oo_rev"}
+            assert len(L.pool_index(ms, "SLOW")) == len(full) - 1
+        finally:
+            L.GATE_FILE = old
+
+
+def test_history_alignment_and_rolling():
+    """미국 장·환율은 한국 날짜 '앞선 날' 값만 (미래 정보 없음) · 시작일별 분포 · 순위 상관."""
+    import history_lab as HL
+    kr = pd.DatetimeIndex(["2020-01-02", "2020-01-03", "2020-01-06"])
+    us = pd.Series([10.0, 11.0, 12.0, 13.0], index=pd.DatetimeIndex(["2020-01-01", "2020-01-02", "2020-01-03", "2020-01-06"]))
+    b = HL.before(us, kr)
+    assert list(b) == [10.0, 11.0, 12.0]                       # 같은 날짜 미국 종가는 아직 모른다
+    r = pd.Series(np.full(600, 0.001))
+    ro = HL.rolling_origin(r, (252,))["1y"]
+    assert ro["p_loss"] == 0 and abs(ro["median"] - (1.001 ** 252 - 1)) < 1e-4
+    assert HL.spearman([1, 2, 3, 4], [10, 20, 30, 40]) == 1.0 and HL.spearman([1, 2, 3, 4], [4, 3, 2, 1]) == -1.0
+
+
 if __name__ == "__main__":
     for k, fn in list(globals().items()):
         if k.startswith("test_"):
