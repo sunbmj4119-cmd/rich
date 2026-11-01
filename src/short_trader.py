@@ -1,11 +1,11 @@
 """
-모의투자 (단기 갈아타기 50 + 전천후 ETF 혼합 50) — 매일 저녁 (daily.yml, 자료 갱신 뒤) 실행. 실제 돈은 움직이지 않는다.
+모의투자 (단기 갈아타기 20 + 전천후 ETF 혼합 80, config short.aw_share) — 매일 저녁 (daily.yml, 자료 갱신 뒤) 실행. 실제 돈은 움직이지 않는다.
 
   계좌는 두 몫으로 나눠 따로 굴린다 (전략서 3-6-7):
     단기 몫  : 아래 1)~4) — 후보 모델 중 주 1회 고른 모델을 따라감
     전천후 몫: allweather.live_mix — ETF 12종, 전략 카드 20장을 변동성 반비례로 섞은 목표 비중 (매달 첫 거래일 재조정),
                지금 비중과 5%p 넘게 다를 때만 주문. 시장 국면은 계산·표시만 (국면 스위칭은 10년 검증에서 불리)
-    분기 마지막 거래일 저녁에 두 몫을 50:50 으로 다시 맞춘다 (config short.aw_share)
+    분기 마지막 거래일 저녁에 두 몫을 목표 비율로 다시 맞춘다 (config short.aw_share · 비율을 바꾸면 다음 실행에 바로 맞춘다)
 
   1) 체결: 어제 저녁에 세운 계획을 오늘 실제 가격으로 체결한다
            (시가 주문 = 오늘 시가, 종가 주문 = 오늘 종가 · 주식 수는 정수 · 수수료·세금·미끄러짐 포함 = 연구와 같은 비용)
@@ -500,7 +500,7 @@ def run(cfg=None, now=None):
         E, sw, _ = L.apply_rule(D, models, recs, R, r_, start)
         shadow.append({"key": key, "name": name, "ret": round(float(E[T] / E[start - 1] - 1), 4), "switches": sw,
                        "days": T - start + 1})
-    # 3) 계획 — 단기 갈아타기 몫 + 전천후 몫 (분기 첫 거래일 전날 저녁: 몫을 50:50 으로 다시 맞춤)
+    # 3) 계획 — 단기 갈아타기 몫 + 전천후 몫 (분기 첫 거래일 전날 저녁, 또는 목표 비율을 바꾼 날: 몫을 다시 맞춤)
     res = recs[mi]
     transfer = None
     if "aw" in acc and acc.get("owe_aw", 0) > 0:          # 지난 분기 맞추기에서 못 옮긴 돈
@@ -509,8 +509,11 @@ def run(cfg=None, now=None):
         acc["aw"]["cash"] += y
         log_flow(acc, today, -y)
         acc["owe_aw"] = round(acc["owe_aw"] - y, 2)
-    if "aw" in acc and quarter_turn(D.dates[T]):
+    if "aw" in acc and (quarter_turn(D.dates[T]) or acc.get("aw_share_target", 0.5) != share):
+        if acc.get("aw_share_target", 0.5) != share:
+            print(f"  목표 비율 변경: 전천후 {acc.get('aw_share_target', 0.5):.0%} → {share:.0%} — 오늘 저녁 바로 맞춤")
         transfer = rebalance_cash(D, acc, share, T)
+        acc["aw_share_target"] = share
     plan = make_plan(D, m, res, acc, sc, nm, T, hold_back=acc.get("owe_aw", 0.0))
     aw = None
     if "aw" in acc:
@@ -523,13 +526,21 @@ def run(cfg=None, now=None):
         except Exception as ex:                         # 전천후 계산이 실패해도 단기 몫은 그대로 돈다
             print(f"  (전천후 몫 계산 실패: {type(ex).__name__} {ex})")
     # 4) 리스크 매니저 (거부권) — 모델이 낸 주문을 저장 직전에 검사. 검사 자체가 실패하면 새 매수 보류
+    recon = None
+    try:                                               # 증권사에 연결돼 있으면 오늘 체결 뒤 잔고를 장부와 맞춰 본다 (모의면 바로 끝남)
+        import short_exec as SX
+        recon = SX.reconcile(cfg, acc=acc)
+    except Exception as ex:
+        recon = {"mode": (cfg.get("short") or {}).get("broker", "paper"), "state": "HALTED", "why": [f"대사 실패({type(ex).__name__}) → 정지"], "blocked": []}
+        if recon["mode"] == "paper":
+            recon = None
     try:
         V = D.P["V"]
         adv20 = np.nanmean(V[max(0, T - 19):T + 1], 0)
         cix = {c: j for j, c in enumerate(D.P["codes"])}
         RK.apply(plan, today, sleeve_returns(acc), equity_at(D, acc, T),
                  adv=lambda c: float(adv20[cix[c]]) if c in cix and np.isfinite(adv20[cix[c]]) else None,
-                 cfg=cfg.get("risk_manager"))
+                 cfg=cfg.get("risk_manager"), recon=recon)
     except Exception as ex:
         RK.fail_closed(plan, ex)
     rk = plan.get("risk") or {}

@@ -293,6 +293,93 @@ def shortfall(short_ui):
             "note": "모의는 같은 가격으로 체결하므로 차이 = 정수 주식·현금 여유·체결 시점 차이. 실계좌를 붙이면 미끄러짐이 여기 나타난다"}
 
 
+READY = "data/readiness.json"
+
+
+def readiness(short_ui, cfg=None):
+    """실제 돈 준비도 점검표 (go/no-go) — 모두 통과해야 '준비됨'. short_exec 가 kis_real 주문 전에 읽는다."""
+    cfg = cfg or {}
+    sc = cfg.get("short") or {}
+    sl = list(sc.get("broker_sleeves") or ["aw"])
+    acc = jload("data/short/account.json", {}) or {}
+    items = []
+
+    def add(key, name, ok, now, need, eta=None, info=None):
+        items.append({"key": key, "name": name, "ok": bool(ok), "now": now, "need": need, "eta": eta, "info": info})
+    # 1) 모의 기록 길이 (따라 할 몫)
+    try:
+        eq = pd.read_csv("data/short/equity.csv")
+        since = (acc.get("aw") or {}).get("since") if sl == ["aw"] else acc.get("start")
+        n = int((eq["날짜"].astype(str) >= str(since)).sum()) if since else len(eq)
+    except (OSError, ValueError, KeyError):
+        n = 0
+    eta = (pd.Timestamp.now() + pd.offsets.BDay(max(0, 60 - n))).strftime("%Y-%m-%d") if n < 60 else None
+    add("paper_days", "모의 기록 60거래일 이상", n >= 60, f"{n}일", "60일", eta, "짧은 기록의 좋은 성적은 운과 구분이 안 된다 (Quantopian 888개 연구)")
+    # 2) 감시 경고 없음 (최근 20번)
+    rows = []
+    if os.path.exists(JOURNAL):
+        with open(JOURNAL, encoding="utf-8") as f:
+            rows = [json.loads(x) for x in f if x.strip()]
+    rows = [r for r in rows if not r.get("rerun")]
+    recent = rows[-20:]
+    alarms = sum(1 for r in recent if r.get("review"))
+    add("no_alarm", "감시 경고 없음 (최근 20번 결정)", alarms == 0 and len(recent) >= 20, f"경고 {alarms}번 / {len(recent)}번", "20번 중 0번")
+    # 3) 매일 실행 (최근 20거래일 중 기록된 날)
+    try:
+        days = pd.read_csv("data/short/equity.csv")["날짜"].astype(str).tolist()[-20:]
+        got = {r["date"] for r in rows}
+        rate = sum(1 for d in days if d in got) / max(len(days), 1)
+    except (OSError, ValueError, KeyError):
+        days, rate = [], 0.0
+    add("runs", "매일 실행 95% 이상 (최근 20거래일)", rate >= 0.95 and len(days) >= 20, f"{rate * 100:.0f}% ({len(days)}일 중)", "95% · 20일",
+        info="GitHub 예약 실행은 늦거나 빠질 수 있다 — 빠지면 그날 주문이 없다")
+    # 4) 미래 정보 검사
+    la = jload("data/lookahead.json", {}) or {}
+    fresh = la.get("generated", "")[:10] >= (pd.Timestamp.now() - pd.Timedelta(days=4)).strftime("%Y-%m-%d")
+    add("lookahead", "미래 정보 전수 검사 통과 (최근 4일 안)", la.get("n_fail") == 0 and fresh, f"실패 {la.get('n_fail', '—')} · {la.get('generated', '없음')}", "실패 0")
+    # 5) 증권사 모의투자 대사
+    rc = jload("data/short/recon.json", {}) or {}
+    streak = 0
+    for h in reversed(rc.get("history") or []):
+        if h.get("mode") in ("kis_demo", "kis_real") and h.get("ok"):
+            streak += 1
+        else:
+            break
+    add("recon", "증권사(모의투자) 잔고 대사 20거래일 연속 일치", streak >= 20, f"{streak}일 (지금 {rc.get('mode', 'paper')})", "20일",
+        info="short.broker: kis_demo → control.yml short_link → 매일 아침 주문·저녁 대사")
+    # 6) 실행 비용
+    bp = rc.get("slippage_med_bp")
+    add("slippage", "실제 체결 비용 ≤ 15bp (중앙값)", bp is not None and bp <= 15, "측정 전" if bp is None else f"{bp}bp", "≤ 15bp",
+        info="연구에 넣은 비용 가정(ETF 호가 반 칸 ≈ 1~5bp)의 몇 배인지")
+    # 7) 따라 할 몫의 근거
+    hi = jload("docs/history.json", {}) or {}
+    aw_oos = ((hi.get("aw") or {}).get("oos") or {}).get("sharpe")
+    sc_ = (jload("docs/science.json", {}) or {}).get("overfit", {}).get("kr_short") or {}
+    ev_ok, ev_now = True, []
+    if "aw" in sl:
+        ev_ok &= bool(aw_oos and aw_oos >= 0.5)
+        ev_now.append(f"전천후 긴 역사 표본 외 샤프 {aw_oos}")
+    if "live" in sl:
+        d_all = sc_.get("dsr_all")
+        ev_ok &= bool(d_all is not None and d_all >= 0.5)
+        ev_now.append(f"단기 몫 DSR(전체 시도) {d_all}")
+    add("evidence", "증권사가 따라 할 몫이 표본 외 검증 통과", ev_ok, " · ".join(ev_now), "전천후 ≥ 0.5 · 단기 DSR ≥ 50%")
+    # 8) 리스크 매니저·자료
+    rk = (jload("data/short/plan.json", {}) or {}).get("risk") or {}
+    add("risk", "리스크 매니저 정상 (ACTIVE)", rk.get("state") == "ACTIVE", rk.get("state", "—"), "ACTIVE")
+    cs = jload("data/collect_status.json", {}) or {}
+    add("data", "자료 수집 정상", bool(cs.get("ok")), "정상" if cs.get("ok") else (cs.get("problem") or "확인 필요"), "정상")
+    missing = [x["name"] for x in items if not x["ok"]]
+    out = {"generated": time.strftime("%Y-%m-%d %H:%M"), "verdict": "준비됨" if not missing else "아직", "missing": missing,
+           "items": items, "sleeves": sl, "broker": sc.get("broker", "paper"),
+           "plan": ["1) short.broker: kis_demo + 비밀값 KIS_APP_KEY·KIS_APP_SECRET·KIS_ACCOUNT_SHORT → control.yml short_link",
+                    "2) 20거래일 대사·비용 확인 (이 점검표가 모두 ✓ 가 될 때까지)",
+                    "3) kis_real · broker_capital 을 계획 금액의 10~20% 로 · live_trading:true · AUTOTRADE_CONFIRM — 3개월 뒤 늘림"]}
+    os.makedirs(os.path.dirname(READY), exist_ok=True)
+    json.dump(out, open(READY, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    return out
+
+
 def main():
     t0 = time.time()
     short_ui = jload("docs/short.json", {}) or {}
@@ -331,11 +418,20 @@ def main():
                    "us": {"state": st_u, "why": why_u}},
           "decisions": dec_s + dec_u, "review": review, "journal": {"chain": chain, "tail": tail, "wrote": wrote, "hash": e.get("hash")},
           "reflection": reflection(), "shortfall": shortfall(short_ui)}
+    try:
+        import settings
+        cfg = settings.load()
+    except Exception:
+        cfg = {}
+    ui["readiness"] = readiness(short_ui, cfg)
+    ui["recon"] = {k: (jload("data/short/recon.json", {}) or {}).get(k) for k in ("date", "mode", "state", "why", "mismatch", "slippage_med_bp")}
+    ui["mirror"] = jload("data/short/mirror.json", None)
     from short_trader import clean
     json.dump(clean(ui), open(UI, "w", encoding="utf-8"), ensure_ascii=False)
     print(f"투자위원회 {entry['date']}: 확신도 {entry['conviction']:+d} (강세 {len(bull)} · 약세 {len(bear)}) · "
           + " · ".join(f"{d['name']} {d['decision']}" for d in dec_s + dec_u)
-          + (f" · 검토 필요 {len(review)}" if review else "") + f" · 기록 {'추가' if wrote else '그대로'} · 사슬 {'정상' if chain['ok'] else '깨짐'} ({time.time() - t0:.0f}s)")
+          + (f" · 검토 필요 {len(review)}" if review else "") + f" · 기록 {'추가' if wrote else '그대로'} · 사슬 {'정상' if chain['ok'] else '깨짐'}"
+          + f" · 실제 돈 준비도: {ui['readiness']['verdict']} (남은 {len(ui['readiness']['missing'])}개) ({time.time() - t0:.0f}s)")
     return ui
 
 

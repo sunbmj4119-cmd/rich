@@ -17,3 +17,4 @@ scratchpad/
 
 # 연구용 캐시 (alpha_lab → prediction_lab)
 data/cache/
+data/history/krx_cache/

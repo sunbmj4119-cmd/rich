@@ -156,6 +156,9 @@
 | 매일 밤 | `src/history_lab.py` (`evolve.yml`) | `data/history/` (Yahoo 1990~, `research.yml` task=history · history_kr 로 한 번 받음) → `data/history/lab.json` · `gate.json` · `docs/history.json` | 설계에 안 쓴 옛 자료(1997~2018)로 표본 외 검증 · 종목 모델 전부 · 시작일별 · 위기별 · 업종 · **긴 역사 관문**(옛 시대 손해 모델을 단기 후보에서 제외) (전략서 3-6-10) |
 | 매일 저녁 | `src/risk.py` (short_trader·us_trader 안) | 내일 주문 | **리스크 매니저 거부권** — 정지 스위치·자료 묵음·주문 수·종목 비중·거래량·가격 보호, 감쇠·낙폭은 경고만 (`config/autotrade.yaml` risk_manager) |
 | 매일 저녁 | `src/committee.py` (`daily.yml` 7-3) | 계획·계좌·자료 → `data/committee/journal.jsonl` · `docs/committee.json` | **투자위원회** — 분석가 4명 → 강세·약세 → 리스크 → 최종 결정, 해시 사슬 기록, 사후 검토, 실행 괴리 (모의투자 '위원회' 탭) |
+| 매일 아침 08:40 | `src/short_exec.py` (`autotrade.yml`) | 전날 계획 → 증권사 | **거울 계좌** — 정한 몫(기본 전천후만)을 증권사가 자기 돈 크기로 따라 함, 가격 보호 지정가, 중복 방지 (`short.broker` 가 paper 면 아무것도 안 보냄) |
+| 매일 저녁 | `short_exec.reconcile` (short_trader 안) · `committee.readiness` | → `data/short/recon.json` · `data/readiness.json` | 증권사 잔고 대사(불일치면 새 매수 금지·정지) · **실제 돈 준비도 점검표** 9가지 (전략서 3-6-12) |
+| 한 번 (서버) | `src/collect_krx_history.py` (`deploy/oracle/collect_history.sh`) | KRX → `data/history/krx_*.csv.gz` | 2000~2018 수급·상장폐지 포함 대형주·ETF 전 기간 — 수급 모델 긴 역사 검증용 |
 | 매일 밤 | `src/lookahead_check.py` · `src/community_lab.py` (`evolve.yml`) | → `docs/lookahead.json` · `docs/community.json` | 미래 정보 전수 검사 · 남들 전략 14개 재검증 (전략서 3-6-11) |
 | 매일 밤 | `src/evolve.py all` · `src/short_lab.py` · `src/allweather_lab.py` (`evolve.yml`) | 위 데이터 → `data/evolve/meta.json` · `data/short/lab.json` · `data/short/allweather.json` | 진화 자체의 재검증 · 단기매매 검증 · 전천후(국면 스위칭 vs 섞기) 검증 다시 재기 (전략서 3-6-7) |
 

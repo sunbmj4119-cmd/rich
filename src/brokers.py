@@ -36,7 +36,8 @@ def tick_size(price):
 
 def round_tick(price, up=False):
     t = tick_size(price)
-    return int((math.ceil if up else math.floor)(price / t) * t)
+    q = round(price / t, 6)                    # 11200.000000000002 같은 부동소수 잡음이 한 칸 올림을 만들지 않게
+    return int((math.ceil if up else math.floor)(q) * t)
 
 
 # ══════════════════════════════════════════════════════════════
@@ -123,7 +124,7 @@ class KISBroker:
     """한국투자증권 Open API. demo=True 면 모의투자 서버."""
     name = "kis"
 
-    def __init__(self, demo=True, live_orders=False):
+    def __init__(self, demo=True, live_orders=False, account=None, product=None):
         import requests                       # 실계좌 모드에서만 필요
         self.rq = requests
         self.demo = demo
@@ -133,8 +134,8 @@ class KISBroker:
                      else "https://openapi.koreainvestment.com:9443")
         self.key = os.environ.get("KIS_APP_KEY", "")
         self.secret = os.environ.get("KIS_APP_SECRET", "")
-        self.cano = os.environ.get("KIS_ACCOUNT", "")
-        self.prdt = os.environ.get("KIS_ACCOUNT_PRODUCT", "01")
+        self.cano = account or os.environ.get("KIS_ACCOUNT", "")
+        self.prdt = product or os.environ.get("KIS_ACCOUNT_PRODUCT", "01")
         if not (self.key and self.secret and self.cano):
             raise RuntimeError("KIS_APP_KEY / KIS_APP_SECRET / KIS_ACCOUNT 환경변수가 없습니다.")
         self._token = None
@@ -216,6 +217,25 @@ class KISBroker:
         ok = j.get("rt_cd") == "0"
         return {"ok": ok, "order_no": (j.get("output") or {}).get("ODNO", ""),
                 "msg": f"{j.get('msg_cd', '')} {j.get('msg1', '')}".strip()}
+
+
+    def daily_fills(self, start, end):
+        """주식일별주문체결조회 (3개월 이내) — 체결된 주문만. 반환 [{order_no, code, side, qty, filled, avg}].
+        TR: 실전 TTTC8001R / 모의 VTTC8001R (공식 예제 inquire_daily_ccld 기준 — 모의투자에서 처음 돌릴 때 응답 필드 확인)."""
+        params = {"CANO": self.cano, "ACNT_PRDT_CD": self.prdt, "INQR_STRT_DT": start.replace("-", ""),
+                  "INQR_END_DT": end.replace("-", ""), "SLL_BUY_DVSN_CD": "00", "INQR_DVSN": "00", "PDNO": "",
+                  "CCLD_DVSN": "01", "ORD_GNO_BRNO": "", "ODNO": "", "INQR_DVSN_3": "00", "INQR_DVSN_1": "",
+                  "EXCG_ID_DVSN_CD": "KRX", "CTX_AREA_FK100": "", "CTX_AREA_NK100": ""}
+        j = self._get("/uapi/domestic-stock/v1/trading/inquire-daily-ccld", self._tr("TTTC8001R", "VTTC8001R"), params)
+        if j.get("rt_cd") != "0":
+            raise RuntimeError(f"체결 조회 실패: {j.get('msg_cd')} {j.get('msg1')}")
+        out = []
+        for r in j.get("output1") or []:
+            q = int(float(r.get("tot_ccld_qty", 0) or 0))
+            out.append({"order_no": r.get("odno", ""), "code": r.get("pdno", ""), "date": r.get("ord_dt", ""),
+                        "side": "sell" if r.get("sll_buy_dvsn_cd") == "01" else "buy", "qty": int(float(r.get("ord_qty", 0) or 0)),
+                        "filled": q, "avg": float(r.get("avg_prvs", 0) or 0)})
+        return out
 
 
 def make_broker(cfg):

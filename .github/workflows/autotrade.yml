@@ -44,11 +44,28 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           python src/autotrader.py --phase execute $FLAG 2>&1 | tee -a $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: 단기·전천후 몫 주문 (config short.broker — paper 면 아무것도 안 보냄)
+        env:
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+          KIS_ACCOUNT: ${{ secrets.KIS_ACCOUNT }}
+          KIS_ACCOUNT_SHORT: ${{ secrets.KIS_ACCOUNT_SHORT }}
+          KIS_ACCOUNT_PRODUCT: ${{ secrets.KIS_ACCOUNT_PRODUCT }}
+          AUTOTRADE_CONFIRM: ${{ vars.AUTOTRADE_CONFIRM }}
+          DRY: ${{ inputs.dry_run }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          FLAG=""
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "$DRY" = "true" ]; then FLAG="--dry-run"; fi
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          python src/short_exec.py --phase execute $FLAG 2>&1 | tee -a $GITHUB_STEP_SUMMARY || echo "단기 몫 주문 실패"
+          echo '```' >> $GITHUB_STEP_SUMMARY
       - name: 주문 기록 커밋
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add data/autotrade/ || true
+          git add data/short/orders.csv 2>/dev/null || true
           git commit -m "autotrade orders $(date +%Y-%m-%d)" || echo "no changes"
           git pull --rebase
           git push

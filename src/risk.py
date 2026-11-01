@@ -270,8 +270,9 @@ def collar_ok(o, px, collar=COLLAR):
     return px <= float(o["est_price"]) * (1 + collar)
 
 
-def apply(plan, data_date, sleeve_returns, equity_total, adv=None, kind_of=None, value_of=None, today=None, cfg=None):
-    """계획(plan['orders'])을 검사해 고치고 plan['risk'] 에 기록. sleeve_returns: {몫: 실제 일수익 Series}."""
+def apply(plan, data_date, sleeve_returns, equity_total, adv=None, kind_of=None, value_of=None, today=None, cfg=None, recon=None):
+    """계획(plan['orders'])을 검사해 고치고 plan['risk'] 에 기록. sleeve_returns: {몫: 실제 일수익 Series}.
+    recon: 증권사 잔고 대사 결과(short_exec.reconcile) — HALTED 면 계좌 정지, 불일치 종목은 새 매수 금지."""
     cf = conf(cfg)
     ex = expectations()
     sleeves = {}
@@ -282,10 +283,22 @@ def apply(plan, data_date, sleeve_returns, equity_total, adv=None, kind_of=None,
         if e:
             sleeves[sl]["expect"] = e
     state, why = global_state(data_date, len(plan.get("orders") or []), today, cf["max_orders"])
+    blocked = set()
+    if recon and recon.get("mode") not in (None, "paper"):
+        if recon.get("state") == "HALTED" and state != "HALTED":
+            state, why = "HALTED", ["증권사 잔고 대사: " + "; ".join(recon.get("why") or [])]
+        blocked = set(recon.get("blocked") or [])
     before = len(plan.get("orders") or [])
+    pre = []
+    for o in plan.get("orders") or []:
+        if o.get("side") == "buy" and o.get("code") in blocked:
+            pre.append({"code": o["code"], "side": "buy", "sleeve": o.get("sleeve") or "live", "act": "취소", "why": "증권사 잔고와 장부 수량이 다름 — 점검 전 새 매수 금지"})
+    plan["orders"] = [o for o in plan.get("orders") or [] if not (o.get("side") == "buy" and o.get("code") in blocked)]
     plan["orders"], log = review(plan.get("orders") or [], state, sleeves, equity_total, adv, kind_of, value_of, cf)
+    log = pre + log
     plan["risk"] = {"state": state, "why": why, "sleeves": sleeves, "log": log, "orders_before": before,
-                    "orders_after": len(plan["orders"]), "limits": {**cf, "haircut": HAIRCUT, "false_alarm_years": ARL0_DAYS / 252}}
+                    "orders_after": len(plan["orders"]), "limits": {**cf, "haircut": HAIRCUT, "false_alarm_years": ARL0_DAYS / 252},
+                    "recon": None if not recon else {k: recon.get(k) for k in ("date", "mode", "state", "why", "blocked", "slippage_med_bp")}}
     return plan
 
 

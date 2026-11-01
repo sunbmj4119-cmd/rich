@@ -459,6 +459,55 @@ def test_community_weights_engine():
     assert abs(E - (130 / 100) * (1 - 0.001)) < 1e-9 and abs(turn - 1.0) < 1e-12
 
 
+def test_mirror_executor_and_reconcile():
+    """거울 계좌: 모의 몫 × 배율을 목표로 차이만 주문(매도 먼저·가격 보호 지정가·늦으면 매수 안 함) · 대사 1주·2% 허용."""
+    import short_exec as SX
+    acc = {"cash": 100.0, "positions": {"A": {"qty": 10}}, "etf": {}, "aw": {"cash": 50.0, "etf": {"E1": {"qty": 100}, "E2": {"qty": 40}}}}
+    plan = {"orders": [{"sleeve": "aw", "side": "buy", "code": "E1", "qty": 20, "session": "open"},
+                       {"sleeve": "aw", "side": "sell", "code": "E2", "qty": 40, "session": "open"},
+                       {"side": "buy", "code": "B", "qty": 5, "session": "open"}]}
+    assert SX.after_plan(acc, plan, ["aw"]) == {"E1": 120}
+    tgt = SX.targets(acc, plan, {"scale": 0.5}, ["aw"])
+    assert tgt == {"E1": 60}
+    orders = SX.diff_orders(tgt, {"E1": {"shares": 50}, "E2": {"shares": 20}}, {"E1": 10000.0}, 0.12)
+    assert [(o["side"], o["code"], o["qty"]) for o, _ in orders] == [("sell", "E2", 20), ("buy", "E1", 10)]
+    assert orders[1][0]["kind"] == "limit" and orders[1][0]["price"] == 11200
+    late = SX.diff_orders(tgt, {"E1": {"shares": 50}}, {"E1": 10000.0}, 0.12, late=True)
+    assert late[0][0]["kind"] == "skip"
+    ok = SX.compare({"E1": 100}, {"E1": {"shares": 101}})
+    bad = SX.compare({"E1": 100, "E2": 10, "E3": 5}, {"E1": {"shares": 90}, "E2": {"shares": 0}, "E3": {"shares": 9}})
+    assert ok["state"] == "ACTIVE" and bad["state"] == "HALTED" and set(bad["blocked"]) == {"E1", "E2", "E3"}
+    b, name, why = SX.make({"short": {"broker": "paper"}})
+    assert b is None and name == "paper"
+
+
+def test_risk_blocks_on_reconcile():
+    """대사가 어긋난 종목은 새 매수 금지 · 대사 HALTED 면 계좌 정지 · 모의(paper) 대사는 영향 없음."""
+    import risk as RK
+    plan = {"orders": [{"side": "buy", "code": "X", "qty": 1, "est_price": 100.0}, {"side": "buy", "code": "Y", "qty": 1, "est_price": 100.0},
+                       {"side": "sell", "code": "Z", "qty": 1, "est_price": 100.0}]}
+    p = RK.apply(json.loads(json.dumps(plan)), "2026-10-30", {}, 1e6, today="2026-10-30",
+                 recon={"mode": "kis_demo", "state": "REDUCING", "blocked": ["X"], "why": ["x"]})
+    assert {o["code"] for o in p["orders"]} == {"Y", "Z"}
+    p = RK.apply(json.loads(json.dumps(plan)), "2026-10-30", {}, 1e6, today="2026-10-30",
+                 recon={"mode": "kis_demo", "state": "HALTED", "blocked": [], "why": ["잔고 조회 실패"]})
+    assert p["orders"] == [] and p["risk"]["state"] == "HALTED"
+    p = RK.apply(json.loads(json.dumps(plan)), "2026-10-30", {}, 1e6, today="2026-10-30",
+                 recon={"mode": "paper", "state": "HALTED", "blocked": ["X"]})
+    assert len(p["orders"]) == 3
+
+
+def test_dsr_counts_all_trials():
+    """시도를 더 많이 했다고 적으면 진짜 실력일 확률(DSR)은 내려가고 운의 기준선은 올라간다."""
+    import science_lab as SL
+    rng = np.random.default_rng(0)
+    r = rng.normal(0.0008, 0.01, 1500)
+    srs = list(rng.normal(0.0, 0.03, 150))
+    p1, s1 = SL.dsr(r, srs)
+    p2, s2 = SL.dsr(r, srs, 180000)
+    assert p2 < p1 and s2 > s1
+
+
 if __name__ == "__main__":
     for k, fn in list(globals().items()):
         if k.startswith("test_"):
