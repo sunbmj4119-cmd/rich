@@ -58,12 +58,19 @@ jobs:
         run: |
           [ -f data/history/hist.csv ] || { echo "긴 역사 자료 없음 (research.yml task=history 로 받기)"; exit 0; }
           python src/history_lab.py 2>&1 | grep -v Warning | grep -E "^■|관문|끝" | tee -a $GITHUB_STEP_SUMMARY || echo "긴 역사 검증 실패(무시하고 계속)"
+      - name: 미래 정보 전수 검사 (lookahead_check — 모든 신호·카드를 자료를 잘라 다시 계산해 비교)
+        run: python src/lookahead_check.py 4 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY || echo "미래 정보 검사 실패(무시하고 계속)"
+      - name: 남들 전략 재검증 (community_lab — 자산배분 9개·변동성 돌파 5개, 원화·세후, Holm)
+        run: |
+          [ -f data/history/hist.csv ] || exit 0
+          python src/community_lab.py 2>&1 | grep -v Warning | tail -20 | tee -a $GITHUB_STEP_SUMMARY || echo "남들 전략 검증 실패(무시하고 계속)"
       - name: 커밋
         run: |
           git config user.name github-actions
           git config user.email actions@github.com
           git add data/science/ docs/science.json 2>/dev/null || true
           git add data/history/lab.json data/history/gate.json docs/history.json 2>/dev/null || true
+          git add data/lookahead.json docs/lookahead.json data/community/ docs/community.json 2>/dev/null || true
           git add data/short/allweather.json docs/allweather.json 2>/dev/null || true
           git add data/short/us_lab.json docs/us_lab.json 2>/dev/null || true
           git add data/evolve/ docs/evolve.json data/short/lab.json docs/short_lab.json

@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import risk as RK  # noqa: E402
 import short_lab as L  # noqa: E402
 import us_lab as U  # noqa: E402
 
@@ -78,6 +79,9 @@ def settle(D, acc, plan):
         px = None if j is None or not np.isfinite(D.O[t, j]) else float(D.O[t, j])
         if px is None:
             fills.append({"날짜": day, "종목": o["code"], "구분": f"{o['side']}·미체결", "수량": 0})
+            continue
+        if not RK.collar_ok(o, px, (plan.get("risk") or {}).get("limits", {}).get("collar", RK.COLLAR)):
+            fills.append({"날짜": day, "종목": o["code"], "구분": "buy·가격보호", "수량": 0})
             continue
         pos = acc["positions"]
         if o["side"] == "sell":
@@ -167,6 +171,24 @@ def run():
     acc["last_date"] = today
     res = L.run_stock(D, MODEL)
     plan = make_plan(D, acc, res, T)
+    try:                                               # 리스크 매니저 (거부권) — 실패하면 새 매수 보류
+        e = pd.read_csv(EQUITY).set_index("날짜")["평가액_달러"].astype(float)
+        V = D.P["V"]
+        adv20 = np.nanmean(V[max(0, T - 19):T + 1], 0)
+        cix = {c: j for j, c in enumerate(D.P["codes"])}
+        cfg = {}
+        try:
+            import settings
+            cfg = settings.load().get("risk_manager") or {}
+        except Exception:
+            pass
+        for o in plan["orders"]:
+            o["sleeve"] = "us"
+        RK.apply(plan, today, {"us": RK.flow_adjusted(e)}, equity_usd(D, acc, T),
+                 adv=lambda c: float(adv20[cix[c]]) if c in cix and np.isfinite(adv20[cix[c]]) else None,
+                 value_of=lambda o: float(o.get("usd", 0)), cfg=cfg, today=None)
+    except Exception as ex:
+        RK.fail_closed(plan, ex)
     json.dump(plan, open(PLAN, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     json.dump(acc, open(ACC, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     eq = equity_usd(D, acc, T)
@@ -182,7 +204,7 @@ def run():
                       "positions": [{"code": c, "qty": round(p["qty"], 4), "avg": round(p["avg"], 2), "since": p.get("since"),
                                      "last": round(float(D.Cf[T, D.P["codes"].index(c)]), 2) if c in D.P["codes"] else None}
                                     for c, p in acc["positions"].items()]},
-          "plan": plan, "fills_today": fills,
+          "plan": plan, "fills_today": fills, "risk": plan.get("risk"),
           "research": {k: lab.get(k) for k in ("period", "start", "by_hold", "bench", "costs")} | {
               "rules": {k: {kk: v.get(kk) for kk in ("name", "usd", "test", "usd_after_tax", "krw", "p_vs_spy", "switches")}
                         for k, v in (lab.get("rules") or {}).items()},

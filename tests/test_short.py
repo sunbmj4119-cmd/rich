@@ -366,6 +366,99 @@ def test_history_alignment_and_rolling():
     assert HL.spearman([1, 2, 3, 4], [10, 20, 30, 40]) == 1.0 and HL.spearman([1, 2, 3, 4], [4, 3, 2, 1]) == -1.0
 
 
+def test_risk_manager_rules():
+    """리스크 매니저: 정지/매도만/한도 축소/거래량/가격 보호/검사 실패 시 새 매수 보류."""
+    import risk as RK
+    orders = [{"side": "sell", "code": "A", "qty": 10, "est_price": 100.0, "kind": "stock"},
+              {"side": "buy", "code": "B", "qty": 100, "est_price": 100.0, "kind": "stock"},
+              {"side": "buy", "code": "153130", "qty": 50, "est_price": 100.0, "kind": "etf", "sleeve": "aw"}]
+    ok = {"live": {"action": "ACTIVE", "size": 1.0}, "aw": {"action": "ACTIVE", "size": 1.0}}
+    out, log = RK.review(orders, "HALTED", ok, 1e6)
+    assert out == [] and len(log) == 3
+    out, log = RK.review(orders, "REDUCING", ok, 1e6)
+    assert [o["side"] for o in out] == ["sell"]
+    out, log = RK.review(orders, "ACTIVE", ok, 20000.0)               # 한 종목 25% = 5000원 → B 50주로 축소, 단기채 ETF 는 예외
+    assert next(o for o in out if o["code"] == "B")["qty"] == 50 and next(o for o in out if o["code"] == "153130")["qty"] == 50
+    out, _ = RK.review(orders, "ACTIVE", ok, 1e9, adv=lambda c: 1000.0)  # 거래량 1000주의 2.5% = 25주
+    assert next(o for o in out if o["code"] == "B")["qty"] == 25
+    out, _ = RK.review(orders, "ACTIVE", {"live": {"action": "REDUCING", "size": 0.0}, "aw": ok["aw"]}, 1e9)
+    assert {o["code"] for o in out} == {"A", "153130"}
+    assert RK.collar_ok(orders[1], 111.0) and not RK.collar_ok(orders[1], 113.0) and RK.collar_ok(orders[0], 500.0)
+    p = RK.fail_closed({"orders": list(orders)}, ValueError("x"))
+    assert [o["side"] for o in p["orders"]] == ["sell"] and p["risk"]["state"] == "REDUCING"
+    with tempfile.TemporaryDirectory() as d:
+        old = RK.KILL
+        try:
+            RK.KILL = os.path.join(d, "KILL")
+            open(RK.KILL, "w").close()
+            assert RK.global_state("2026-10-30", 1, "2026-10-30")[0] == "HALTED"
+        finally:
+            RK.KILL = old
+    assert RK.global_state("2026-10-20", 1, "2026-10-30")[0] == "REDUCING"        # 자료가 묵음
+    assert RK.global_state("2026-10-30", 61, "2026-10-30")[0] == "HALTED"         # 주문 수 비정상
+
+
+def test_cusum_monitor():
+    """기대대로 벌면 경보 없음 · 꾸준히 잃으면 경보 · 문턱은 오경보 7년 기준."""
+    import risk as RK
+    sr, vol = 0.5, 0.2
+    mu = sr / np.sqrt(252) * vol / np.sqrt(252)
+    assert RK.cusum(np.full(2000, mu), sr, vol)["alarms"] == 0
+    assert RK.cusum(np.full(400, -0.01), sr, vol)["alarms"] >= 1
+    m = RK.monitor(np.full(300, -0.003), sr, vol)
+    assert m["review"] and m["size"] == 1.0                    # 기본은 경고만 (재현에서 자동 축소가 손해)
+    m = RK.monitor(np.full(300, -0.003), sr, vol, decay_action="half")
+    assert m["size"] == 0.5
+    e = pd.Series([100.0, 110.0, 160.0, 176.0], index=["2026-01-01", "2026-01-02", "2026-01-05", "2026-01-06"])
+    r = RK.flow_adjusted(e, [{"after": "2026-01-02", "amount": 39.0}])   # 1/5 에 39 가 들어옴 → 수익은 (160-39)/110-1
+    assert abs(r.loc["2026-01-05"] - (121 / 110 - 1)) < 1e-12 and abs(r.loc["2026-01-02"] - 0.1) < 1e-12
+
+
+def test_committee_journal_chain():
+    """결정 기록은 해시 사슬 — 한 글자라도 고치면 깨진 것으로 나온다."""
+    import committee as CMT
+    with tempfile.TemporaryDirectory() as d:
+        old = (CMT.DIR, CMT.JOURNAL)
+        try:
+            CMT.DIR, CMT.JOURNAL = d, os.path.join(d, "j.jsonl")
+            CMT.append_journal({"date": "2026-10-29", "conviction": 1})
+            e2, w2 = CMT.append_journal({"date": "2026-10-30", "conviction": -1})
+            _, w3 = CMT.append_journal({"date": "2026-10-30", "conviction": -1})     # 같은 날 같은 내용 = 다시 안 씀
+            assert w2 and not w3 and CMT.verify_chain() == {"ok": True, "n": 2}
+            txt = open(CMT.JOURNAL).read().replace('"conviction": 1', '"conviction": 2')
+            open(CMT.JOURNAL, "w").write(txt)
+            assert not CMT.verify_chain()["ok"]
+        finally:
+            CMT.DIR, CMT.JOURNAL = old
+
+
+def test_lookahead_check_catches_leaks():
+    """미래 정보 검사: 진짜 신호는 통과, 일부러 넣은 미래 정보(전체 평균·내일 수익)는 걸린다."""
+    import lookahead_check as LC
+    P = SP.load()
+    t = len(P["dates"]) // 2
+    assert not [r for r in LC.check_panel(P, [t]) if not r["ok"]]
+    a = np.array([1.0, 2.0, np.nan])
+    assert LC.same(a, a.copy())[0] and not LC.same(a, np.array([1.0, 2.5, np.nan]))[0] and not LC.same(a, np.array([1.0, 2.0, 3.0]))[0]
+    C = P["C"]
+    full = (C - np.nanmean(C, 0))
+    part = (C[:t + 1] - np.nanmean(C[:t + 1], 0))
+    assert not LC.same(part, full[:t + 1])[0]
+
+
+def test_community_weights_engine():
+    """남들 전략 시뮬레이터: 한 자산 100% 를 계속 들면 = 그 자산 수익 − 처음 한 번 비용."""
+    import community_lab as CL
+    d = pd.bdate_range("2020-01-01", periods=60)
+    c = pd.DataFrame({"X": np.linspace(100, 130, 60), "Y": np.full(60, 50.0)}, index=d)
+    o = c.shift(1).fillna(100.0)
+    dec = np.full((60, 2), np.nan)
+    dec[0] = [1.0, 0.0]
+    r, turn = CL.run_weights(dec, o, c, cost=0.001)
+    E = np.prod(1 + r[1:])
+    assert abs(E - (130 / 100) * (1 - 0.001)) < 1e-9 and abs(turn - 1.0) < 1e-12
+
+
 if __name__ == "__main__":
     for k, fn in list(globals().items()):
         if k.startswith("test_"):

@@ -31,6 +31,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import allweather as AW  # noqa: E402
+import risk as RK  # noqa: E402
 import settings  # noqa: E402
 import short_evolve as SE  # noqa: E402
 import short_lab as L  # noqa: E402
@@ -150,6 +151,10 @@ def settle(D, acc, plan, nm):
             fills.append({"날짜": day, "시점": o["session"], "종목코드": o["code"], "종목명": name, "구분": f"{o['side']}·미체결",
                           "수량": 0, "가격": "", "금액": 0, "비용": 0, "손익": "", **tag})
             continue
+        if not RK.collar_ok(o, px, (plan.get("risk") or {}).get("limits", {}).get("collar", RK.COLLAR)):
+            fills.append({"날짜": day, "시점": o["session"], "종목코드": o["code"], "종목명": name, "구분": "buy·가격보호",
+                          "수량": 0, "가격": round(px, 2), "금액": 0, "비용": 0, "손익": "", **tag})
+            continue
         if o["side"] == "sell":
             have = int((book.get(o["code"]) or {}).get("qty", 0))
             q = min(int(o["qty"]), have)
@@ -187,7 +192,27 @@ def settle(D, acc, plan, nm):
         x = min(float(tr["amount"]), acc["aw"]["cash"])
         acc["aw"]["cash"] -= x
         acc["cash"] += x
+        log_flow(acc, str(D.dates[t - 1].date()), x)
     return fills, t
+
+
+def log_flow(acc, after, to_live):
+    """몫 사이에 옮긴 돈 기록 (리스크 감시가 이 돈을 수익으로 착각하지 않게). after = 이 날짜 평가 뒤에 옮김. to_live: +면 전천후→단기."""
+    if abs(to_live) < 1:
+        return
+    acc.setdefault("flows", []).append({"after": after, "live": round(to_live, 2), "aw": round(-to_live, 2)})
+    acc["flows"] = acc["flows"][-200:]
+
+
+def sleeve_returns(acc):
+    """equity.csv 의 단기몫·전천후몫 → 옮긴 돈을 뺀 일수익."""
+    try:
+        e = pd.read_csv(EQUITY).dropna(subset=["단기몫", "전천후몫"]).set_index("날짜")
+    except (OSError, ValueError, KeyError):
+        return {}
+    fl = acc.get("flows") or []
+    return {"live": RK.flow_adjusted(e["단기몫"].astype(float), [{"after": f["after"], "amount": f["live"]} for f in fl]),
+            "aw": RK.flow_adjusted(e["전천후몫"].astype(float), [{"after": f["after"], "amount": f["aw"]} for f in fl])}
 
 
 def _etf_value(D, book, t):
@@ -298,12 +323,14 @@ def rebalance_cash(D, acc, share, T):
         x = min(-gap, acc["cash"])
         acc["cash"] -= x
         acc["aw"]["cash"] += x
+        log_flow(acc, str(D.dates[T].date()), -x)
         acc["owe_aw"] = round(-gap - x, 2)                  # 못 옮긴 만큼은 단기 몫이 종목을 팔아 현금이 생길 때마다 옮긴다
         print(f"  분기 몫 맞추기: 단기 → 전천후 현금 {x:,.0f}원" + (f" (남은 {acc['owe_aw']:,.0f}원은 종목 교체 때)" if acc["owe_aw"] > 0 else ""))
         return {"moved": x}
     x = min(gap, acc["aw"]["cash"])
     acc["aw"]["cash"] -= x
     acc["cash"] += x
+    log_flow(acc, str(D.dates[T].date()), x)
     rest = gap - x
     print(f"  분기 몫 맞추기: 전천후 → 단기 현금 {x:,.0f}원" + (f" + 내일 {rest:,.0f}원어치 팔아서 옮김" if rest > 0 else ""))
     return {"moved": -x, "pending": rest}
@@ -480,6 +507,7 @@ def run(cfg=None, now=None):
         y = min(acc["owe_aw"], acc["cash"])
         acc["cash"] -= y
         acc["aw"]["cash"] += y
+        log_flow(acc, today, -y)
         acc["owe_aw"] = round(acc["owe_aw"] - y, 2)
     if "aw" in acc and quarter_turn(D.dates[T]):
         transfer = rebalance_cash(D, acc, share, T)
@@ -494,6 +522,19 @@ def run(cfg=None, now=None):
             plan["aw"] = {"regime": aw["regime"]["name"], "target": aw["target_named"]}
         except Exception as ex:                         # 전천후 계산이 실패해도 단기 몫은 그대로 돈다
             print(f"  (전천후 몫 계산 실패: {type(ex).__name__} {ex})")
+    # 4) 리스크 매니저 (거부권) — 모델이 낸 주문을 저장 직전에 검사. 검사 자체가 실패하면 새 매수 보류
+    try:
+        V = D.P["V"]
+        adv20 = np.nanmean(V[max(0, T - 19):T + 1], 0)
+        cix = {c: j for j, c in enumerate(D.P["codes"])}
+        RK.apply(plan, today, sleeve_returns(acc), equity_at(D, acc, T),
+                 adv=lambda c: float(adv20[cix[c]]) if c in cix and np.isfinite(adv20[cix[c]]) else None,
+                 cfg=cfg.get("risk_manager"))
+    except Exception as ex:
+        RK.fail_closed(plan, ex)
+    rk = plan.get("risk") or {}
+    print(f"  리스크 매니저: {rk.get('state')} · 주문 {rk.get('orders_before', '?')}→{rk.get('orders_after', len(plan['orders']))}"
+          + "".join(f" · {x['code']} {x['act']}({x['why']})" for x in (rk.get("log") or [])[:5]))
     json.dump(clean(plan), open(PLAN, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     json.dump(acc, open(ACC, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     eq = equity_at(D, acc, T)
@@ -522,6 +563,7 @@ def run(cfg=None, now=None):
           "model": {"id": m["id"], "desc": L.describe(m), "selected_at": acc["selected_at"], "changed_today": changed,
                     "sh250": round(float(sh250[mi]), 3)},
           "plan": plan, "leaderboard": board[:20], "pool_size": len(pool), "shadow": shadow, "top_stock": top_stock,
+          "risk": plan.get("risk"),
           "long_gate": {"n_fail": len(gate), "removed": [{"id": k, "desc": L.describe(next(x for x in models if x["id"] == k))} for k in gated]},
           "fills_today": fills}
     try:
