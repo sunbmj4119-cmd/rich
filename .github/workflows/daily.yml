@@ -131,6 +131,9 @@ jobs:
           echo "## 🇺🇸 미국 모의" >> $GITHUB_STEP_SUMMARY
           python src/us_trader.py 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY || echo "미국 모의 실패(무시하고 계속)"
 
+      - name: 7-3) 투자위원회 (분석가 4명 → 강세·약세 → 리스크 매니저 거부권 → 최종 결정 · 해시 사슬 기록 · 사후 검토)
+        run: python src/committee.py 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY || echo "투자위원회 실패(무시하고 계속)"
+
       - name: 8) 자동매매 해설 (무엇을 왜 했나 · 무엇을 얼마나 봤나 → docs/explain.json)
         run: python src/explain.py 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY || echo "해설 실패(무시하고 계속)"
 

@@ -72,6 +72,15 @@ risk:
   veto_buy_events: "유상증자|전환사채|신주인수권|횡령|배임|분식|상장폐지|관리종목|거래정지|감사의견|불성실공시|감자"
   force_sell_events: "상장폐지|관리종목|거래정지|감사의견\\s?거절|횡령|배임|분식"
 
+risk_manager:                    # 단기·전천후·미국 모의 몫의 리스크 매니저 (src/risk.py) — 모델이 바꿀 수 없는 마지막 관문
+  decay_action: alert            # alert = 감쇠 경보는 검토 요청만 (과거 재현에서 자동 축소가 손해) · half = 경보 뒤 2년간 새 매수 ×0.5
+  drawdown_action: alert         # alert = 경고만 · stop = 낙폭이 기대 범위 99% 밖이면 새 매수 중단
+  max_orders: 60                 # 한 번에 이보다 많으면 비정상 → 전부 취소(HALTED)
+  cap_stock: 0.25                # 한 종목 매수 ≤ 계좌의 25%
+  cap_etf: 0.60                  # 한 ETF 매수 ≤ 60% (단기채 ETF 는 예외)
+  adv_cap: 0.025                 # 매수 수량 ≤ 20일 평균 거래량의 2.5%
+  collar: 0.12                   # 체결 때 시가가 계획 가격보다 12% 넘게 높으면 매수 안 함
+
 execution:
   # auto   = 판단대로 자동 주문
   # manual = 계획만 만들고 '승인 대기' 알림 → GitHub 앱/웹에서 autotrade-control 워크플로우의

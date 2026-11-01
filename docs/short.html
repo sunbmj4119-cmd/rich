@@ -43,13 +43,21 @@
   <section class="card hero" id="hero" aria-live="polite"><div class="skeleton" style="height:120px"></div></section>
 
   <div class="stick"><div class="tabs" id="tabs">
-    <button data-t="today">내일 주문</button><button data-t="aw">전천후</button><button data-t="us">미국</button><button data-t="models">모델 순위</button><button data-t="verify">검증 결과</button><button data-t="log">기록</button>
+    <button data-t="today">내일 주문</button><button data-t="cmt">위원회</button><button data-t="aw">전천후</button><button data-t="us">미국</button><button data-t="models">모델 순위</button><button data-t="verify">검증 결과</button><button data-t="log">기록</button>
   </div></div>
 
   <div class="tabpane" data-tab="today">
     <section class="card" id="orders"></section>
     <section class="card" id="holds"></section>
     <section class="card" id="why"></section>
+  </div>
+
+  <div class="tabpane" data-tab="cmt">
+    <section class="card" id="cmt-dec"><div class="skeleton" style="height:90px"></div></section>
+    <section class="card" id="cmt-debate"></section>
+    <section class="card" id="cmt-risk"></section>
+    <section class="card" id="cmt-an"></section>
+    <section class="card" id="cmt-log"></section>
   </div>
 
   <div class="tabpane" data-tab="aw">
@@ -364,6 +372,57 @@
     U.$("#verdicts").innerHTML = `<div class="empty">검증 결과가 아직 없습니다.</div>`;
   }
 
+
+  // 투자위원회
+  let C = null;
+  try { C = await U.j("committee.json"); } catch { C = null; }
+  if (!C) {
+    U.$("#cmt-dec").innerHTML = `<div class="empty">투자위원회 기록은 다음 평일 저녁 실행부터 쌓입니다.</div>`;
+  } else {
+    const dc = { "승인": "pos", "축소 승인": "warn", "매도만": "neg", "정지": "neg", "할 일 없음": "" };
+    U.$("#cmt-dec").innerHTML = `<header><h2>오늘의 결정</h2><span class="mut small">${U.esc(C.date)} 저녁 · 같은 자료면 언제 돌려도 같은 결론</span></header>` +
+      C.decisions.map((d) => `<div class="kv"><span>${U.esc(d.name)}</span><b class="${dc[d.decision] === "pos" ? "good" : dc[d.decision] ? "bad" : ""}">${U.esc(d.decision)}${d.orders ? ` · 매수 ${d.buys} · 매도 ${d.sells}` : ""}</b></div>`).join("") +
+      `<div class="kv"><span>계좌 상태</span><b>국내 ${U.esc(C.risk.kr.state)} · 미국 ${U.esc(C.risk.us.state)}</b></div>` +
+      (C.review.length ? `<div class="warn">검토 필요: ${C.review.map(U.esc).join("<br>")}</div>` : "") +
+      `<p class="note">역할: 분석가 4명(시장·수급·거시·모델) → 강세·약세 근거 → 트레이더(모델의 주문) → <b>리스크 매니저(거부권)</b> → 펀드매니저(최종). 월가 'AI 트레이딩 팀'(TradingAgents 등)의 구조를 LLM 없이 정해진 규칙으로 옮겼습니다 —
+      LLM 팀은 학습 자료에 시험 기간이 섞여 백테스트가 부풀고, 같은 입력에도 결론이 달라지며, 20년 재검증에서 우위가 사라졌습니다.</p>`;
+    const li = (L) => L.length ? L.map((x) => `<div class="li"><span class="main"><span class="t">${U.esc(x.why)}</span><span class="s">${U.esc(x.from)} 분석가</span></span></div>`).join("") : `<div class="empty">없음</div>`;
+    U.$("#cmt-debate").innerHTML = `<header><h2>강세 ${C.bull.length} · 약세 ${C.bear.length}</h2><span class="mut small">확신도 ${C.conviction > 0 ? "+" : ""}${C.conviction}</span></header>
+      <h3 style="margin:6px 0;font-size:14.5px" class="good">강세 근거</h3>${li(C.bull)}
+      <h3 style="margin:10px 0 6px;font-size:14.5px" class="bad">약세 근거</h3>${li(C.bear)}
+      <p class="mut small" style="margin-top:8px">확신도는 참고용입니다 — 아직 검증 전이라 주문 크기를 바꾸지 않습니다. 결정 뒤 5·20거래일 실제 결과를 확신도별로 쌓아(아래 '사후 검토') 쓸모가 확인되면 그때 씁니다.</p>`;
+    const RK = (S && S.risk) || {};
+    const sl = RK.sleeves || {};
+    const names = { live: "단기 갈아타기", aw: "전천후 ETF 혼합" };
+    const mon = (k, m) => {
+      const c = m.cusum, d = m.dd;
+      return `<div class="kv"><span>${U.esc(names[k] || k)} · 실제 ${m.days || 0}일</span><b>${U.esc((m.why || []).join(" · "))}</b></div>` +
+        (c ? `<div class="kv"><span>기대 샤프 SR* (백테스트×0.5)</span><b>${sh(m.sr_star)} · 0 으로 떨어지면 평균 ${Math.round(c.detect_days_if_zero / 252 * 10) / 10}년 안에 경보</b></div>` : "");
+    };
+    U.$("#cmt-risk").innerHTML = `<header><h2>리스크 매니저 — 거부권</h2><span class="mut small">모델이 바꿀 수 없음</span></header>
+      <div class="kv"><span>오늘 주문</span><b>${RK.orders_before ?? "—"} → ${RK.orders_after ?? "—"}건 ${(RK.log || []).length ? "(" + RK.log.map((x) => U.esc(x.code + " " + x.act)).join(", ") + ")" : "(손댄 것 없음)"}</b></div>` +
+      Object.entries(sl).map(([k, m]) => mon(k, m)).join("") +
+      `<details class="fold" style="margin-top:8px"><summary><div class="sum"><b>규칙 전체</b><span>무엇을 쓰고 무엇을 안 쓰나</span></div></summary><div class="body" style="font-size:13.5px;line-height:1.7">
+        <b>항상 적용</b> · config/KILL → 모든 주문 취소 · config/PAUSE·자료 2영업일 넘게 묵음 → 새 매수 취소 · 주문 60건 초과 → 전부 취소(비정상) ·
+        한 종목 매수 ≤ 계좌의 25%(주식)/60%(ETF) · 매수 수량 ≤ 20일 평균 거래량의 2.5% · 체결 때 시가가 계획보다 12% 넘게 높으면 매수 안 함 · 검사 자체가 실패하면 새 매수 보류<br>
+        <b>경고만</b> · 감쇠 감시(CUSUM, 오경보 7년에 한 번꼴): 실제 성적이 기대 샤프보다 꾸준히 낮으면 경보 · 낙폭이 기대 범위 95%/99% 밖이면 경고 —
+        과거 재현에서 경보 뒤 자동으로 줄이면 단기 규칙(샤프 0.155→0.042)·지수 보유(0.457→0.358)가 나빠져서, 크기 조절은 사람이 정하도록 했습니다 (설정 risk_manager.decay_action·drawdown_action 로 켤 수 있음)<br>
+        <b>안 쓰는 것</b> · 변동성 맞추기(가설 검증에서 샤프 못 올림) · 촘촘한 손절(되돌림 전략엔 해로움) · 연속 손실 잠금</div></details>`;
+    const A = C.analysts || {}, mk = A.market || {}, fl = A.flows || {}, mc = A.macro || {}, md = (A.models || {}).short || {};
+    U.$("#cmt-an").innerHTML = `<header><h2>분석가 보고</h2></header>
+      <div class="kv"><span>시장</span><b>국면 ${U.esc((mk.regime || {}).name || "—")} · 200일선 ${pctv(mk.vs_ma200)} · 1년 고점 ${pctv(mk.dd252, 0)} · 20일 변동성 ${pctv(mk.vol20, 0)}(3년 중 ${U.ok(mk.vol20_pct3y) ? Math.round(mk.vol20_pct3y * 100) + "%" : "—"})</b></div>
+      <div class="kv"><span>수급</span><b>${fl.date ? `외국인 5일 ${Math.round(fl.foreign_5d / 1e8).toLocaleString("ko-KR")}억 (1년 중 ${Math.round(fl.foreign_5d_pct1y * 100)}%) · 기관 5일 ${Math.round(fl.inst_5d / 1e8).toLocaleString("ko-KR")}억` : "—"}</b></div>
+      <div class="kv"><span>거시</span><b>원/달러 ${mc.usdkrw ?? "—"} (20일 ${pctv(mc.usdkrw_r20)}) · S&P 500 200일선 ${pctv(mc.spy_vs_ma200)} · 국고채10년 60일 ${pctv(mk.bond10_r60)} · 금 ${pctv(mk.gold_r60)}</b></div>
+      <div class="kv"><span>모델</span><b>${U.esc(md.desc || "—")} · 250일 샤프 ${sh(md.sh250)} · 순위 ${md.rank ?? "—"}/${md.pool ?? "—"} · 옛 시대 샤프 ${md.old_era_sharpe == null ? "자료 없음" : sh(md.old_era_sharpe)}</b></div>`;
+    const sf = C.shortfall, rf = C.reflection || {}, j = C.journal || {};
+    const rr = (k) => { const x = rf[k] || {}; return x.n ? `${x.n}건 · 지수 대비 평균 ${pctv(x.mean_excess, 2)} · 이긴 비율 ${Math.round(x.hit * 100)}%` : "아직 없음"; };
+    U.$("#cmt-log").innerHTML = `<header><h2>기록 · 사후 검토</h2><span class="mut small">결정 ${j.chain?.n ?? 0}건 · 해시 사슬 ${j.chain?.ok ? "정상" : "깨짐!"}</span></header>
+      ${sf ? `<div class="kv"><span>실행 괴리 (모의 몫 − 같은 규칙 시뮬레이션, ${sf.days}일)</span><b>${pctv(sf.real, 2)} − ${pctv(sf.sim, 2)} = ${pctv(sf.gap, 2)}</b></div>` : ""}
+      <div class="kv"><span>결정 뒤 5거래일</span><b>${rr("5d")}</b></div><div class="kv"><span>결정 뒤 20거래일</span><b>${rr("20d")}</b></div>
+      <p class="mut small">기록은 data/committee/journal.jsonl 에 하루 한 줄, 앞 줄의 해시를 이어 붙여 나중에 고칠 수 없게 남깁니다. 사후 검토는 글로 된 '반성'이 아니라 통계만 — 자유롭게 고치는 기억은 끝없는 과최적화가 됩니다.</p>` +
+      (j.tail || []).slice(0, 10).map((x) => `<div class="li"><span class="main"><span class="t">${U.esc(x.date)} · ${U.esc(x.regime || "")} · 확신도 ${x.conviction > 0 ? "+" : ""}${x.conviction}</span>
+        <span class="s">${(x.decisions || []).map((d) => U.esc(d.sleeve + " " + d.decision)).join(" · ")} · ${U.esc((x.hash || "").slice(0, 10))}</span></span></div>`).join("");
+  }
   U.tabs(U.$("#tabs"), "short");
 })();
 </script>

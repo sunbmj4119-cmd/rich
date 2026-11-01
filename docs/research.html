@@ -44,7 +44,7 @@ td.hl { font-weight: 700 }
   <section class="card hero" id="hero"><div class="skeleton" style="height:120px"></div></section>
 
   <div class="stick"><div class="tabs" id="tabs">
-    <button data-t="sum">결론</button><button data-t="hist">긴 역사</button><button data-t="hyp">가설 검증</button><button data-t="over">과최적화 진단</button><button data-t="src">출처</button>
+    <button data-t="sum">결론</button><button data-t="hist">긴 역사</button><button data-t="comm">남들 전략</button><button data-t="oss">오픈소스</button><button data-t="hyp">가설 검증</button><button data-t="over">과최적화 진단</button><button data-t="src">출처</button>
   </div></div>
 
   <div class="tabpane" data-tab="sum">
@@ -65,6 +65,17 @@ td.hl { font-weight: 700 }
     <section class="card" id="h-crisis"></section>
     <section class="card" id="h-sector"></section>
     <section class="card" id="h-lim"></section>
+  </div>
+
+  <div class="tabpane" data-tab="comm">
+    <section class="card" id="c-top"><div class="skeleton" style="height:100px"></div></section>
+    <section class="card" id="c-tab"></section>
+    <section class="card" id="c-vb"></section>
+  </div>
+
+  <div class="tabpane" data-tab="oss">
+    <section class="card" id="o-adopt"><div class="skeleton" style="height:100px"></div></section>
+    <div id="o-groups" style="display:flex;flex-direction:column;gap:12px"></div>
   </div>
 
   <div class="tabpane" data-tab="hyp">
@@ -249,6 +260,52 @@ td.hl { font-weight: 700 }
       ② 2014년 전 국내 ETF·국고채·단기금리는 대용입니다(배당 연 ${((HI.assumptions?.div || 0) * 100).toFixed(1)}% · 단기채 연 ${((HI.assumptions?.cash || 0) * 100).toFixed(0)}%).<br>
       ③ 세금·수수료는 지금 기준입니다(옛날 거래세는 더 높았음 → 매매가 잦은 모델은 실제론 더 나빴을 것).<br>
       ④ 외국인·기관 수급 신호는 2018년 전 자료가 없어 검증하지 못했습니다 — 지금 단기 몫에서 가장 많이 뽑히는 신호라 가장 큰 빈칸입니다.</p>`;
+  }
+
+  // 남들 전략 (community_lab)
+  let CM = null, OS = null, LA = null;
+  try { CM = await U.j("community.json"); } catch { CM = null; }
+  try { OS = await U.j("opensource.json"); } catch { OS = null; }
+  try { LA = await U.j("lookahead.json"); } catch { LA = null; }
+  if (CM) {
+    const R = CM.rows || {};
+    const k = (x) => x.krw_after_tax || {};
+    const order = Object.keys(R).filter((x) => !R[x].reference).sort((a, b) => ((k(R[b]).common || {}).sharpe ?? -9) - ((k(R[a]).common || {}).sharpe ?? -9));
+    const aw = k(R.our_aw || {}).common || {};
+    const beat = order.filter((x) => x !== "our_aw" && (R[x].p_vs_aw_holm ?? 1) < 0.05).length;
+    U.$("#c-top").innerHTML = `<header><h2>남들이 해 본 전략, 같은 잣대로</h2><span class="mut small">${U.esc(CM.generated)}</span></header>
+      <p style="font-size:14px;line-height:1.7">국내외 개인 투자자·책·블로그에서 가장 많이 쓰는 자산배분 9개와 변동성 돌파 5개를 다음 날 시가 체결·비용·세금(해외 ETF 양도세 22% 근사)을 넣어 원화로 다시 쟀습니다.
+      공통 기간 ${U.esc(CM.common_from.slice(0, 4))}년~ 비교, 여러 개를 한꺼번에 봤으니 Holm 보정. 저자가 규칙을 만든 뒤(발표 뒤) 성적이 진짜 표본 외입니다.</p>
+      <div class="verdict"><span class="ic ${beat ? "y" : "n"}">${beat ? "✓" : "✕"}</span><div><b>우리 전천후 혼합(샤프 ${sh(aw.sharpe)} · 낙폭 ${pc(aw.mdd, 0)})을 확실히 이긴 전략: ${beat}개</b>
+      <p>유명한 자산배분(듀얼 모멘텀·VAA·DAA·HAA·영구·올웨더·60/40)은 샤프 0.4~0.6 — 미국 주식만 들고 있기와 비슷하거나 조금 낫습니다. 변동성 돌파는 실제 ETF 가격으로 재면 지수판의 절반 아래였고, 대형주판은 세금·비용으로 크게 잃었습니다.</p></div></div>`;
+    U.$("#c-tab").innerHTML = `<header><h2>원화·세후 · 공통 기간</h2><span class="mut small">샤프 순</span></header>
+      <div class="scroll"><table><tr><th>전략</th><th>샤프</th><th>연</th><th>낙폭</th><th>발표 뒤 샤프</th><th>3년 손실확률</th><th>vs 전천후 P(보정)</th></tr>` +
+      order.map((x) => { const v = R[x], c = k(v).common || {}, po = k(v).post || {}, ro = (k(v).rolling || {})["3y"] || {};
+        return `<tr><td class="wrap-cell">${U.esc(v.name)}<div class="mut small">${U.esc(v.source)}${Object.keys(v.proxies || {}).length ? " · 앞부분 대용: " + Object.entries(v.proxies).map(([a, b]) => `${a}←${b[0]}`).join(", ") : ""}</div></td>
+        <td class="${x === "our_aw" ? "hl" : ""}">${sh(c.sharpe)}</td><td class="${(c.cagr || 0) < 0 ? "neg" : ""}">${pc(c.cagr)}</td><td>${pc(c.mdd, 0)}</td><td>${sh(po.sharpe)}</td>
+        <td>${U.ok(ro.p_loss) ? Math.round(ro.p_loss * 100) + "%" : "—"}</td><td>${v.p_vs_aw_holm ?? "—"}</td></tr>`; }).join("") +
+      `</table></div><p class="mut small" style="margin-top:6px">우리 전천후는 국내 ETF 대용 자산(2005~)·국내 ETF 세금 기준, 미국 ETF 전략은 달러 성적 × 환율 − 해마다 이익의 22%. LAA 는 실업률 조건을 뺀 근사입니다.</p>`;
+    const vb = ["vb_etf", "vb_etf_ma5", "vb_etf_noise", "vb_idx", "vb_stocks"].filter((x) => R[x]);
+    U.$("#c-vb").innerHTML = `<header><h2>변동성 돌파 — 왜 블로그 성적과 다른가</h2></header>` +
+      vb.map((x) => { const v = R[x], f = k(v).full || {}, pt = v.parts;
+        return `<div class="kv"><span>${U.esc(v.name)} · ${U.esc(v.start.slice(0, 4))}~ · ${U.esc(v.freq)}</span><b>연 ${pc(f.cagr)} · 샤프 ${sh(f.sharpe)} · 낙폭 ${pc(f.mdd, 0)}</b></div>` +
+          (pt ? `<p class="mut small">한 해 평균: 장중(돌파 뒤 종가까지) ${pc(pt.intraday)} · 밤사이(종가→다음 날 시가) ${pc(pt.overnight)} · 비용 −${U.pct(pt.cost * 100, 1, false)}</p>` : ""); }).join("") +
+      `<p class="note">실제 KODEX 200 으로 재면 이익 대부분은 '돌파'가 아니라 밤사이 보유에서 나오고(이미 '밤사이 보유' 규칙으로 따로 검증 중), 매매가 잦아 비용이 연 7% 가까이 듭니다. 코스피 지수로 잰 1997~ 판은 지수 시가가 장 시작 직후 가격을 덜 반영해 같은 기간 실제 ETF 의 두 배로 부풀려져 참고만 합니다.</p>`;
+  } else {
+    U.$("#c-top").innerHTML = `<div class="empty">아직 결과가 없습니다.</div>`;
+  }
+  if (OS) {
+    const stc = { "적용": "y", "경고만": "m", "적용 (채택은 없음)": "y", "안 함": "n", "남음": "m" };
+    U.$("#o-adopt").innerHTML = `<header><h2>무엇을 가져왔나</h2><span class="mut small">${U.esc(OS.updated)} 조사</span></header>
+      <p class="mut" style="font-size:13.5px;line-height:1.6">${U.esc(OS.note)}</p>` +
+      OS.adopted.map((a) => `<div class="verdict"><span class="ic ${stc[a.status] || "m"}">${stc[a.status] === "y" ? "✓" : stc[a.status] === "n" ? "✕" : "!"}</span><div><b>${U.esc(a.what)} · ${U.esc(a.status)}</b><p>${U.esc(a.detail)}</p></div></div>`).join("");
+    U.$("#o-groups").innerHTML = OS.groups.map((g) => `<details class="fold"><summary><div class="sum"><b>${U.esc(g.name)}</b><span>${g.items.length}개</span></div></summary><div class="body">` +
+      g.items.map((x) => `<div class="src"><a href="${U.esc(x.url)}" target="_blank" rel="noopener">${U.esc(x.t)}</a><div>${U.esc(x.what)}</div>
+        ${x.evidence ? `<div class="who">${U.esc(x.evidence)}</div>` : ""}<div class="us">우리에게: ${U.esc(x.we)}</div></div>`).join("") + `</div></details>`).join("");
+  }
+  if (LA) {
+    U.$("#ov").insertAdjacentHTML("beforeend", `<div class="verdict"><span class="ic ${LA.n_fail ? "n" : "y"}">${LA.n_fail ? "✕" : "✓"}</span><div><b>미래 정보 전수 검사: ${LA.n_items}개 항목 · ${LA.n_checks}번 비교 · 실패 ${LA.n_fail}</b>
+      <p>자료를 ${LA.cuts.length}개 날짜(${LA.cuts.map(U.esc).join(", ")})에서 잘라 다시 계산한 값이 전체로 계산한 값과 같은지 봅니다 (freqtrade lookahead-analysis 방식). 다르면 그 계산은 그날 뒤 자료를 몰래 쓰는 것 — 매일 밤 다른 날짜로 다시 검사합니다.</p></div></div>`);
   }
   U.tabs(U.$("#tabs"), "research");
 })();
