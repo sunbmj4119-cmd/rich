@@ -14,6 +14,7 @@
 
   python src/collect_history.py        → 전부
   python src/collect_history.py kr     → 국내 대형주만
+  python src/collect_history.py assets → 지수·ETF·환율(hist.csv)만
 """
 import os
 import sys
@@ -33,7 +34,11 @@ KR = {"^KS11": "코스피 지수", "^KQ11": "코스닥 지수", "069500.KS": "KO
       "117680.KS": "KODEX 철강", "140710.KS": "KODEX 운송", "266420.KS": "KODEX 헬스케어", "114800.KS": "KODEX 인버스"}
 US = {"SPY": "S&P 500", "QQQ": "나스닥 100", "IWM": "러셀 2000", "XLK": "기술", "XLF": "금융", "XLE": "에너지", "XLV": "헬스케어",
       "XLI": "산업재", "XLP": "필수소비재", "XLY": "임의소비재", "XLU": "유틸리티", "XLB": "소재", "TLT": "미국 장기채", "IEF": "미국 중기채",
-      "SHY": "미국 단기채", "GLD": "금", "UUP": "달러 지수", "EFA": "선진국 주식", "EEM": "신흥국 주식", "DBC": "원자재", "VNQ": "리츠"}
+      "SHY": "미국 단기채", "GLD": "금", "UUP": "달러 지수", "EFA": "선진국 주식", "EEM": "신흥국 주식", "DBC": "원자재", "VNQ": "리츠",
+      # 자산배분 전략(VAA·DAA·HAA·듀얼 모멘텀·영구·올웨더)이 쓰는 것
+      "AGG": "미국 종합채권", "BND": "미국 종합채권(뱅가드)", "LQD": "미국 투자등급 회사채", "HYG": "미국 하이일드", "TIP": "미국 물가연동채",
+      "BIL": "미국 초단기 국채", "VEA": "선진국 주식(뱅가드)", "VWO": "신흥국 주식(뱅가드)", "VGK": "유럽 주식", "EWJ": "일본 주식",
+      "GSG": "원자재(GSCI)", "VTI": "미국 전체 주식"}
 FX = {"KRW=X": "원/달러"}
 
 
@@ -72,6 +77,7 @@ def main():
     os.makedirs(DIR, exist_ok=True)
     if sys.argv[1:] == ["kr"]:
         return kr_stocks()
+    assets_only = sys.argv[1:] == ["assets"]
     rows, bad = [], []
     for sym, name in {**KR, **US, **FX}.items():
         try:
@@ -91,6 +97,8 @@ def main():
         h[c] = h[c].round(4)
     h.to_csv(HIST, index=False)
     print(f"지수·ETF: {h['종목코드'].nunique()}개 · {len(h):,}행 → {HIST}" + (f" · 실패 {bad}" if bad else ""))
+    if assets_only:
+        return
     srows, sbad = [], []
     for sym in CU.SP100:
         try:

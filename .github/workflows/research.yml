@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: "etf = ETF 전체 기간 · allweather = 전천후 연구 · us = 미국 주식 + 미국 연구 · history = 1990년~ 긴 역사 자료 · history_kr = 국내 대형주 2000년~만"
+        description: "etf = ETF 전체 기간 · allweather = 전천후 연구 · us = 미국 주식 + 미국 연구 · history = 1990년~ 긴 역사 자료 · history_kr = 국내 대형주 2000년~만 · history_assets = 지수·ETF·환율만"
         type: choice
-        options: [etf, allweather, us, history, history_kr]
+        options: [etf, allweather, us, history, history_kr, history_assets]
         default: etf
 concurrency:
   group: research-${{ github.ref_name }}
@@ -43,6 +43,9 @@ jobs:
       - name: 긴 역사 자료 (Yahoo, 1990~)
         if: inputs.task == 'history'
         run: python src/collect_history.py 2>&1 | tee -a $GITHUB_STEP_SUMMARY
+      - name: 지수·ETF·환율만 다시 (Yahoo)
+        if: inputs.task == 'history_assets'
+        run: python src/collect_history.py assets 2>&1 | tee -a $GITHUB_STEP_SUMMARY
       - name: 국내 대형주 긴 역사 (Yahoo, 2000~)
         if: inputs.task == 'history_kr'
         run: python src/collect_history.py kr 2>&1 | tee -a $GITHUB_STEP_SUMMARY
