@@ -10,8 +10,10 @@
     미국: SPY · QQQ · IWM · 업종 SPDR 9종 · TLT · IEF · SHY · GLD · UUP · EFA · EEM · DBC · VNQ
     환율: KRW=X
   미국 대형주 (us_stocks.csv): S&P 100 (지금 구성, collect_us.SP100) 2000년부터 — 생존편향 주의
+  국내 대형주 (kr_stocks.csv): 최근 코스피 100 에 든 적 있는 종목 전부(data/universe.csv) 2000년부터 — 역시 생존편향
 
-  python src/collect_history.py
+  python src/collect_history.py        → 전부
+  python src/collect_history.py kr     → 국내 대형주만
 """
 import os
 import sys
@@ -25,6 +27,7 @@ import collect_us as CU  # noqa: E402
 DIR = "data/history"
 HIST = os.path.join(DIR, "hist.csv")
 STOCKS = os.path.join(DIR, "us_stocks.csv")
+KR_STOCKS = os.path.join(DIR, "kr_stocks.csv")
 KR = {"^KS11": "코스피 지수", "^KQ11": "코스닥 지수", "069500.KS": "KODEX 200", "091160.KS": "KODEX 반도체", "091170.KS": "KODEX 은행",
       "091180.KS": "KODEX 자동차", "102970.KS": "KODEX 증권", "117460.KS": "KODEX 에너지화학", "117700.KS": "KODEX 건설",
       "117680.KS": "KODEX 철강", "140710.KS": "KODEX 운송", "266420.KS": "KODEX 헬스케어", "114800.KS": "KODEX 인버스"}
@@ -34,8 +37,41 @@ US = {"SPY": "S&P 500", "QQQ": "나스닥 100", "IWM": "러셀 2000", "XLK": "�
 FX = {"KRW=X": "원/달러"}
 
 
+def kr_stocks():
+    """최근 코스피 100 에 든 적 있는 종목 (universe.csv 전체 기간) — Yahoo .KS (안 되면 .KQ), 2000년부터 수정가."""
+    codes = sorted(pd.read_csv("data/universe.csv", dtype=str)["종목코드"].str.zfill(6).unique())
+    names = {}
+    if os.path.exists("data/sectors.csv"):
+        names = pd.read_csv("data/sectors.csv", dtype={"종목코드": str}).set_index("종목코드")["종목명"].to_dict()
+    rows, bad = [], []
+    for c in codes:
+        d = None
+        for suf in (".KS", ".KQ"):
+            try:
+                d = CU.yahoo(c + suf, "2000-01-01")
+            except Exception:
+                d = None
+            if d is not None and not d.empty:
+                break
+        if d is None or d.empty:
+            bad.append(c)
+            continue
+        d["종목코드"], d["종목명"] = c, names.get(c, "")
+        rows.append(d)
+        time.sleep(0.2)
+    s = pd.concat(rows, ignore_index=True)
+    for col in ("시가", "고가", "저가", "종가"):
+        s[col] = s[col].round(2)
+    s.to_csv(KR_STOCKS, index=False)
+    first = s.groupby("종목코드")["날짜"].min()
+    print(f"국내 대형주: {s['종목코드'].nunique()}종목 · {len(s):,}행 · 2005년 전부터 있는 종목 {(first < '2005-01-01').sum()}개 → {KR_STOCKS}"
+          + (f" · 실패 {bad}" if bad else ""))
+
+
 def main():
     os.makedirs(DIR, exist_ok=True)
+    if sys.argv[1:] == ["kr"]:
+        return kr_stocks()
     rows, bad = [], []
     for sym, name in {**KR, **US, **FX}.items():
         try:
@@ -69,6 +105,7 @@ def main():
         s[c] = s[c].round(4)
     s.to_csv(STOCKS, index=False)
     print(f"미국 대형주: {s['종목코드'].nunique()}종목 · {len(s):,}행 · {s['날짜'].min()} ~ → {STOCKS}" + (f" · 실패 {sbad}" if sbad else ""))
+    kr_stocks()
 
 
 if __name__ == "__main__":
