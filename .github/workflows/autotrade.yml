@@ -44,7 +44,7 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           python src/autotrader.py --phase execute $FLAG 2>&1 | tee -a $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-      - name: 단기·전천후 몫 주문 (config short.broker — paper 면 아무것도 안 보냄)
+      - name: 단기·전천후 몫 주문 (config short.broker — paper 면 아무것도 안 보냄 · Oracle 서버 run.sh 가 이미 보냈으면 중복 방지로 건너뜀)
         env:
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
@@ -58,7 +58,7 @@ jobs:
           FLAG=""
           if [ "$EVENT" = "workflow_dispatch" ] && [ "$DRY" = "true" ]; then FLAG="--dry-run"; fi
           echo '```' >> $GITHUB_STEP_SUMMARY
-          python src/short_exec.py --phase execute $FLAG 2>&1 | tee -a $GITHUB_STEP_SUMMARY || echo "단기 몫 주문 실패"
+          python src/short_exec.py --phase execute --where github $FLAG 2>&1 | tee -a $GITHUB_STEP_SUMMARY || echo "단기 몫 주문 실패"
           echo '```' >> $GITHUB_STEP_SUMMARY
       - name: 주문 기록 커밋
         run: |

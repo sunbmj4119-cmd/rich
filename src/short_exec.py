@@ -180,7 +180,13 @@ def last_prices():
     return px
 
 
-def execute(cfg, dry=False, now=None):
+def execute(cfg, dry=False, now=None, where=None):
+    """where: 'github' | 'oracle' — 아침 주문은 한 곳에서만 보낸다(short.exec_on). 두 곳이 같이 보내면 체결 전에
+    서로의 주문을 못 봐서 두 번 살 수 있다."""
+    on = (cfg.get("short") or {}).get("exec_on", "github")
+    if where and where != on:
+        print(f"거울 계좌 주문은 {on} 에서 보냄 (short.exec_on) — 여기({where})서는 건너뜀")
+        return []
     plan = RK.jload(PLAN, {}) or {}
     acc = RK.jload(ACC, {}) or {}
     mirror = RK.jload(MIRROR, None)
@@ -338,10 +344,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--phase", choices=["execute", "reconcile", "link"], required=True)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--where", choices=["github", "oracle"], default=None, help="어디서 돌리나 (short.exec_on 과 다르면 건너뜀)")
     a = ap.parse_args()
     cfg = settings.load()
     if a.phase == "execute":
-        execute(cfg, a.dry_run)
+        execute(cfg, a.dry_run, where=a.where)
     elif a.phase == "link":
         link(cfg)
     else:

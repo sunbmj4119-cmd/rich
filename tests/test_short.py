@@ -479,6 +479,7 @@ def test_mirror_executor_and_reconcile():
     assert ok["state"] == "ACTIVE" and bad["state"] == "HALTED" and set(bad["blocked"]) == {"E1", "E2", "E3"}
     b, name, why = SX.make({"short": {"broker": "paper"}})
     assert b is None and name == "paper"
+    assert SX.execute({"short": {"broker": "kis_demo", "exec_on": "oracle"}}, where="github") == []   # 한 곳에서만 보낸다
 
 
 def test_risk_blocks_on_reconcile():

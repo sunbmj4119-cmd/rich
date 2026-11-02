@@ -570,6 +570,8 @@ LPPL 거품(한국 거품 표본 1개), 한국 개별주 짝매매(공매도 제
 - 저녁 잔고 대사: 증권사 보유 ↔ 모의 몫 × 배율, 1주·2% 넘게 다르면 그 종목 새 매수 금지, 3종목 이상이면 계좌 정지(리스크 매니저가 읽음). 체결 조회로 실행 비용(bp) 기록.
 - 연결: `short.broker: kis_demo` + 비밀값(KIS_APP_KEY·KIS_APP_SECRET·KIS_ACCOUNT_SHORT) → control.yml `short_link` (빈 계좌만, 배율 = 증권사 현금 ÷ 모의 몫 평가액).
 - 실계좌(kis_real) 네 겹 잠금: live_trading:true · 저장소 변수 AUTOTRADE_CONFIRM=I_UNDERSTAND · 준비도 점검표 '준비됨' · 리스크 상태 HALTED 아님.
+- 아침 주문은 한 곳에서만 (`short.exec_on`): GitHub 예약 실행은 2026-10 한 달 동안 17:00 예정이 22:00~새벽 3:40 에 돌았고 3일은 빠졌다 →
+  실계좌는 Oracle 서버(`deploy/oracle/run.sh`, 08:40 정시)에서 보내도록 `exec_on: oracle` (준비도 점검표 항목). 두 곳이 같이 보내면 체결 전에 서로를 못 봐 두 번 살 수 있어 막는다.
 
 **실제 돈 준비도 점검표** (`committee.readiness` → `data/readiness.json`, 모의투자 '위원회' 탭) — 모두 ✓ 여야 '준비됨'
 1. 모의 기록 60거래일 이상 · 2. 감시 경고 없음(최근 20번 결정) · 3. 매일 실행 95% 이상(최근 20거래일) · 4. 미래 정보 검사 통과 ·
