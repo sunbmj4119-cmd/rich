@@ -600,6 +600,12 @@ def run(cfg=None, now=None):
             lines.append(f"{'🔴 매수' if o['side'] == 'buy' else '🔵 매도'} {o['name']} {o['qty']}주 ({'시가' if o['session'] == 'open' else '종가'}"
                          f"{' · 전천후' if o.get('sleeve') == 'aw' else ''})")
         notify.send(cfg, "daily", "\n".join(lines), title="단기 모의투자")
+        rk = plan.get("risk") or {}                        # 리스크 매니저가 막거나 줄였으면 바로 따로 알림 (정지는 이미 자동)
+        bad = [f"계좌 상태 {rk.get('state')}: " + "; ".join(rk.get("why") or [])] if rk.get("state") not in (None, "ACTIVE") else []
+        bad += [f"{x['code']} {x['act']} — {x['why']}" for x in rk.get("log") or []]
+        bad += [f"{k} 몫 검토 필요 — " + "; ".join(v.get("why") or []) for k, v in (rk.get("sleeves") or {}).items() if v.get("review")]
+        if bad:
+            notify.send(cfg, "safety", "\n".join(bad[:12]), title="⛔ 리스크 매니저", urgent=True)
     except Exception as ex:                                # 알림 실패가 기록을 막지 않게
         print(f"  (알림 생략: {ex})")
     print(f"모의 계좌 {today}: 평가액 {eq:,.0f}원 · 단기 모델 {m['id']}{' (바뀜)' if changed else ''} · 내일 주문 {len(plan['orders'])}건 "
