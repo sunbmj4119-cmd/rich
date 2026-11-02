@@ -102,5 +102,6 @@ GitHub 서버는 KRX 가 막아서 2018년 전 외국인·기관 수급과 상�
 1. 한국투자증권 모의투자 계좌를 하나 더 만들고(30일 엔진과 다른 계좌), GitHub Secrets 에 `KIS_ACCOUNT_SHORT` 로 넣습니다 (앱 키·시크릿은 기존 `KIS_APP_KEY`·`KIS_APP_SECRET`)
 2. `config/autotrade.yaml` → `short.broker: kis_demo`
 3. Actions → autotrade-control → `short_link` 실행 (증권사 계좌가 비어 있어야 함)
-4. 다음 날 아침부터 주문, 저녁마다 대사 — 모의투자 화면 '위원회' 탭의 '실제 돈 준비도'가 모두 ✓ 가 될 때까지 지켜봅니다
+4. `config/autotrade.yaml` → `short.exec_on: oracle` 그리고 이 서버에서 `bash ~/rich/deploy/oracle/setup.sh --cron` (평일 08:40 정시 주문 — GitHub 예약 실행은 몇 시간씩 늦어서)
+5. 다음 날 아침부터 주문, 저녁마다 대사 — 모의투자 화면 '위원회' 탭의 '실제 돈 준비도'가 모두 ✓ 가 될 때까지 지켜봅니다
 

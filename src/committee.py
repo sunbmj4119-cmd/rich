@@ -364,6 +364,10 @@ def readiness(short_ui, cfg=None):
         ev_ok &= bool(d_all is not None and d_all >= 0.5)
         ev_now.append(f"단기 몫 DSR(전체 시도) {d_all}")
     add("evidence", "증권사가 따라 할 몫이 표본 외 검증 통과", ev_ok, " · ".join(ev_now), "전천후 ≥ 0.5 · 단기 DSR ≥ 50%")
+    # 7-2) 아침 주문을 정시에 보내는 곳
+    on = sc.get("exec_on", "github")
+    add("exec_on", "아침 주문을 정시에 보냄 (Oracle 서버 08:40)", on == "oracle", on, "oracle",
+        info="GitHub 예약 실행은 지난달 22시~새벽 4시로 몇 시간씩 늦었고 3일은 빠졌다 — 09:30 넘으면 매수를 못 보낸다")
     # 8) 리스크 매니저·자료
     rk = (jload("data/short/plan.json", {}) or {}).get("risk") or {}
     add("risk", "리스크 매니저 정상 (ACTIVE)", rk.get("state") == "ACTIVE", rk.get("state", "—"), "ACTIVE")
