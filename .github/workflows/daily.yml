@@ -116,11 +116,6 @@ jobs:
 
       - name: 7) 모의투자 단기 20 + 전천후 80 (어제 계획 체결 → 잔고 대사 → 후보 모델 재시뮬레이션 · 국면 판정 → 리스크 매니저 → 내일 계획)
         env:
-          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
-          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
-          KIS_ACCOUNT: ${{ secrets.KIS_ACCOUNT }}
-          KIS_ACCOUNT_SHORT: ${{ secrets.KIS_ACCOUNT_SHORT }}
-          KIS_ACCOUNT_PRODUCT: ${{ secrets.KIS_ACCOUNT_PRODUCT }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}

@@ -8,14 +8,16 @@
   DSR 이 32% — 운과 구분이 안 된다. 단기 몫은 앞으로의 모의 성적이 쌓일 때까지 모의로만 (설정으로 "live" 추가 가능).
 
   설정 (config/autotrade.yaml short:)
-    broker          paper(기본·아무것도 안 보냄) | kis_demo(한국투자 모의투자 서버) | kis_real(실계좌)
+    broker          paper(기본·아무것도 안 보냄) | toss(토스증권 — 오라클 서버에서만, 모의투자 서버 없음) | kis_demo | kis_real
     broker_sleeves  [aw] — 증권사가 따라 할 몫 (aw = 전천후, live = 단기)
     kis_real 은 네 겹 잠금: live_trading:true + 저장소 변수 AUTOTRADE_CONFIRM=I_UNDERSTAND
                            + 준비도 점검표 '준비됨'(data/readiness.json, 아니면 short.allow_before_ready:true) + 리스크 상태 HALTED 아님
   계좌: KIS_ACCOUNT_SHORT 가 있으면 그 계좌(없으면 KIS_ACCOUNT). 30일 엔진이 같은 계좌로 증권사를 쓰면 막는다(대사가 깨짐).
-  연결 (한 번): control.yml short_link → 증권사 현금 = 거울 자본, 배율 = 자본 ÷ 모의 몫 평가액 (data/short/mirror.json)
+  연결 (한 번, 서버): setup.sh --link → 거울 자본, 배율 = 자본 ÷ 모의 몫 평가액 (서버 ~/.rich/mirror.json — 비공개)
   주문 (아침 08:40, 시가 동시호가): 매수 = 지정가(어제 종가 × 1.12, 호가 올림 → 가격 보호) · 매도 = 시장가
-    09:30 넘어 실행되면 매수는 안 보냄 · 같은 (계획 날짜·종목·방향) 성공 기록이 있으면 다시 안 보냄 (data/short/orders.csv)
+    09:30 넘어 실행되면 매수는 안 보냄 · 같은 (계획 날짜·종목·방향) 성공 기록이 있으면 다시 안 보냄 (서버 ~/.rich/orders.csv)
+  공개 저장소(GitHub)에는 상태·종목 코드·건수·비용(bp)만 올린다 — 현금·수량·자본은 서버 밖으로 나가지 않는다.
+  증권사 주문·대사·연결은 모두 서버에서만 한다. GitHub 계산은 서버가 올린 공개 상태(recon.json)만 읽는다.
   대사 (저녁, short_trader 안): 증권사 보유 ↔ 모의 몫 보유 × 배율 — 1주·2% 넘게 다르면 그 종목 새 매수 금지,
     3종목 이상이면 계좌 정지(HALTED). 체결 조회로 실제 체결가 − 모의 체결가(시가) = 실행 비용(bp) 기록
 
@@ -37,9 +39,14 @@ import settings  # noqa: E402
 
 PLAN = "data/short/plan.json"
 ACC = "data/short/account.json"
-ORDERS = "data/short/orders.csv"
-RECON = "data/short/recon.json"
-MIRROR = "data/short/mirror.json"
+# 공개 저장소에는 금액·수량을 올리지 않는다 — 실제 계좌의 현금·보유 수량·주문 수량·연결 자본·직접 보유분은 서버의 ~/.rich/ 에만.
+PRIVATE = os.path.expanduser("~/.rich")
+ORDERS = os.path.join(PRIVATE, "orders.csv")              # 보낸 주문 (수량 포함) — 비공개
+MIRROR = os.path.join(PRIVATE, "mirror.json")             # 연결 자본·배율·직접 보유분 — 비공개
+RECON_FULL = os.path.join(PRIVATE, "recon_full.json")     # 대사 상세 (수량·현금) — 비공개
+RECON = "data/short/recon.json"                           # 공개: 상태·불일치 종목 코드·비용(bp)만
+MIRROR_STATUS = "data/short/mirror_status.json"           # 공개: 연결 여부·증권사·날짜·몫만
+EXEC_STATUS = "data/short/exec_status.json"               # 공개: 아침 주문 건수·성공 여부만
 READY = "data/readiness.json"
 LEDGER = "data/short/ledger.csv"
 ORDER_COLS = ["ts", "plan_date", "broker", "sleeve", "side", "code", "name", "qty", "kind", "price", "ok", "order_no", "msg"]
@@ -72,7 +79,44 @@ def make(cfg, dry=False):
             locks.append(f"준비도 점검표 '{rd.get('verdict', '없음')}' (남은 조건 {len(rd.get('missing') or [])}개)")
         live = not locks and not dry
         return brokers.KISBroker(demo=False, live_orders=live, account=acct), b, ("실계좌 주문" if live else "실계좌 — 잠김: " + " · ".join(locks or ["dry-run"]))
+    if b == "toss":
+        if not on_server():
+            return None, b, "토스는 등록된 IP(오라클 서버)에서만 — 여기서는 서버가 남긴 기록만 읽음"
+        locks = []
+        if not cfg.get("live_trading"):
+            locks.append("config live_trading:false")
+        if os.environ.get("AUTOTRADE_CONFIRM") != "I_UNDERSTAND":
+            locks.append("서버 확인값 AUTOTRADE_CONFIRM 없음 (setup.sh --live)")
+        rd = RK.jload(READY, {}) or {}
+        if rd.get("verdict") != "준비됨" and not sc.get("allow_before_ready"):
+            locks.append(f"준비도 점검표 '{rd.get('verdict', '없음')}' (남은 조건 {len(rd.get('missing') or [])}개)")
+        live = not locks and not dry
+        try:
+            tb = brokers.TossBroker(live_orders=live)
+        except Exception as ex:
+            return None, b, f"토스 연결 준비 실패: {ex}"
+        return tb, b, ("토스 실계좌 주문" if live else "토스 — 주문 잠김(만들기만 하고 안 보냄): " + " · ".join(locks or ["dry-run"]))
     return None, b, f"알 수 없는 short.broker: {b}"
+
+
+def public_recon(res):
+    """공개용 대사 결과 — 금액·수량을 뺀다."""
+    keep = {k: res.get(k) for k in ("date", "mode", "state", "ok", "why", "blocked", "slippage_med_bp", "history")}
+    keep["mismatch_codes"] = [d.get("code") for d in res.get("mismatch") or []]
+    keep["slippage_bp"] = [x.get("cost_bp") for x in res.get("slippage") or []]
+    return keep
+
+
+def write_private(path, obj):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w", encoding="utf-8") as fh:
+        json.dump(obj, fh, ensure_ascii=False, indent=1)
+
+
+def on_server():
+    """오라클 서버인가 (토스 키 파일이 있는 곳)."""
+    return os.path.exists(os.path.expanduser("~/.rich/secrets.env")) and bool(
+        os.environ.get("TOSS_CLIENT_ID") or "TOSS_CLIENT_ID=" in open(os.path.expanduser("~/.rich/secrets.env"), encoding="utf-8").read())
 
 
 def sent_before(plan_date, bname):
@@ -86,6 +130,8 @@ def sent_before(plan_date, bname):
 def append_orders(rows):
     new = not os.path.exists(ORDERS)
     os.makedirs(os.path.dirname(ORDERS), exist_ok=True)
+    if new:
+        os.close(os.open(ORDERS, os.O_WRONLY | os.O_CREAT, 0o600))
     with open(ORDERS, "a", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=ORDER_COLS)
         if new:
@@ -138,6 +184,18 @@ def targets(acc, plan, mirror, sleeves):
     return {c: int(q * mirror["scale"]) for c, q in after_plan(acc, plan, sleeves).items()}
 
 
+def own_positions(broker_pos, mirror):
+    """증권사 보유 − 연결 때 이미 있던 '직접 보유분'(mirror.external) = 자동매매가 관리하는 수량.
+    직접 산 종목은 비교하지도, 팔지도 않는다."""
+    ext = (mirror or {}).get("external") or {}
+    out = {}
+    for c, p in (broker_pos or {}).items():
+        q = float((p or {}).get("shares", 0)) - float(ext.get(c, 0))
+        if q > 0:
+            out[c] = {**p, "shares": q}
+    return out
+
+
 def diff_orders(target, broker_pos, est, collar, late=False):
     """목표 보유 − 증권사 보유 → 주문 목록 [(주문, 메모)]. 매도 먼저."""
     out = []
@@ -184,6 +242,8 @@ def execute(cfg, dry=False, now=None, where=None):
     """where: 'github' | 'oracle' — 아침 주문은 한 곳에서만 보낸다(short.exec_on). 두 곳이 같이 보내면 체결 전에
     서로의 주문을 못 봐서 두 번 살 수 있다."""
     on = (cfg.get("short") or {}).get("exec_on", "github")
+    if (cfg.get("short") or {}).get("broker") == "toss":
+        on = "oracle"                                   # 토스는 등록된 IP 에서만
     if where and where != on:
         print(f"거울 계좌 주문은 {on} 에서 보냄 (short.exec_on) — 여기({where})서는 건너뜀")
         return []
@@ -204,7 +264,7 @@ def execute(cfg, dry=False, now=None, where=None):
     now = now or kst_now()
     sl = mirror.get("sleeves") or sleeves_of(cfg)
     tgt = targets(acc, plan, mirror, sl)
-    bpos = b.account()["positions"]
+    bpos = own_positions(b.account()["positions"], mirror)
     est = last_prices()
     for o in plan.get("orders") or []:
         est.setdefault(o["code"], o.get("est_price"))
@@ -231,6 +291,14 @@ def execute(cfg, dry=False, now=None, where=None):
                      "order_no": r.get("order_no", ""), "msg": (r.get("msg") or "") + f" · {note}"})
         time.sleep(0.6 if bname == "kis_demo" else 0.15)             # 모의투자 서버는 초당 호출 한도가 낮다
     append_orders(rows)
+    try:                                              # 공개 상태: 건수·종목 코드·방향만 (수량·가격 없음)
+        json.dump({"date": now.strftime("%Y-%m-%d %H:%M"), "broker": tag, "plan": plan.get("made"),
+                   "sent": sum(1 for r in rows if r["ok"]), "failed": sum(1 for r in rows if not r["ok"] and r.get("kind") != "skip"),
+                   "skipped": sum(1 for r in rows if r.get("kind") == "skip"),
+                   "orders": [{"code": r["code"], "side": r["side"], "ok": bool(r["ok"])} for r in rows]},
+                  open(EXEC_STATUS, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    except OSError:
+        pass
     for r in rows:
         print(f"  {'✓' if r['ok'] else '·'} {r['side']} {r['code']} {r['qty']}주 {r.get('kind')} {r.get('price') or ''} — {r['msg']}")
     if not rows:
@@ -275,12 +343,24 @@ def slippage(fills, ledger):
     return out
 
 
-def reconcile(cfg, acc=None, save=True):
-    """acc: 방금 체결을 반영한 모의 장부(short_trader 안에서 부를 때). 모의(paper)면 바로 끝."""
+def reconcile(cfg, acc=None, save=True, after_plan=False):
+    """acc: 방금 체결을 반영한 모의 장부(short_trader 안에서 부를 때). 모의(paper)면 바로 끝.
+    after_plan: 서버에서 장 마감 뒤 돌 때 — 장부는 아직 어제 저녁 상태이므로 '어제 계획이 다 체결된 뒤 보유 × 배율'과 비교.
+    토스는 GitHub 에서 접속이 안 되므로 서버가 남긴 recon.json 을 읽기만 한다 (1영업일 넘게 묵으면 새 매수 금지)."""
     acc = acc if acc is not None else (RK.jload(ACC, {}) or {})
-    hist = (RK.jload(RECON, {}) or {}).get("history") or []
+    old_rc = RK.jload(RECON, {}) or {}
+    hist = old_rc.get("history") or []
     today = kst_now().strftime("%Y-%m-%d")
     mirror = RK.jload(MIRROR, None)
+    sb = (cfg.get("short") or {}).get("broker", "paper")
+    if sb != "paper" and not on_server():               # 증권사는 서버에서만 — 여기서는 서버가 올린 공개 상태만 읽는다
+        lag = len(pd.bdate_range(pd.Timestamp(old_rc.get("date", "2000-01-01")) + pd.Timedelta(days=1), today)) if old_rc.get("date") else 99
+        linked = (RK.jload(MIRROR_STATUS, {}) or {}).get("linked") or mirror
+        if not linked:
+            return {"date": today, "mode": sb, "state": "ACTIVE", "why": [f"{sb} 거울 계좌 연결 전 — 모의만"], "mismatch": [], "blocked": [], "ok": False}
+        if lag > 1:
+            return {**old_rc, "state": "REDUCING", "why": [f"증권사 잔고 대사 기록이 {lag}영업일 묵음 — 서버 저녁 대사(evening.sh) 확인 전까지 새 매수 금지"]}
+        return old_rc
     b, bname, why = make(cfg, dry=True)
     if b is None:
         res = {"date": today, "mode": bname, "state": "ACTIVE", "why": [why], "mismatch": [], "blocked": [], "ok": bname == "paper"}
@@ -290,9 +370,16 @@ def reconcile(cfg, acc=None, save=True):
     else:
         try:
             a = b.account()
+            if bname == "toss" and not b.is_live:            # 토스는 연습 서버가 없다 — 주문이 잠긴 동안은 '조회·해석이 매일 되는가'만 본다
+                res = {"date": today, "mode": "toss_dry", "state": "ACTIVE", "ok": True, "mismatch": [], "blocked": [],
+                       "why": ["토스 연결 정상 (보유·매수 가능 금액 해석) — 주문 잠김 상태라 보유 비교는 실제 주문 뒤부터"]}
+                raise StopIteration
             sl = mirror.get("sleeves") or sleeves_of(cfg)
-            expect = {c: int(q * mirror["scale"]) for c, q in sleeve_holdings(acc, sl).items()}
-            res = {"date": today, "mode": bname, **compare(expect, a["positions"]), "broker_cash": a["cash"]}
+            if after_plan:
+                expect = targets(acc, RK.jload(PLAN, {}) or {}, mirror, sl)
+            else:
+                expect = {c: int(q * mirror["scale"]) for c, q in sleeve_holdings(acc, sl).items()}
+            res = {"date": today, "mode": bname, **compare(expect, own_positions(a["positions"], mirror)), "broker_cash": a["cash"]}  # 현금은 비공개 파일에만
             res["ok"] = res["state"] == "ACTIVE"
             try:
                 start = (pd.Timestamp(today) - pd.Timedelta(days=10)).strftime("%Y-%m-%d")
@@ -309,33 +396,40 @@ def reconcile(cfg, acc=None, save=True):
     res["history"] = hist[-250:]
     if save:
         os.makedirs(os.path.dirname(RECON), exist_ok=True)
-        json.dump(res, open(RECON, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        json.dump(public_recon(res), open(RECON, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        if bname != "paper":
+            write_private(RECON_FULL, res)
     print(f"잔고 대사 {today} · {bname}: {res['state']} — " + "; ".join(res["why"]))
-    return res
+    return public_recon(res) if bname != "paper" else res
 
 
 def link(cfg):
-    """거울 계좌 연결: 증권사 현금 = 자본, 배율 = 자본 ÷ 모의 몫 평가액. 증권사에 이미 보유가 있으면 연결하지 않는다(섞임 방지)."""
+    """거울 계좌 연결: 자본 = short.broker_capital (없으면 현금 전부), 배율 = 자본 ÷ 모의 몫 평가액.
+    이미 있던 종목은 '직접 보유분'(external)으로 기록 — 자동매매는 그 수량을 비교도, 매도도 하지 않는다."""
     b, bname, why = make(cfg, dry=True)
     if b is None:
         print("연결할 증권사 없음:", why)
         return None
     a = b.account()
-    if a["positions"]:
-        print(f"증권사 계좌에 이미 {len(a['positions'])}종목 보유 — 비어 있는(현금만 있는) 계좌로 연결해야 합니다")
-        return None
+    ext = {c: float(p["shares"]) for c, p in a["positions"].items()}
+    if ext:
+        print(f"증권사 계좌에 이미 {len(ext)}종목이 있습니다 — '직접 보유분'으로 기록하고 자동매매는 그 수량을 건드리지 않습니다")
     acc = RK.jload(ACC, {}) or {}
     sl = sleeves_of(cfg)
     px = last_prices()
     val = sleeve_value(acc, sl, lambda c: px.get(c))
     cap = float((cfg.get("short") or {}).get("broker_capital") or a["cash"])
     cap = min(cap, float(a["cash"]))
+    if not (cfg.get("short") or {}).get("broker_capital"):
+        print(f"  주의: short.broker_capital 을 정하지 않아 계좌 현금 전부({cap:,.0f}원)를 자동매매 몫으로 잡습니다")
     if val <= 0 or cap <= 0:
         print("모의 몫 평가액 또는 증권사 현금이 0 — 연결 안 함")
         return None
     m = {"broker": bname, "date": kst_now().strftime("%Y-%m-%d"), "capital": round(cap), "sleeves": sl,
-         "paper_value": round(val), "scale": cap / val}
-    json.dump(m, open(MIRROR, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+         "paper_value": round(val), "scale": cap / val, "external": ext}
+    write_private(MIRROR, m)                                       # 자본·배율·직접 보유분 — 서버에만
+    json.dump({"linked": True, "broker": bname, "date": m["date"], "sleeves": sl, "external_codes": len(ext)},
+              open(MIRROR_STATUS, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"거울 계좌 연결: {bname} 자본 {cap:,.0f}원 · 따라 할 몫 {sl} (모의 평가액 {val:,.0f}원) · 배율 {m['scale']:.4f} — 다음 아침부터 주문")
     return m
 
@@ -345,6 +439,7 @@ def main():
     ap.add_argument("--phase", choices=["execute", "reconcile", "link"], required=True)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--where", choices=["github", "oracle"], default=None, help="어디서 돌리나 (short.exec_on 과 다르면 건너뜀)")
+    ap.add_argument("--after-plan", action="store_true", help="서버 장 마감 뒤 대사: 어제 계획이 다 체결된 뒤 보유와 비교")
     a = ap.parse_args()
     cfg = settings.load()
     if a.phase == "execute":
@@ -352,7 +447,7 @@ def main():
     elif a.phase == "link":
         link(cfg)
     else:
-        reconcile(cfg)
+        reconcile(cfg, after_plan=a.after_plan)
 
 
 if __name__ == "__main__":

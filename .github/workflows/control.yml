@@ -8,15 +8,13 @@ name: autotrade-control
 #   status  : 현재 계획·상태만 출력
 #   promote : 모델 진화의 도전자를 챔피언으로 (challenger 칸에 ID, 예: E20261031) → config/champion.yaml
 #   demote  : 챔피언 설정을 지우고 config/autotrade.yaml 원래 설정으로
-#   short_link : 단기·전천후 몫을 증권사(short.broker)에 연결 — 모의 장부를 보관하고 증권사 잔고로 새 장부 시작
-#   short_reconcile : 단기·전천후 몫 잔고 대사만 지금 실행
 on:
   workflow_dispatch:
     inputs:
       action:
         description: "무엇을 할까요"
         type: choice
-        options: [status, approve, pause, resume, kill, unkill, promote, demote, short_link, short_reconcile]
+        options: [status, approve, pause, resume, kill, unkill, promote, demote]
         default: status
       skip:
         description: "approve 때 뺄 종목코드 (쉼표 구분, 예: 005930,000660)"
@@ -44,7 +42,6 @@ jobs:
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
           KIS_ACCOUNT: ${{ secrets.KIS_ACCOUNT }}
-          KIS_ACCOUNT_SHORT: ${{ secrets.KIS_ACCOUNT_SHORT }}
           KIS_ACCOUNT_PRODUCT: ${{ secrets.KIS_ACCOUNT_PRODUCT }}
           AUTOTRADE_CONFIRM: ${{ vars.AUTOTRADE_CONFIRM }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -68,10 +65,6 @@ jobs:
               python src/evolve.py promote "$CH" 2>&1 | tee -a $GITHUB_STEP_SUMMARY ;;
             demote)
               rm -f config/champion.yaml; echo "챔피언 설정 해제 → config/autotrade.yaml 원래 설정" | tee -a $GITHUB_STEP_SUMMARY ;;
-            short_link)
-              python src/short_exec.py --phase link 2>&1 | tee -a $GITHUB_STEP_SUMMARY ;;
-            short_reconcile)
-              python src/short_exec.py --phase reconcile 2>&1 | tee -a $GITHUB_STEP_SUMMARY ;;
           esac
           echo '```' >> $GITHUB_STEP_SUMMARY
           python -c "import json;p=json.load(open('data/autotrade/plan.json'));print('계획',p['date'],p.get('status',''),'주문',len(p['orders']));[print(' ',o['side'],o['name'],o['code'],o['qty']) for o in p['orders']]" | tee -a $GITHUB_STEP_SUMMARY
@@ -83,7 +76,7 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add -A config/ data/autotrade/ data/evolve/ data/short/ || true
+          git add -A config/ data/autotrade/ data/evolve/ || true
           git commit -m "autotrade-control $A $(date +%Y-%m-%d)" || echo "no changes"
           git pull --rebase
           git push

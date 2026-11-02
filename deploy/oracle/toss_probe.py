@@ -2,8 +2,10 @@
 토스증권 오픈API 연결 점검 (서버에서 실행) — 돈이 움직이는 기능은 쓰지 않는다.
 
   1) 공식 OpenAPI 명세를 받아 '주소 · 방식 · 입력 이름 · 출력 이름'만 추린다 → data/toss/api_summary.json
+     + 주문·잔고·체결 API 는 끝까지 풀어서 → data/toss/api_detail.json (주문 요청 형식을 정확히 맞추려고)
   2) 키로 토큰을 발급받고(POST /oauth2/token) 계좌 목록만 조회한다(GET) → 상태 코드·개수만 data/toss/probe.json
-  3) 계좌 식별값을 찾으면 서버의 ~/.rich/secrets.env 에만 TOSS_ACCOUNT 로 저장한다 (비어 있을 때만)
+  3) 계좌 식별값을 찾으면 서버의 ~/.rich/secrets.env 에만 TOSS_ACCOUNT 로 저장한다 (비어 있을 때만) · 주문용 accountSeq 는 TOSS_ACCOUNT_SEQ
+  4) 읽기 전용 점검: 보유·매수 가능 금액·주문 목록·장 운영·현재가·수수료 — 상태 코드와 응답의 '모양'(키 이름)만 남긴다
 
 저장소가 공개이므로 GitHub 에 올리는 파일에는 잔고·보유 종목·키·토큰을 넣지 않고, 숫자 6자리 이상은 끝 4자리만 남긴다.
 토큰은 클라이언트당 하나만 유효하다(새로 받으면 이전 것이 무효) → ~/.rich/toss_token.json(600)에 저장해 다시 쓴다.
@@ -81,6 +83,67 @@ def fields(spec, schema, depth=0):
     return {"required": s.get("required", []), "props": out}
 
 
+DETAIL_OPS = [("POST", "/api/v1/orders"), ("GET", "/api/v1/orders"), ("GET", "/api/v1/orders/{orderId}"),
+              ("POST", "/api/v1/orders/{orderId}/cancel"), ("POST", "/api/v1/orders/{orderId}/modify"),
+              ("GET", "/api/v1/holdings"), ("GET", "/api/v1/buying-power"), ("GET", "/api/v1/sellable-quantity"),
+              ("GET", "/api/v1/prices"), ("GET", "/api/v1/price-limits"), ("GET", "/api/v1/market-calendar/KR"),
+              ("GET", "/api/v1/market-calendar/US"), ("GET", "/api/v1/commissions"), ("GET", "/api/v1/accounts"),
+              ("GET", "/api/v1/stocks/{symbol}/warnings"), ("GET", "/api/v1/exchange-rate")]
+
+
+def deep(spec, node, depth=0):
+    """스키마를 끝까지 풀어서 (oneOf·anyOf·allOf·enum·예시 포함) — 주문 요청 형식을 정확히 맞추려고."""
+    node = resolve(spec, node)
+    if not isinstance(node, dict):
+        return node
+    if depth > 8:
+        return {"...": "깊이 제한"}
+    out = {}
+    for k in ("type", "format", "enum", "required", "example", "examples", "default", "minimum", "maximum",
+              "pattern", "nullable", "const", "minLength", "maxLength"):
+        if k in node:
+            out[k] = node[k]
+    if node.get("description"):
+        out["description"] = node["description"][:600]
+    if isinstance(node.get("discriminator"), dict):
+        out["discriminator"] = {"propertyName": node["discriminator"].get("propertyName"),
+                                "mapping": list((node["discriminator"].get("mapping") or {}).keys())}
+    for comb in ("oneOf", "anyOf", "allOf"):
+        if comb in node:
+            out[comb] = [deep(spec, x, depth + 1) for x in node[comb]]
+    if "properties" in node:
+        out["properties"] = {k: deep(spec, v, depth + 1) for k, v in node["properties"].items()}
+    if "items" in node:
+        out["items"] = deep(spec, node["items"], depth + 1)
+    return out
+
+
+def detail(spec):
+    """주문·잔고·체결에 쓰는 API 만 끝까지 풀어서 → data/toss/api_detail.json (공개 명세 — 계좌 정보 없음)."""
+    ops = []
+    for m, path in DETAIL_OPS:
+        item = (spec.get("paths") or {}).get(path) or {}
+        op = item.get(m.lower())
+        if not op:
+            continue
+        params = [resolve(spec, x) for x in (op.get("parameters") or []) + (item.get("parameters") or [])]
+        rb = resolve(spec, op.get("requestBody") or {})
+        body = {ct: {"schema": deep(spec, c.get("schema")), "examples": c.get("examples") or c.get("example")}
+                for ct, c in ((rb or {}).get("content") or {}).items()}
+        res = {}
+        for code, r in (op.get("responses") or {}).items():
+            r = resolve(spec, r)
+            res[code] = {"description": ((r or {}).get("description") or "")[:300],
+                         **{ct: deep(spec, c.get("schema")) for ct, c in ((r or {}).get("content") or {}).items() if code in ("200", "201")}}
+        ops.append({"method": m, "path": path, "summary": op.get("summary"), "description": (op.get("description") or "")[:4000],
+                    "params": [{"name": x.get("name"), "in": x.get("in"), "required": x.get("required", False),
+                                "description": (x.get("description") or "")[:400], "schema": deep(spec, x.get("schema"))}
+                               for x in params if isinstance(x, dict)],
+                    "body": body, "responses": res})
+    info = spec.get("info") or {}
+    return {"version": info.get("version"), "info_description": (info.get("description") or "")[:8000], "ops": ops}
+
+
 def summarize(spec):
     ops = []
     for path, item in (spec.get("paths") or {}).items():
@@ -109,6 +172,30 @@ def summarize(spec):
     return {"title": (spec.get("info") or {}).get("title"), "version": (spec.get("info") or {}).get("version"),
             "servers": spec.get("servers"), "security": list(((spec.get("components") or {}).get("securitySchemes") or {}).keys()),
             "n_ops": len(ops), "ops": ops}
+
+
+def shape(j, depth=0):
+    """응답의 '모양'만 (키 이름·형식·배열 길이) — 값은 남기지 않는다."""
+    if depth > 4:
+        return "…"
+    if isinstance(j, dict):
+        return {k: shape(v, depth + 1) for k, v in list(j.items())[:40]}
+    if isinstance(j, list):
+        return [shape(j[0], depth + 1)] if j else []          # 개수도 남기지 않는다 (보유·주문 건수도 계좌 정보)
+    return type(j).__name__
+
+
+def seq_from_accounts(tok):
+    try:
+        r = requests.get(BASE + "/api/v1/accounts", timeout=15, headers={"Authorization": f"Bearer {tok}", "Accept": "application/json"})
+        items = (r.json() or {}).get("result") or []
+        env = load_env()
+        for it in items:
+            if str(it.get("accountNo")) == str(env.get("TOSS_ACCOUNT")) or it.get("accountType") == "BROKERAGE":
+                return it.get("accountSeq")
+    except Exception:
+        return None
+    return None
 
 
 def get_spec():
@@ -169,6 +256,9 @@ def main():
         json.dump(summ, open(os.path.join(OUT, "api_summary.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(f"  ✓ {url} · 버전 {summ['version']} · API {summ['n_ops']}개 → data/toss/api_summary.json")
         res["spec"] = {"url": url, "version": summ["version"], "n_ops": summ["n_ops"]}
+        det = detail(spec)
+        json.dump(det, open(os.path.join(OUT, "api_detail.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print(f"  ✓ 주문·잔고·체결 API {len(det['ops'])}개 상세 → data/toss/api_detail.json")
     else:
         res["spec"] = None
         print("  ✗ 명세를 받지 못함 (주소가 바뀌었을 수 있음)")
@@ -226,6 +316,31 @@ def main():
             entry["error"] = mask({k: j[k] for k in list(j)[:4]} if isinstance(j, dict) else r.text[:200])
             print(f"  ✗ {p} → {r.status_code}")
             res.setdefault("tried", []).append(entry)
+    # 4) 읽기 전용 점검 — 상태 코드와 '항목 이름'만 남긴다 (금액·종목·수량은 저장소에 올리지 않음)
+    if tok and res.get("accounts"):
+        seq = env.get("TOSS_ACCOUNT_SEQ") or seq_from_accounts(tok)
+        if seq and not env.get("TOSS_ACCOUNT_SEQ"):
+            lines = [ln for ln in open(SECRETS, encoding="utf-8") if not ln.startswith("TOSS_ACCOUNT_SEQ=")]
+            lines.append(f"TOSS_ACCOUNT_SEQ={seq}\n")
+            with open(os.open(SECRETS, os.O_WRONLY | os.O_TRUNC, 0o600), "w", encoding="utf-8") as fh:
+                fh.writelines(lines)
+        checks = {}
+        for name, path, params in (("holdings", "/api/v1/holdings", None), ("buying_power", "/api/v1/buying-power", {"currency": "KRW"}),
+                                   ("orders", "/api/v1/orders", None), ("calendar_kr", "/api/v1/market-calendar/KR", None),
+                                   ("prices", "/api/v1/prices", {"symbols": "069500"}), ("commissions", "/api/v1/commissions", None)):
+            try:
+                r = requests.get(BASE + path, params=params, timeout=15, headers={"Authorization": f"Bearer {tok}", "Accept": "application/json",
+                                                                                 **({"X-Tossinvest-Account": str(seq)} if seq else {})})
+                j = r.json() if r.headers.get("content-type", "").startswith("application/json") else None
+            except Exception as e:
+                checks[name] = {"error": type(e).__name__}
+                continue
+            checks[name] = {"status": r.status_code, "shape": shape(j)}
+            if r.status_code != 200:
+                checks[name]["error"] = mask({k: j[k] for k in list(j)[:3]} if isinstance(j, dict) else "")
+            print(f"  {'✓' if r.status_code == 200 else '✗'} {path} → {r.status_code}")
+            time.sleep(0.3)
+        res["readonly"] = checks
     json.dump(res, open(os.path.join(OUT, "probe.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     ok = bool(res.get("accounts"))
     print(f"\n결과: {'연결 성공' if ok else '아직 연결 안 됨'} — data/toss/probe.json")

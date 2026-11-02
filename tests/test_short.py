@@ -477,6 +477,10 @@ def test_mirror_executor_and_reconcile():
     ok = SX.compare({"E1": 100}, {"E1": {"shares": 101}})
     bad = SX.compare({"E1": 100, "E2": 10, "E3": 5}, {"E1": {"shares": 90}, "E2": {"shares": 0}, "E3": {"shares": 9}})
     assert ok["state"] == "ACTIVE" and bad["state"] == "HALTED" and set(bad["blocked"]) == {"E1", "E2", "E3"}
+    own = SX.own_positions({"E1": {"shares": 70}, "X": {"shares": 5}}, {"external": {"E1": 20, "X": 5}})
+    assert own == {"E1": {"shares": 50.0}}                                       # 직접 보유분은 빼고 본다
+    assert SX.diff_orders({}, own, {}, 0.12) == [(SX.diff_orders({}, own, {}, 0.12)[0][0], "시장가 매도")]
+    assert SX.diff_orders({}, own, {}, 0.12)[0][0]["qty"] == 50                  # 직접 산 20주·X 는 팔지 않음
     b, name, why = SX.make({"short": {"broker": "paper"}})
     assert b is None and name == "paper"
     assert SX.execute({"short": {"broker": "kis_demo", "exec_on": "oracle"}}, where="github") == []   # 한 곳에서만 보낸다
@@ -507,6 +511,77 @@ def test_dsr_counts_all_trials():
     p1, s1 = SL.dsr(r, srs)
     p2, s2 = SL.dsr(r, srs, 180000)
     assert p2 < p1 and s2 > s1
+
+
+def test_toss_broker_readonly_and_order_lock():
+    """토스: 보유·매수 가능 금액 해석 · 계좌 식별값 자동 찾기 · 주문 형식 확인 전에는 절대 보내지 않음."""
+    import types
+    import brokers
+    fake_tp = types.SimpleNamespace(BASE="https://x", TOKEN="/nonexistent/tok", load_env=lambda: {},
+                                    get_token=lambda env: ("TOKEN", {"status": "cached"}))
+    sys.modules["toss_probe"] = fake_tp
+    calls = []
+
+    class R:
+        def __init__(self, st, j):
+            self.status_code, self._j, self.text = st, j, ""
+
+        def json(self):
+            return self._j
+
+    class S:
+        def request(self, method, url, params=None, json=None, headers=None, timeout=None):
+            calls.append((method, url, headers.get("X-Tossinvest-Account")))
+            if url.endswith("/api/v1/accounts"):
+                return R(200, {"result": [{"accountNo": "111", "accountSeq": 7, "accountType": "BROKERAGE"}]})
+            if url.endswith("/api/v1/holdings"):
+                return R(200, {"result": {"items": [{"symbol": "069500", "quantity": "3", "averagePrice": {"amount": "90000"}},
+                                                    {"symbol": "114800", "quantity": "0", "averagePrice": "1000"}]}})
+            if url.endswith("/api/v1/buying-power"):
+                return R(200, {"result": {"currency": "KRW", "cashBuyingPower": "1234567"}})
+            return R(404, {})
+    try:
+        tb = brokers.TossBroker(env={"TOSS_CLIENT_ID": "a", "TOSS_CLIENT_SECRET": "b", "TOSS_ACCOUNT": "111"}, session=S())
+        a = tb.account()
+        assert a == {"cash": 1234567.0, "positions": {"069500": {"shares": 3.0, "avg": 90000.0}}}
+        assert tb.seq == 7 and all(h == "7" for m, u, h in calls if not u.endswith("/accounts"))
+        r = tb.order("buy", "069500", 1, "limit", 91000)
+        assert not r["ok"] and "확인 전" in r["msg"]
+        n = len(calls)
+        brokers.TossBroker.VERIFIED = "9.9.9"                     # 확인 버전이 서버 명세와 다르면 여전히 안 보냄
+        assert not tb.order("buy", "069500", 1, "limit", 91000)["ok"] and len(calls) == n
+    finally:
+        brokers.TossBroker.VERIFIED = None
+        sys.modules.pop("toss_probe", None)
+
+
+def test_toss_reconcile_off_server_reads_file():
+    """토스는 GitHub 에서 접속이 안 됨 → 서버가 남긴 대사 기록을 읽고, 1영업일 넘게 묵으면 새 매수 금지."""
+    import short_exec as SX
+    with tempfile.TemporaryDirectory() as d:
+        old = (SX.RECON, SX.MIRROR, SX.on_server)
+        try:
+            SX.RECON, SX.MIRROR = os.path.join(d, "recon.json"), os.path.join(d, "mirror.json")
+            SX.on_server = lambda: False
+            cfg = {"short": {"broker": "toss"}}
+            r = SX.reconcile(cfg, acc={})
+            assert r["mode"] == "toss" and r["state"] == "ACTIVE" and not r["ok"]          # 연결 전 = 모의만
+            json.dump({"broker": "toss", "scale": 1.0}, open(SX.MIRROR, "w"))
+            json.dump({"date": "2020-01-02", "mode": "toss", "state": "ACTIVE", "ok": True}, open(SX.RECON, "w"))
+            r = SX.reconcile(cfg, acc={})
+            assert r["state"] == "REDUCING" and "묵음" in r["why"][0]
+            today = SX.kst_now().strftime("%Y-%m-%d")
+            json.dump({"date": today, "mode": "toss", "state": "ACTIVE", "ok": True, "blocked": []}, open(SX.RECON, "w"))
+            assert SX.reconcile(cfg, acc={})["state"] == "ACTIVE"
+            assert SX.execute(cfg, where="github") == []                                   # 토스 주문은 서버에서만
+            pub = SX.public_recon({"date": today, "mode": "toss", "state": "REDUCING", "broker_cash": 123456789,
+                                   "mismatch": [{"code": "069500", "expect": 10, "broker": 7}],
+                                   "slippage": [{"code": "069500", "broker_px": 1.0, "book_px": 1.0, "cost_bp": 3.2}]})
+            txt = json.dumps(pub)
+            assert "123456789" not in txt and '"expect"' not in txt and "broker_px" not in txt     # 공개 파일엔 금액·수량 없음
+            assert pub["mismatch_codes"] == ["069500"] and pub["slippage_bp"] == [3.2]
+        finally:
+            SX.RECON, SX.MIRROR, SX.on_server = old
 
 
 if __name__ == "__main__":

@@ -238,6 +238,138 @@ class KISBroker:
         return out
 
 
+# ══════════════════════════════════════════════════════════════
+class TossBroker:
+    """토스증권 오픈API (https://openapi.tossinvest.com) — 미리 등록한 IP(오라클 서버)에서만 된다. 모의투자 서버는 없다.
+    토큰은 클라이언트당 하나만 유효 → 서버의 점검·수집기와 같은 토큰 파일(~/.rich/toss_token.json)을 같이 쓴다.
+    주문은 VERIFIED(사람이 data/toss/api_detail.json 으로 요청 형식을 확인한 명세 버전)와 서버 명세 버전이 같을 때만 보낸다.
+    그 전에는 주문을 만들기만 하고 '보내지 않음'으로 기록한다."""
+    name = "toss"
+    VERIFIED = None                 # 예: "1.2.24" — 주문 요청 형식을 명세로 확인한 버전
+    CODE_KEYS = ("symbol", "stockCode", "code", "ticker", "productCode")
+    QTY_KEYS = ("quantity", "holdingQuantity", "totalQuantity", "qty", "balanceQuantity")
+    AVG_KEYS = ("averagePrice", "avgPrice", "averagePurchasePrice", "purchasePrice", "avgPurchasePrice")
+
+    def __init__(self, live_orders=False, env=None, session=None):
+        import requests
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "deploy", "oracle"))
+        import toss_probe as TP
+        self.TP = TP
+        self.rq = session or requests
+        self.env = env if env is not None else {**TP.load_env(), **{k: v for k, v in os.environ.items() if k.startswith("TOSS_")}}
+        if not (self.env.get("TOSS_CLIENT_ID") and self.env.get("TOSS_CLIENT_SECRET")):
+            raise RuntimeError("TOSS_CLIENT_ID / TOSS_CLIENT_SECRET 가 없습니다 (서버 ~/.rich/secrets.env — setup.sh --keys)")
+        self.base = TP.BASE
+        self.live_orders = live_orders
+        self.is_live = bool(live_orders)
+        self._tok = None
+        self.seq = self.env.get("TOSS_ACCOUNT_SEQ")
+
+    def spec_version(self):
+        try:
+            return json.load(open("data/toss/api_detail.json", encoding="utf-8")).get("version")
+        except (OSError, ValueError):
+            return None
+
+    def token(self, fresh=False):
+        if fresh:
+            try:
+                os.remove(self.TP.TOKEN)
+            except OSError:
+                pass
+            self._tok = None
+        if not self._tok:
+            self._tok, info = self.TP.get_token(self.env)
+            if not self._tok:
+                raise RuntimeError(f"토스 토큰 실패: {info}")
+        return self._tok
+
+    def _req(self, method, path, params=None, body=None, account=True):
+        for i in range(4):
+            h = {"Authorization": f"Bearer {self.token()}", "Accept": "application/json"}
+            if account:
+                h["X-Tossinvest-Account"] = str(self.account_seq())
+            r = self.rq.request(method, self.base + path, params=params, json=body, headers=h, timeout=20)
+            if r.status_code == 401 and i == 0:
+                self.token(fresh=True)
+                continue
+            if r.status_code in (429, 500, 502, 503, 504):
+                time.sleep(1.5 * (i + 1))
+                continue
+            try:
+                j = r.json()
+            except ValueError:
+                j = {"raw": r.text[:300]}
+            return r.status_code, j
+        return r.status_code, {}
+
+    def account_seq(self):
+        if not self.seq:
+            st, j = self._req("GET", "/api/v1/accounts", account=False)
+            items = (j or {}).get("result") or []
+            want = str(self.env.get("TOSS_ACCOUNT") or "")
+            pick = next((x for x in items if str(x.get("accountNo")) == want), None) or \
+                next((x for x in items if x.get("accountType") == "BROKERAGE"), None)
+            if not pick:
+                raise RuntimeError(f"토스 계좌를 찾지 못함 (상태 {st})")
+            self.seq = pick["accountSeq"]
+        return self.seq
+
+    @staticmethod
+    def _num(v):
+        if isinstance(v, dict):
+            v = v.get("amount", v.get("value", v.get("krw")))
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
+    def _pick(self, d, keys):
+        for k in keys:
+            if k in d and d[k] is not None:
+                return d[k]
+        return None
+
+    def account(self):
+        st, j = self._req("GET", "/api/v1/holdings")
+        if st != 200:
+            raise RuntimeError(f"보유 조회 실패 {st}: {str(j)[:200]}")
+        items = ((j or {}).get("result") or {}).get("items") or []
+        pos = {}
+        for it in items:
+            code = self._pick(it, self.CODE_KEYS)
+            q = self._num(self._pick(it, self.QTY_KEYS))
+            if code is None or q is None:
+                raise RuntimeError(f"보유 항목 형식을 모름 — 키 {sorted(it.keys())} (api_detail.json 확인 필요)")
+            if q > 0:
+                pos[str(code)] = {"shares": q, "avg": self._num(self._pick(it, self.AVG_KEYS)) or 0.0}
+        st, j = self._req("GET", "/api/v1/buying-power", {"currency": "KRW"})
+        if st != 200:
+            raise RuntimeError(f"매수 가능 금액 조회 실패 {st}")
+        cash = self._num(((j or {}).get("result") or {}).get("cashBuyingPower"))
+        return {"cash": cash or 0.0, "positions": pos}
+
+    def price(self, code):
+        st, j = self._req("GET", "/api/v1/prices", {"symbols": code})
+        res = (j or {}).get("result")
+        it = res[0] if isinstance(res, list) and res else res if isinstance(res, dict) else {}
+        return self._num(self._pick(it or {}, ("currentPrice", "price", "lastPrice", "close", "tradePrice")))
+
+    def order(self, side, code, qty, kind="market", price=None, date=None):
+        if qty <= 0:
+            return {"ok": False, "order_no": "", "msg": "수량 0"}
+        ver = self.spec_version()
+        if not self.VERIFIED or ver != self.VERIFIED:
+            return {"ok": False, "order_no": "", "msg": f"토스 주문 형식 확인 전(명세 {ver}, 확인 {self.VERIFIED}) — 보내지 않음"}
+        if not self.live_orders:
+            return {"ok": False, "order_no": "", "msg": "DRY-RUN (실제 주문 잠김) — 보내지 않음"}
+        raise NotImplementedError("주문 요청 형식은 api_detail.json 확인 뒤 채운다")
+
+    def daily_fills(self, start, end):
+        return []                   # 주문 목록 조회 형식 확인 뒤 채운다 (대사는 보유 수량으로 계속된다)
+
+
 def make_broker(cfg):
     b = cfg.get("broker", "paper")
     if b == "paper":

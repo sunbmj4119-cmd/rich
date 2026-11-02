@@ -1,5 +1,7 @@
 # Oracle 서버 설정 — 고정 IP에서 증권사 주문 보내기
 
+> 휴대폰 터미우스 앱으로 하나씩 따라 하기: **[TERMIUS.md](TERMIUS.md)**
+
 판단(매수·매도 결정)은 지금처럼 GitHub Actions가 매일 17:00에 합니다.
 이 서버는 **다음 날 08:40에 그 계획을 받아 증권사로 보내는 일만** 합니다.
 토스증권 오픈API는 미리 등록한 IP에서 온 요청만 받기 때문입니다.
@@ -97,11 +99,10 @@ GitHub 서버는 KRX 가 막아서 2018년 전 외국인·기관 수급과 상�
 2. `bash ~/rich/deploy/oracle/collect_history.sh` — 1~2시간. 끊기면 같은 명령을 다시 실행하면 이어 받습니다 (`screen` 이나 `tmux` 안에서 돌리면 접속이 끊겨도 계속)
 3. 끝나면 자동으로 GitHub 에 올리고, 그날 밤 긴 역사 검증이 수급 모델까지 잽니다
 
-## 단기·전천후 몫 증권사 연결 (모의투자부터)
+## 단기·전천후 몫 증권사 연결 (토스증권)
 
-1. 한국투자증권 모의투자 계좌를 하나 더 만들고(30일 엔진과 다른 계좌), GitHub Secrets 에 `KIS_ACCOUNT_SHORT` 로 넣습니다 (앱 키·시크릿은 기존 `KIS_APP_KEY`·`KIS_APP_SECRET`)
-2. `config/autotrade.yaml` → `short.broker: kis_demo`
-3. Actions → autotrade-control → `short_link` 실행 (증권사 계좌가 비어 있어야 함)
-4. `config/autotrade.yaml` → `short.exec_on: oracle` 그리고 이 서버에서 `bash ~/rich/deploy/oracle/setup.sh --cron` (평일 08:40 정시 주문 — GitHub 예약 실행은 몇 시간씩 늦어서)
-5. 다음 날 아침부터 주문, 저녁마다 대사 — 모의투자 화면 '위원회' 탭의 '실제 돈 준비도'가 모두 ✓ 가 될 때까지 지켜봅니다
-
+터미우스로 따라 하는 순서는 [TERMIUS.md](TERMIUS.md) 에 있습니다. 요약:
+1. `setup.sh --probe` (토스 명세 받기) → 주문 형식 확인(Claude) → 설정 `short.broker: toss`
+2. `setup.sh --link` (거울 계좌 연결 — 이미 있던 종목은 '직접 보유분'으로 빼고 봄) · `setup.sh --cron` (평일 08:40 주문 · 16:10 대사)
+3. 준비도 점검표가 모두 ✓ → `setup.sh --live`
+- 실제 계좌의 현금·수량·자본은 이 서버의 `~/.rich/` 에만 저장되고 GitHub(공개)에는 상태만 올라갑니다.
