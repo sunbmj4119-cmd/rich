@@ -1,43 +1,74 @@
 {
- "made": "2026-10-29",
+ "made": "2026-11-02",
  "model": "S:MOM:10:BAND:none",
  "orders": [
   {
    "side": "sell",
-   "code": "AAPL",
-   "qty": 2.1657,
-   "est_price": 348.91
-  },
-  {
-   "side": "sell",
-   "code": "MSFT",
-   "qty": 1.3951,
-   "est_price": 530.14
+   "code": "PLTR",
+   "qty": 3.7994,
+   "est_price": 182.9,
+   "sleeve": "us"
   },
   {
    "side": "buy",
-   "code": "COP",
-   "usd": 754.91,
-   "est_price": 150.03
-  },
-  {
-   "side": "buy",
-   "code": "MA",
-   "usd": 754.91,
-   "est_price": 635.7
+   "code": "CVX",
+   "usd": 752.41,
+   "est_price": 228.47,
+   "sleeve": "us"
   }
  ],
- "equity_usd": 7549.09,
+ "equity_usd": 7524.15,
  "target": [
   "ABBV",
   "AMGN",
   "COP",
+  "CVX",
   "KO",
   "LLY",
   "MA",
-  "PLTR",
   "PM",
   "TMO",
   "V"
- ]
+ ],
+ "risk": {
+  "state": "ACTIVE",
+  "why": [
+   "정상"
+  ],
+  "sleeves": {
+   "us": {
+    "days": 3,
+    "sr_star": 0.533,
+    "vol_star": 0.1849,
+    "action": "ACTIVE",
+    "size": 1.0,
+    "why": [
+     "실제 기록이 아직 짧음 — 감시 대기"
+    ],
+    "cusum": null,
+    "dd": null,
+    "expect": {
+     "sr_bt": 1.067,
+     "vol": 0.1849,
+     "src": "미국 추세 상위 10 2016~",
+     "sr_star": 0.533
+    }
+   }
+  },
+  "log": [],
+  "orders_before": 2,
+  "orders_after": 2,
+  "limits": {
+   "decay_action": "alert",
+   "drawdown_action": "alert",
+   "max_orders": 60,
+   "cap_stock": 0.25,
+   "cap_etf": 0.6,
+   "adv_cap": 0.025,
+   "collar": 0.12,
+   "haircut": 0.5,
+   "false_alarm_years": 7.0
+  },
+  "recon": null
+ }
 }

@@ -1,0 +1,21 @@
+{
+ "date": "2026-11-03",
+ "mode": "paper",
+ "state": "ACTIVE",
+ "ok": true,
+ "why": [
+  "모의 계좌 — 증권사로 보내지 않음 (체결은 저녁 시뮬레이션)"
+ ],
+ "blocked": [],
+ "slippage_med_bp": null,
+ "history": [
+  {
+   "date": "2026-11-03",
+   "mode": "paper",
+   "state": "ACTIVE",
+   "ok": true
+  }
+ ],
+ "mismatch_codes": [],
+ "slippage_bp": []
+}
