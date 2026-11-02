@@ -568,7 +568,9 @@ LPPL 거품(한국 거품 표본 1개), 한국 개별주 짝매매(공매도 제
 - 모의 장부는 그대로 두고, 증권사 계좌가 정한 몫을 '자기 돈 크기에 맞춰' 따라 한다. 아침마다 '모의 몫의 내일 보유 × 배율'과 증권사 보유의 차이만 주문 → 어긋나도 다음 날 저절로 맞춰진다.
 - 매수 = 지정가(어제 종가 × 1.12, 호가 올림 — 가격 보호를 증권사 쪽에서) · 매도 = 시장가 · 09:30 넘어 실행되면 매수 안 함 · 같은 주문 두 번 안 보냄.
 - 저녁 잔고 대사: 증권사 보유 ↔ 모의 몫 × 배율, 1주·2% 넘게 다르면 그 종목 새 매수 금지, 3종목 이상이면 계좌 정지(리스크 매니저가 읽음). 체결 조회로 실행 비용(bp) 기록.
-- 연결: `short.broker: kis_demo` + 비밀값(KIS_APP_KEY·KIS_APP_SECRET·KIS_ACCOUNT_SHORT) → control.yml `short_link` (빈 계좌만, 배율 = 증권사 현금 ÷ 모의 몫 평가액).
+- 연결·주문·대사는 모두 **서버에서만** (`setup.sh --link` · `run.sh` · `evening.sh`). 배율 = 연결 자본 ÷ 모의 몫 평가액.
+- **공개 저장소에는 금액·수량을 올리지 않는다**: 실제 현금·보유 수량·주문 수량·연결 자본·직접 보유분은 서버 `~/.rich/`(mirror.json · orders.csv · recon_full.json, 권한 600)에만.
+  GitHub 에는 상태·불일치 종목 코드·주문 건수·비용(bp)만 (`data/short/recon.json` · `exec_status.json` · `mirror_status.json`).
 - 실계좌(kis_real) 네 겹 잠금: live_trading:true · 저장소 변수 AUTOTRADE_CONFIRM=I_UNDERSTAND · 준비도 점검표 '준비됨' · 리스크 상태 HALTED 아님.
 - 아침 주문은 한 곳에서만 (`short.exec_on`): GitHub 예약 실행은 2026-10 한 달 동안 17:00 예정이 22:00~새벽 3:40 에 돌았고 3일은 빠졌다 →
   실계좌는 Oracle 서버(`deploy/oracle/run.sh`, 08:40 정시)에서 보내도록 `exec_on: oracle` (준비도 점검표 항목). 두 곳이 같이 보내면 체결 전에 서로를 못 봐 두 번 살 수 있어 막는다.
@@ -581,6 +583,19 @@ LPPL 거품(한국 거품 표본 1개), 한국 개별주 짝매매(공매도 제
 **긴 역사 수급·상장폐지 자료** (`src/collect_krx_history.py`, Oracle 서버 `deploy/oracle/collect_history.sh` 로 한 번)
 - 해마다 코스피 시총 상위 150(상장폐지 포함) · 수정 일봉 · 외국인·기관·개인 순매수 2000~2018 · 국내 ETF 12종 전 기간 → `data/history/krx_*.csv.gz`.
 - 들어오면 history_lab 이 '그때 실제 대형주' 패널(`krx_panel`)로 수급 모델까지 옛 시대 성적을 재고(`pit_report`), 긴 역사 관문도 이 자료로 판정한다 (수급 모델도 관문 대상).
+
+### 3-6-13. 토스증권으로 실제 운용 (2026-11-02)
+
+- 주문 증권사는 **토스증권 오픈API** (`short.broker: toss`, `src/brokers.py TossBroker`). 토스는 미리 등록한 IP 에서만 받으므로 주문·잔고 대사는 **오라클 서버**에서만
+  (아침 08:40 `run.sh` · 저녁 16:10 `evening.sh`). GitHub 계산은 서버가 남긴 대사 기록(`data/short/recon.json`)만 읽고, 1영업일 넘게 묵으면 새 매수를 막는다.
+- 토큰은 클라이언트당 하나만 유효 → 서버의 점검·수집기와 같은 토큰 파일을 같이 쓴다.
+- **주문 형식 잠금**: 토스 명세 요약에 주문 요청 칸이 빠져 있어, 서버에서 받은 상세 명세(`data/toss/api_detail.json`, `setup.sh --probe`)로
+  형식을 확인한 버전(`TossBroker.VERIFIED`)과 서버 명세 버전이 같을 때만 주문을 보낸다. 그 전에는 주문을 만들어 기록만 한다.
+- 토스에는 연습(모의투자) 서버가 없다 → 준비도 점검표의 증권사 항목: 연결 점검 20거래일(주문 잠금 상태에서 매일 잔고 조회·해석) +
+  주문 형식 확인 + 1주 실주문 시험(사기 → 체결 확인 → 팔기).
+- 연결(`setup.sh --link`) 때 계좌에 이미 있던 종목은 **직접 보유분**(서버 `~/.rich/mirror.json` 의 external)으로 기록 — 자동매매는 그 수량을 비교·매도하지 않는다.
+- 실제 돈 잠금: `live_trading:true` + 서버 확인값(`setup.sh --live`, AUTOTRADE_CONFIRM) + 준비도 '준비됨' + 주문 형식 확인 + 리스크 상태.
+- 휴대폰 터미우스로 하는 순서: `deploy/oracle/TERMIUS.md`.
 
 ### 3-7. 정직한 한계
 

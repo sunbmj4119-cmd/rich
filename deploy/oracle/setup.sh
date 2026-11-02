@@ -11,7 +11,10 @@
 #          bash setup.sh --token    GitHub 쓰기 권한을 토큰으로 (휴대폰처럼 화면 글자를 복사하기 어려울 때)
 #          bash setup.sh --probe    토스 연결 점검: 공식 명세 요약 + 토큰 발급 + 계좌 목록(조회만) → 결과를 GitHub 에 올림
 #          bash setup.sh --collect  토스 시세·수급 이력 수집 시작 (조회만 · 처음 1시간 안팎 되채우기 · 평일 18:50 자동 등록)
-#          bash setup.sh --cron     평일 08:40 자동 실행 등록 (증권사 연결이 끝난 뒤에만)
+#          bash setup.sh --cron     평일 08:40 주문 · 16:10 잔고 대사 자동 실행 등록 (모의 상태면 실행돼도 아무것도 안 함)
+#          bash setup.sh --history  한국거래소 긴 역사(2000~2018 수급·상장폐지 포함) 받기 — 뒤에서 돌고 앱을 닫아도 계속
+#          bash setup.sh --link     토스 계좌를 거울 계좌로 연결 (config short.broker: toss 로 바꾼 뒤 · 빈 계좌만)
+#          bash setup.sh --live     실제 돈 주문 최종 확인값 저장 (준비도 점검표가 모두 통과한 뒤에만 의미 있음)
 #
 #   이 스크립트는 비밀 값을 화면에 출력하지 않는다. 키는 ~/.rich/secrets.env 에만 저장한다.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -160,6 +163,7 @@ check() {
   gh=$(gh_ok && echo "가능" || echo "아직 (배포 키 등록 필요)")
   names=$(filled)
   cronl=$({ crontab -l 2>/dev/null || true; } | grep -c "rich/deploy/oracle/run.sh" || true)
+  crone=$({ crontab -l 2>/dev/null || true; } | grep -c "rich/deploy/oracle/evening.sh" || true)
   cronc=$({ crontab -l 2>/dev/null || true; } | grep -c "rich/deploy/oracle/collect.sh" || true)
   rawn=$(find "$STATE/toss" -name '*.jsonl' 2>/dev/null | wc -l | tr -d ' ')
   echo "  ┌──────────────────────────────────────────"
@@ -170,7 +174,8 @@ check() {
   echo "  │ 코드          : $(git -C "$DIR" log -1 --format='%h %cd' --date=short 2>/dev/null || echo 없음)"
   echo "  │ GitHub 쓰기   : $gh"
   echo "  │ 키 파일 항목  : ${names:-비어 있음}"
-  echo "  │ 자동 실행     : $([ "$cronl" -gt 0 ] && echo '등록됨 (평일 08:40)' || echo '아직 안 함')"
+  echo "  │ 자동 실행     : $([ "$cronl" -gt 0 ] && echo '주문 08:40 등록' || echo '주문 아직') · $([ "$crone" -gt 0 ] && echo '대사 16:10 등록' || echo '대사 아직')"
+  echo "  │ 긴 역사 자료  : $(ls "$DIR"/data/history/krx_*.csv.gz 2>/dev/null | wc -l | tr -d ' ')개 파일 $(pgrep -f collect_krx_history.py >/dev/null 2>&1 && echo '(받는 중)' || true)"
   echo "  │ 토스 수집     : $([ "$cronc" -gt 0 ] && echo '등록됨 (평일 18:50)' || echo '아직 안 함') · 원본 파일 ${rawn}개"
   echo "  │ 바깥으로 나가는 IP : $out_ip   ← 토스 '허용 IP'에 이 값을 등록 (보낼 때는 가려도 됩니다)"
   echo "  └──────────────────────────────────────────"
@@ -179,7 +184,7 @@ check() {
 set_keys() {
   step "증권사 키 입력 — 붙여넣고 Enter (입력한 글자는 화면에 보이지 않습니다. 건너뛰려면 그냥 Enter)"
   [ -f "$STATE/secrets.env" ] || secrets_file
-  for k in TOSS_CLIENT_ID TOSS_CLIENT_SECRET TOSS_ACCOUNT; do
+  for k in TOSS_CLIENT_ID TOSS_CLIENT_SECRET TOSS_ACCOUNT KRX_ID KRX_PW; do
     printf "  %s: " "$k"
     IFS= read -rs v || v=""
     echo
@@ -242,10 +247,54 @@ install_collect() {
 }
 
 install_cron() {
-  # 서버 시간대와 상관없이: 매시 40분에 깨어나고, run.sh 가 '한국 시간 평일 08시'일 때만 실제로 일한다
+  # 서버 시간대와 상관없이: 매시 40분·10분에 깨어나고, 스크립트가 '한국 시간 평일 08시 / 16시'일 때만 실제로 일한다
+  mkdir -p "$STATE/logs"
   line="40 * * * * bash $DIR/deploy/oracle/run.sh >> $STATE/logs/cron.log 2>&1"
-  ( { crontab -l 2>/dev/null || true; } | { grep -v "rich/deploy/oracle/run.sh" || true; } ; echo "$line" ) | crontab -
-  ok "자동 실행 등록 (한국 시간 평일 08:40에만 주문): $line"
+  line2="10 * * * * bash $DIR/deploy/oracle/evening.sh >> $STATE/logs/evening.log 2>&1"
+  ( { crontab -l 2>/dev/null || true; } | { grep -v -e "rich/deploy/oracle/run.sh" -e "rich/deploy/oracle/evening.sh" || true; } ; echo "$line"; echo "$line2" ) | crontab -
+  ok "자동 실행 등록: 평일 08:40 주문 · 16:10 잔고 대사 (모의 상태면 아무것도 안 함)"
+}
+
+run_history() {
+  step "한국거래소 긴 역사 받기 — 뒤에서 돌고, 앱을 닫거나 접속이 끊겨도 계속됩니다 (1~2시간)"
+  git -C "$DIR" pull -q --ff-only || true
+  grep -q '^KRX_ID=.\+' "$STATE/secrets.env" 2>/dev/null || { no "KRX_ID 가 없습니다 — 먼저 bash ~/rich/deploy/oracle/setup.sh --keys"; return 0; }
+  mkdir -p "$STATE/logs"
+  if pgrep -f "collect_krx_history.py" >/dev/null 2>&1; then
+    ok "이미 받는 중입니다 — 진행 보기: tail -f $STATE/logs/krx_history.log"
+    return 0
+  fi
+  nohup bash "$DIR/deploy/oracle/collect_history.sh" > "$STATE/logs/krx_history.log" 2>&1 &
+  ok "시작했습니다. 진행 보기: tail -f $STATE/logs/krx_history.log   (그만 보기: Ctrl+C — 받기는 계속됨)"
+  echo "  끝나면 저절로 GitHub 에 올라갑니다. 채팅으로 '수집 끝'이라고만 알려 주세요."
+}
+
+run_link() {
+  step "토스 계좌를 거울 계좌로 연결 — 빈 계좌(현금만)여야 합니다"
+  git -C "$DIR" pull -q --ff-only || true
+  set -a; . "$STATE/secrets.env"; set +a
+  "$DIR/.venv/bin/python" "$DIR/src/short_exec.py" --phase link || true
+  git -C "$DIR" add data/short/mirror_status.json 2>/dev/null || true   # 공개: 연결 여부만 (자본·보유는 ~/.rich/mirror.json 에만)
+  git -C "$DIR" diff --cached --quiet || { git -C "$DIR" commit -q -m "mirror link $(date +%F) (oracle)" && git -C "$DIR" pull -q --rebase && git -C "$DIR" push -q && ok "연결 정보를 GitHub 에 올렸습니다"; }
+}
+
+set_live() {
+  step "실제 돈 주문 최종 확인 — 준비도 점검표(모의투자 화면 '위원회' 탭)가 모두 통과한 뒤에만 하세요"
+  echo "  이 값이 있어도 config live_trading:true · 점검표 '준비됨' 이 모두 맞아야 주문이 나갑니다."
+  printf "  정말 실제 돈으로 주문을 보내려면 I_UNDERSTAND 를 입력 (취소: 그냥 Enter): "
+  IFS= read -r v || v=""
+  if [ "$v" = "I_UNDERSTAND" ]; then
+    tmp="$(mktemp)"; { grep -v "^AUTOTRADE_CONFIRM=" "$STATE/secrets.env" || true; } > "$tmp"
+    echo "AUTOTRADE_CONFIRM=I_UNDERSTAND" >> "$tmp"; mv "$tmp" "$STATE/secrets.env"; chmod 600 "$STATE/secrets.env"
+    ok "저장했습니다 (되돌리기: bash ~/rich/deploy/oracle/setup.sh --unlive)"
+  else
+    no "취소 — 바뀐 것 없음"
+  fi
+}
+
+unset_live() {
+  tmp="$(mktemp)"; { grep -v "^AUTOTRADE_CONFIRM=" "$STATE/secrets.env" || true; } > "$tmp"; mv "$tmp" "$STATE/secrets.env"; chmod 600 "$STATE/secrets.env"
+  ok "실제 돈 주문 확인값을 지웠습니다 — 이제 주문은 만들기만 하고 보내지 않습니다"
 }
 
 case "$MODE" in
@@ -255,6 +304,10 @@ case "$MODE" in
   --probe) run_probe ;;
   --collect) install_collect ;;
   --cron)  install_cron; check ;;
+  --history) run_history ;;
+  --link)  run_link ;;
+  --live)  set_live ;;
+  --unlive) unset_live ;;
   *)       install_packages; tune_system; get_code; deploy_key; secrets_file; check
            echo; echo "다음 단계: 위 ✗ 항목을 해결한 뒤 'bash ~/rich/deploy/oracle/setup.sh --check' 로 다시 확인하세요." ;;
 esac

@@ -388,7 +388,7 @@
           <p>지금 ${U.esc(String(x.now))} · 기준 ${U.esc(String(x.need))}${x.eta ? ` · 빨라야 ${U.esc(x.eta)}` : ""}${x.info ? `<br>${U.esc(x.info)}` : ""}</p></div></div>`).join("") +
         `<div class="note"><b>순서</b><br>${RD.plan.map(U.esc).join("<br>")}<br>모두 ✓ 가 되기 전엔 실계좌 주문이 잠겨 있습니다 (설정 live_trading · 저장소 변수 AUTOTRADE_CONFIRM 과 함께 네 겹).
           단기 몫은 시도 전체를 반영한 '진짜 실력일 확률'(DSR)이 낮아 모의로만 둡니다.</div>` +
-        (C.mirror ? `<div class="kv"><span>거울 계좌</span><b>${U.esc(C.mirror.broker)} · 자본 ${U.won(C.mirror.capital)} · 배율 ${(+C.mirror.scale).toFixed(4)} · ${U.esc(C.mirror.date)} 연결</b></div>` : "") +
+        (C.mirror ? `<div class="kv"><span>거울 계좌</span><b>${U.esc(C.mirror.broker)} · ${U.esc(C.mirror.date)} 연결 · 따라 하는 몫 ${(C.mirror.sleeves || []).map((x) => x === "aw" ? "전천후" : "단기").join("·")} (금액은 서버에만)</b></div>` : "") +
         (C.recon && C.recon.mode ? `<div class="kv"><span>잔고 대사 (${U.esc(C.recon.date || "")})</span><b>${U.esc(C.recon.mode)} · ${U.esc(C.recon.state || "")} · ${U.esc((C.recon.why || []).join("; "))}${C.recon.slippage_med_bp != null ? ` · 체결 비용 ${C.recon.slippage_med_bp}bp` : ""}</b></div>` : "");
     }
     const dc = { "승인": "pos", "축소 승인": "warn", "매도만": "neg", "정지": "neg", "할 일 없음": "" };

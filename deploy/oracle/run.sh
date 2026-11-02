@@ -20,7 +20,7 @@ echo "$(date '+%F %T') 주문 전송 시작 · 30일 엔진 $broker · 단기·�
 [ "$broker" != "paper" ] && .venv/bin/python src/autotrader.py --phase execute
 # 거울 계좌(전천후 몫) — GitHub 예약 실행은 몇 시간씩 늦어 09:30 넘으면 매수를 못 보낸다 → 시간이 정확한 이 서버에서
 [ "$sbroker" != "paper" ] && .venv/bin/python src/short_exec.py --phase execute --where oracle
-git add data/autotrade/ docs/autotrade.json data/short/orders.csv 2>/dev/null || git add data/autotrade/
+git add data/autotrade/ docs/autotrade.json data/short/exec_status.json 2>/dev/null || git add data/autotrade/
 git commit -q -m "execute $(date +%F) (oracle)" || { echo "변경 없음"; exit 0; }
 git pull -q --rebase && git push -q && echo "결과를 GitHub 에 올림"
 find "$STATE/logs" -type f -mtime +60 -delete 2>/dev/null || true

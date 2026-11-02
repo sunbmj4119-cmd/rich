@@ -341,16 +341,33 @@ def readiness(short_ui, cfg=None):
     rc = jload("data/short/recon.json", {}) or {}
     streak = 0
     for h in reversed(rc.get("history") or []):
-        if h.get("mode") in ("kis_demo", "kis_real") and h.get("ok"):
+        if h.get("mode") in ("kis_demo", "kis_real", "toss", "toss_dry") and h.get("ok"):
             streak += 1
         else:
             break
-    add("recon", "증권사(모의투자) 잔고 대사 20거래일 연속 일치", streak >= 20, f"{streak}일 (지금 {rc.get('mode', 'paper')})", "20일",
-        info="short.broker: kis_demo → control.yml short_link → 매일 아침 주문·저녁 대사")
-    # 6) 실행 비용
-    bp = rc.get("slippage_med_bp")
-    add("slippage", "실제 체결 비용 ≤ 15bp (중앙값)", bp is not None and bp <= 15, "측정 전" if bp is None else f"{bp}bp", "≤ 15bp",
-        info="연구에 넣은 비용 가정(ETF 호가 반 칸 ≈ 1~5bp)의 몇 배인지")
+    toss = sc.get("broker") == "toss"
+    if toss:
+        add("recon", "토스 연결 점검 20거래일 연속 정상 (서버 저녁 잔고 조회·해석)", streak >= 20, f"{streak}일 (지금 {rc.get('mode', 'paper')})", "20일",
+            info="short.broker: toss → 서버에서 setup.sh --link → --cron (평일 16:10 대사). 토스는 연습 서버가 없어 주문이 잠긴 동안은 조회·해석만 본다")
+        try:
+            import brokers
+            checked = brokers.TossBroker.VERIFIED
+        except Exception:
+            checked = None
+        ver = (jload("data/toss/api_detail.json", {}) or {}).get("version")
+        vok = bool(checked) and checked == ver
+        add("toss_spec", "토스 주문 요청 형식 확인 (명세로 검증)", vok, f"명세 {ver or '받기 전'} · 확인 {checked or '전'}",
+            "확인 완료", info="서버에서 setup.sh --probe → 받은 명세(api_detail.json)로 주문 형식을 맞추고 확인 표시")
+        sm = jload("data/toss/smoke.json", {}) or {}
+        add("smoke", "1주 실주문 시험 (사고 → 체결 확인 → 팔기)", bool(sm.get("ok")), sm.get("summary") or "아직", "성공",
+            info="주문 형식 확인 뒤 아주 적은 돈으로 한 번 — 실제 체결가와 비용도 여기서 처음 잰다")
+    else:
+        add("recon", "증권사(모의투자) 잔고 대사 20거래일 연속 일치", streak >= 20, f"{streak}일 (지금 {rc.get('mode', 'paper')})", "20일",
+            info="short.broker: kis_demo → control.yml short_link → 매일 아침 주문·저녁 대사")
+        # 6) 실행 비용
+        bp = rc.get("slippage_med_bp")
+        add("slippage", "실제 체결 비용 ≤ 15bp (중앙값)", bp is not None and bp <= 15, "측정 전" if bp is None else f"{bp}bp", "≤ 15bp",
+            info="연구에 넣은 비용 가정(ETF 호가 반 칸 ≈ 1~5bp)의 몇 배인지")
     # 7) 따라 할 몫의 근거
     hi = jload("docs/history.json", {}) or {}
     aw_oos = ((hi.get("aw") or {}).get("oos") or {}).get("sharpe")
@@ -365,7 +382,7 @@ def readiness(short_ui, cfg=None):
         ev_now.append(f"단기 몫 DSR(전체 시도) {d_all}")
     add("evidence", "증권사가 따라 할 몫이 표본 외 검증 통과", ev_ok, " · ".join(ev_now), "전천후 ≥ 0.5 · 단기 DSR ≥ 50%")
     # 7-2) 아침 주문을 정시에 보내는 곳
-    on = sc.get("exec_on", "github")
+    on = "oracle" if toss else sc.get("exec_on", "github")
     add("exec_on", "아침 주문을 정시에 보냄 (Oracle 서버 08:40)", on == "oracle", on, "oracle",
         info="GitHub 예약 실행은 지난달 22시~새벽 4시로 몇 시간씩 늦었고 3일은 빠졌다 — 09:30 넘으면 매수를 못 보낸다")
     # 8) 리스크 매니저·자료
@@ -376,9 +393,13 @@ def readiness(short_ui, cfg=None):
     missing = [x["name"] for x in items if not x["ok"]]
     out = {"generated": time.strftime("%Y-%m-%d %H:%M"), "verdict": "준비됨" if not missing else "아직", "missing": missing,
            "items": items, "sleeves": sl, "broker": sc.get("broker", "paper"),
-           "plan": ["1) short.broker: kis_demo + 비밀값 KIS_APP_KEY·KIS_APP_SECRET·KIS_ACCOUNT_SHORT → control.yml short_link",
-                    "2) 20거래일 대사·비용 확인 (이 점검표가 모두 ✓ 가 될 때까지)",
-                    "3) kis_real · broker_capital 을 계획 금액의 10~20% 로 · live_trading:true · AUTOTRADE_CONFIRM — 3개월 뒤 늘림"]}
+           "plan": (["1) 서버: setup.sh --probe (토스 명세 받기) → 주문 형식 확인 (Claude)",
+                     "2) config short.broker: toss → 서버: setup.sh --link · setup.sh --cron → 20거래일 연결 점검",
+                     "3) 1주 실주문 시험 → broker_capital 을 계획 금액의 10~20% 로 · live_trading:true · 서버 setup.sh --live — 3개월 뒤 늘림"]
+                    if toss else
+                    ["1) short.broker: kis_demo + 비밀값 KIS_APP_KEY·KIS_APP_SECRET·KIS_ACCOUNT_SHORT → control.yml short_link",
+                     "2) 20거래일 대사·비용 확인 (이 점검표가 모두 ✓ 가 될 때까지)",
+                     "3) kis_real · broker_capital 을 계획 금액의 10~20% 로 · live_trading:true · AUTOTRADE_CONFIRM — 3개월 뒤 늘림"])}
     os.makedirs(os.path.dirname(READY), exist_ok=True)
     json.dump(out, open(READY, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     return out
@@ -429,7 +450,7 @@ def main():
         cfg = {}
     ui["readiness"] = readiness(short_ui, cfg)
     ui["recon"] = {k: (jload("data/short/recon.json", {}) or {}).get(k) for k in ("date", "mode", "state", "why", "mismatch", "slippage_med_bp")}
-    ui["mirror"] = jload("data/short/mirror.json", None)
+    ui["mirror"] = jload("data/short/mirror_status.json", None)
     from short_trader import clean
     json.dump(clean(ui), open(UI, "w", encoding="utf-8"), ensure_ascii=False)
     print(f"투자위원회 {entry['date']}: 확신도 {entry['conviction']:+d} (강세 {len(bull)} · 약세 {len(bear)}) · "
