@@ -26,9 +26,9 @@
     "fit": 0.5745
    },
    "forward": {
-    "days": 5,
-    "ret": 0.027,
-    "sharpe": 7.342
+    "days": 6,
+    "ret": 0.0193,
+    "sharpe": 4.416
    },
    "eligible": false
   },
@@ -58,9 +58,9 @@
     "fit": 0.3114
    },
    "forward": {
-    "days": 2,
-    "ret": 0.039,
-    "sharpe": 36.212
+    "days": 3,
+    "ret": 0.0312,
+    "sharpe": 11.44
    },
    "eligible": false
   },
@@ -90,9 +90,9 @@
     "fit": 0.3112
    },
    "forward": {
-    "days": 1,
-    "ret": 0.0,
-    "sharpe": null
+    "days": 2,
+    "ret": 0.0033,
+    "sharpe": 2.907
    },
    "eligible": false
   },
@@ -123,7 +123,7 @@
     "fit": 0.311
    },
    "forward": {
-    "days": 0,
+    "days": 1,
     "ret": 0.0,
     "sharpe": null
    },

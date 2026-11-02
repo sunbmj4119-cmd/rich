@@ -18,15 +18,15 @@
   },
   "source": "초기 설정 (config/autotrade.yaml)",
   "fit": {
-   "fit": 0.1692,
+   "fit": 0.1706,
    "sharpe": 1.02,
-   "ann": 23.0,
+   "ann": 23.1,
    "mdd": -43.6,
    "trades": 969,
-   "adj": -0.0008
+   "adj": 0.0006
   },
   "forward": {
-   "days": 5,
+   "days": 6,
    "me": {
     "ann": null,
     "total": 0.0,
@@ -63,7 +63,7 @@
    "status": "관찰 중",
    "source": "무학습 기준 (6요소 동일가중 + 기본 규칙)",
    "forward": {
-    "days": 5,
+    "days": 6,
     "me": {
      "ann": null,
      "total": 0.0,
@@ -80,11 +80,11 @@
     "msprt": null
    },
    "fit_now": {
-    "fit": 0.138,
+    "fit": 0.142,
     "sharpe": 1.04,
-    "ann": 24.2,
+    "ann": 24.4,
     "mdd": -35.4,
-    "trades": 1059
+    "trades": 1060
    },
    "checks": {
     "A": {
@@ -140,11 +140,11 @@
    "status": "관찰 중",
    "source": "주간 진화 · 수축 (기본값에서 멀수록 감점)",
    "forward": {
-    "days": 5,
+    "days": 6,
     "me": {
      "ann": null,
-     "total": -3.4,
-     "sharpe": -5.07,
+     "total": -1.5,
+     "sharpe": -1.7,
      "mdd": -5.7
     },
     "champ": {
@@ -157,11 +157,11 @@
     "msprt": null
    },
    "fit_now": {
-    "fit": 0.5496,
-    "sharpe": 1.06,
-    "ann": 27.7,
+    "fit": 0.558,
+    "sharpe": 1.07,
+    "ann": 28.0,
     "mdd": -37.0,
-    "trades": 1172
+    "trades": 1177
    },
    "checks": {
     "A": {
@@ -217,11 +217,11 @@
    "status": "관찰 중",
    "source": "연속 진화 · 수축 (기본값에서 멀수록 감점)",
    "forward": {
-    "days": 5,
+    "days": 6,
     "me": {
      "ann": null,
-     "total": -4.5,
-     "sharpe": -5.86,
+     "total": -2.3,
+     "sharpe": -2.3,
      "mdd": -7.0
     },
     "champ": {
@@ -234,11 +234,11 @@
     "msprt": null
    },
    "fit_now": {
-    "fit": 0.472,
-    "sharpe": 1.0,
-    "ann": 25.1,
+    "fit": 0.4802,
+    "sharpe": 1.01,
+    "ann": 25.5,
     "mdd": -33.0,
-    "trades": 1185
+    "trades": 1189
    },
    "checks": {
     "A": {
@@ -294,11 +294,11 @@
    "status": "관찰 중",
    "source": "주간 진화 · 수축 (기본값에서 멀수록 감점)",
    "forward": {
-    "days": 5,
+    "days": 6,
     "me": {
      "ann": null,
-     "total": -2.8,
-     "sharpe": -4.54,
+     "total": 0.2,
+     "sharpe": 0.45,
      "mdd": -4.8
     },
     "champ": {
@@ -311,32 +311,32 @@
     "msprt": null
    },
    "fit_now": {
-    "fit": 0.5328,
-    "sharpe": 1.04,
-    "ann": 26.1,
+    "fit": 0.5426,
+    "sharpe": 1.06,
+    "ann": 26.5,
     "mdd": -34.8,
-    "trades": 1147
+    "trades": 1151
    },
    "checks": {
     "A": {
      "days": false,
-     "beat": false,
+     "beat": true,
      "fit": true,
      "meta": false
     },
     "B": {
      "days": false,
-     "beat": false,
+     "beat": true,
      "p": false
     },
     "C": {
      "days": false,
-     "beat": false,
+     "beat": true,
      "evidence": false
     }
    }
   }
  ],
  "retired": [],
- "n_evaluated": 371029
+ "n_evaluated": 387855
 }
