@@ -1,65 +1,51 @@
 {
- "made": "2026-11-02",
+ "made": "2026-11-03",
  "model": "S:REV3_LV:5:H5:crash",
  "model_desc": "3일반전+저변동 · 5종목 · 5일 보유 · 급락장 제외",
  "orders": [
   {
    "session": "open",
    "kind": "etf",
-   "code": "069500",
-   "name": "KODEX 200",
-   "side": "sell",
-   "qty": 53,
-   "est_price": 92945.0
-  },
-  {
-   "session": "open",
-   "kind": "stock",
-   "code": "021240",
-   "name": "코웨이",
+   "sleeve": "aw",
+   "code": "114260",
+   "name": "KODEX 국고채3년",
    "side": "buy",
-   "qty": 3,
-   "est_price": 105800.0
+   "qty": 18,
+   "est_price": 62510.0
   },
   {
    "session": "open",
-   "kind": "stock",
-   "code": "024110",
-   "name": "기업은행",
+   "kind": "etf",
+   "sleeve": "aw",
+   "code": "148070",
+   "name": "KOSEF 국고채10년",
    "side": "buy",
-   "qty": 20,
-   "est_price": 19110.0
+   "qty": 5,
+   "est_price": 108145.0
   },
   {
    "session": "open",
-   "kind": "stock",
-   "code": "029780",
-   "name": "삼성카드",
+   "kind": "etf",
+   "sleeve": "aw",
+   "code": "261240",
+   "name": "KODEX 미국달러선물",
    "side": "buy",
-   "qty": 9,
-   "est_price": 41700.0
+   "qty": 32,
+   "est_price": 13915.0
   },
   {
    "session": "open",
-   "kind": "stock",
-   "code": "030200",
-   "name": "KT",
-   "side": "buy",
-   "qty": 8,
-   "est_price": 46800.0
-  },
-  {
-   "session": "open",
-   "kind": "stock",
-   "code": "161390",
-   "name": "한국타이어앤테크놀로지",
+   "kind": "etf",
+   "sleeve": "aw",
+   "code": "143850",
+   "name": "TIGER 미국S&P500선물(H)",
    "side": "buy",
    "qty": 6,
-   "est_price": 57600.0
+   "est_price": 75510.0
   }
  ],
  "notes": [],
- "equity_est": 2012168,
+ "equity_est": 1872755,
  "aw": {
   "regime": "급락",
   "target": [
@@ -138,72 +124,72 @@
   ],
   "sleeves": {
    "live": {
-    "days": 5,
-    "sr_star": 0.517,
-    "vol_star": 0.2984,
+    "days": 6,
+    "sr_star": 0.519,
+    "vol_star": 0.2983,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 0% (100% 면 경보) · 낙폭 -0.7% (경고선 -7.6%)"
+     "정상 — 감쇠 누적 4% (100% 면 경보) · 낙폭 -2.7% (경고선 -8.3%)"
     ],
     "cusum": {
-     "S": 0.0,
-     "h": 1.0775,
-     "level": 0.0,
+     "S": 0.0483,
+     "h": 1.0809,
+     "level": 0.045,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 835,
+     "detect_days_if_zero": 833,
      "false_alarm_years": 7.0
     },
     "dd": {
-     "now": -0.0073,
-     "p95": -0.0759,
-     "p99": -0.1093
+     "now": -0.0274,
+     "p95": -0.0834,
+     "p99": -0.1247
     },
     "expect": {
-     "sr_bt": 1.035,
-     "vol": 0.2984,
+     "sr_bt": 1.038,
+     "vol": 0.2983,
      "src": "short_lab 채택 규칙 2019~",
-     "sr_star": 0.517
+     "sr_star": 0.519
     }
    },
    "aw": {
-    "days": 5,
-    "sr_star": 0.618,
+    "days": 6,
+    "sr_star": 0.619,
     "vol_star": 0.0524,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 4% (100% 면 경보) · 낙폭 -0.4% (경고선 -1.4%)"
+     "정상 — 감쇠 누적 6% (100% 면 경보) · 낙폭 -0.6% (경고선 -1.5%)"
     ],
     "cusum": {
-     "S": 0.049,
-     "h": 1.2423,
-     "level": 0.039,
+     "S": 0.0785,
+     "h": 1.2439,
+     "level": 0.063,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 743,
+     "detect_days_if_zero": 742,
      "false_alarm_years": 7.0
     },
     "dd": {
-     "now": -0.0038,
-     "p95": -0.0135,
-     "p99": -0.0195
+     "now": -0.0062,
+     "p95": -0.0149,
+     "p99": -0.0223
     },
     "expect": {
-     "sr_bt": 1.236,
+     "sr_bt": 1.237,
      "vol": 0.0524,
      "src": "전천후 혼합 2016~",
      "sr_oos": 0.968,
-     "sr_star": 0.618
+     "sr_star": 0.619
     }
    }
   },
   "log": [],
-  "orders_before": 6,
-  "orders_after": 6,
+  "orders_before": 4,
+  "orders_after": 4,
   "limits": {
    "decay_action": "alert",
    "drawdown_action": "alert",
@@ -216,7 +202,7 @@
    "false_alarm_years": 7.0
   },
   "recon": {
-   "date": "2026-11-03",
+   "date": "2026-11-04",
    "mode": "paper",
    "state": "ACTIVE",
    "why": [

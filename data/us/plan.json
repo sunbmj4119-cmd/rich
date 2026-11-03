@@ -1,23 +1,8 @@
 {
- "made": "2026-11-02",
+ "made": "2026-11-03",
  "model": "S:MOM:10:BAND:none",
- "orders": [
-  {
-   "side": "sell",
-   "code": "PLTR",
-   "qty": 3.7994,
-   "est_price": 182.9,
-   "sleeve": "us"
-  },
-  {
-   "side": "buy",
-   "code": "CVX",
-   "usd": 752.41,
-   "est_price": 228.47,
-   "sleeve": "us"
-  }
- ],
- "equity_usd": 7524.15,
+ "orders": [],
+ "equity_usd": 7447.68,
  "target": [
   "ABBV",
   "AMGN",
@@ -37,8 +22,8 @@
   ],
   "sleeves": {
    "us": {
-    "days": 3,
-    "sr_star": 0.533,
+    "days": 4,
+    "sr_star": 0.532,
     "vol_star": 0.1849,
     "action": "ACTIVE",
     "size": 1.0,
@@ -48,16 +33,16 @@
     "cusum": null,
     "dd": null,
     "expect": {
-     "sr_bt": 1.067,
+     "sr_bt": 1.064,
      "vol": 0.1849,
      "src": "미국 추세 상위 10 2016~",
-     "sr_star": 0.533
+     "sr_star": 0.532
     }
    }
   },
   "log": [],
-  "orders_before": 2,
-  "orders_after": 2,
+  "orders_before": 0,
+  "orders_after": 0,
   "limits": {
    "decay_action": "alert",
    "drawdown_action": "alert",
