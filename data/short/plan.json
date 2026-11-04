@@ -1,51 +1,75 @@
 {
- "made": "2026-11-03",
+ "made": "2026-11-04",
  "model": "S:REV3_LV:5:H5:crash",
  "model_desc": "3일반전+저변동 · 5종목 · 5일 보유 · 급락장 제외",
  "orders": [
   {
    "session": "open",
-   "kind": "etf",
-   "sleeve": "aw",
-   "code": "114260",
-   "name": "KODEX 국고채3년",
-   "side": "buy",
-   "qty": 18,
-   "est_price": 62510.0
+   "kind": "stock",
+   "code": "021240",
+   "name": "코웨이",
+   "side": "sell",
+   "qty": 3,
+   "est_price": 106700.0
   },
   {
    "session": "open",
-   "kind": "etf",
-   "sleeve": "aw",
-   "code": "148070",
-   "name": "KOSEF 국고채10년",
-   "side": "buy",
-   "qty": 5,
-   "est_price": 108145.0
+   "kind": "stock",
+   "code": "030200",
+   "name": "KT",
+   "side": "sell",
+   "qty": 8,
+   "est_price": 49700.0
   },
   {
    "session": "open",
-   "kind": "etf",
-   "sleeve": "aw",
-   "code": "261240",
-   "name": "KODEX 미국달러선물",
-   "side": "buy",
-   "qty": 32,
-   "est_price": 13915.0
-  },
-  {
-   "session": "open",
-   "kind": "etf",
-   "sleeve": "aw",
-   "code": "143850",
-   "name": "TIGER 미국S&P500선물(H)",
-   "side": "buy",
+   "kind": "stock",
+   "code": "161390",
+   "name": "한국타이어앤테크놀로지",
+   "side": "sell",
    "qty": 6,
-   "est_price": 75510.0
+   "est_price": 57700.0
+  },
+  {
+   "session": "open",
+   "kind": "stock",
+   "code": "033780",
+   "name": "KT&G",
+   "side": "buy",
+   "qty": 1,
+   "est_price": 194100.0
+  },
+  {
+   "session": "open",
+   "kind": "stock",
+   "code": "055550",
+   "name": "신한지주",
+   "side": "buy",
+   "qty": 4,
+   "est_price": 87800.0
+  },
+  {
+   "session": "open",
+   "kind": "stock",
+   "code": "088980",
+   "name": "맥쿼리인프라",
+   "side": "buy",
+   "qty": 38,
+   "est_price": 9640.0
+  },
+  {
+   "session": "open",
+   "kind": "etf",
+   "sleeve": "aw",
+   "code": "122630",
+   "name": "KODEX 레버리지",
+   "side": "buy",
+   "qty": 1,
+   "est_price": 70500.0
   }
  ],
  "notes": [],
- "equity_est": 1872755,
+ "equity_est": 1907905,
  "aw": {
   "regime": "급락",
   "target": [
@@ -74,16 +98,16 @@
     "w": 0.1157
    },
    {
-    "code": "153130",
-    "name": "KODEX 단기채권",
-    "group": "현금성",
-    "w": 0.0492
-   },
-   {
     "code": "132030",
     "name": "KODEX 골드선물(H)",
     "group": "금",
     "w": 0.0469
+   },
+   {
+    "code": "153130",
+    "name": "KODEX 단기채권",
+    "group": "현금성",
+    "w": 0.0402
    },
    {
     "code": "133690",
@@ -104,16 +128,16 @@
     "w": 0.0218
    },
    {
+    "code": "122630",
+    "name": "KODEX 레버리지",
+    "group": "국내주식 2배",
+    "w": 0.0152
+   },
+   {
     "code": "229200",
     "name": "KODEX 코스닥150",
     "group": "코스닥",
     "w": 0.0125
-   },
-   {
-    "code": "122630",
-    "name": "KODEX 레버리지",
-    "group": "국내주식 2배",
-    "w": 0.0062
    }
   ]
  },
@@ -124,72 +148,72 @@
   ],
   "sleeves": {
    "live": {
-    "days": 6,
-    "sr_star": 0.519,
+    "days": 7,
+    "sr_star": 0.518,
     "vol_star": 0.2983,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 4% (100% 면 경보) · 낙폭 -2.7% (경고선 -8.3%)"
+     "정상 — 감쇠 누적 3% (100% 면 경보) · 낙폭 -2.7% (경고선 -9.0%)"
     ],
     "cusum": {
-     "S": 0.0483,
-     "h": 1.0809,
-     "level": 0.045,
+     "S": 0.036,
+     "h": 1.0792,
+     "level": 0.033,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 833,
+     "detect_days_if_zero": 834,
      "false_alarm_years": 7.0
     },
     "dd": {
      "now": -0.0274,
-     "p95": -0.0834,
-     "p99": -0.1247
+     "p95": -0.0896,
+     "p99": -0.1311
     },
     "expect": {
-     "sr_bt": 1.038,
+     "sr_bt": 1.036,
      "vol": 0.2983,
      "src": "short_lab 채택 규칙 2019~",
-     "sr_star": 0.519
+     "sr_star": 0.518
     }
    },
    "aw": {
-    "days": 6,
-    "sr_star": 0.619,
+    "days": 7,
+    "sr_star": 0.615,
     "vol_star": 0.0524,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 6% (100% 면 경보) · 낙폭 -0.6% (경고선 -1.5%)"
+     "정상 — 감쇠 누적 4% (100% 면 경보) · 낙폭 -0.6% (경고선 -1.6%)"
     ],
     "cusum": {
-     "S": 0.0785,
-     "h": 1.2439,
-     "level": 0.063,
+     "S": 0.0542,
+     "h": 1.2376,
+     "level": 0.044,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 742,
+     "detect_days_if_zero": 746,
      "false_alarm_years": 7.0
     },
     "dd": {
      "now": -0.0062,
-     "p95": -0.0149,
-     "p99": -0.0223
+     "p95": -0.016,
+     "p99": -0.0236
     },
     "expect": {
-     "sr_bt": 1.237,
+     "sr_bt": 1.23,
      "vol": 0.0524,
      "src": "전천후 혼합 2016~",
      "sr_oos": 0.968,
-     "sr_star": 0.619
+     "sr_star": 0.615
     }
    }
   },
   "log": [],
-  "orders_before": 4,
-  "orders_after": 4,
+  "orders_before": 7,
+  "orders_after": 7,
   "limits": {
    "decay_action": "alert",
    "drawdown_action": "alert",

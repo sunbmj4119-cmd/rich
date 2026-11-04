@@ -2,7 +2,7 @@
  "made": "2026-11-03",
  "model": "S:MOM:10:BAND:none",
  "orders": [],
- "equity_usd": 7447.68,
+ "equity_usd": 7420.11,
  "target": [
   "ABBV",
   "AMGN",
@@ -23,7 +23,7 @@
   "sleeves": {
    "us": {
     "days": 4,
-    "sr_star": 0.532,
+    "sr_star": 0.531,
     "vol_star": 0.1849,
     "action": "ACTIVE",
     "size": 1.0,
@@ -33,10 +33,10 @@
     "cusum": null,
     "dd": null,
     "expect": {
-     "sr_bt": 1.064,
+     "sr_bt": 1.063,
      "vol": 0.1849,
      "src": "미국 추세 상위 10 2016~",
-     "sr_star": 0.532
+     "sr_star": 0.531
     }
    }
   },
