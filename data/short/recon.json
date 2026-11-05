@@ -1,5 +1,5 @@
 {
- "date": "2026-11-04",
+ "date": "2026-11-06",
  "mode": "paper",
  "state": "ACTIVE",
  "ok": true,
@@ -17,6 +17,12 @@
   },
   {
    "date": "2026-11-04",
+   "mode": "paper",
+   "state": "ACTIVE",
+   "ok": true
+  },
+  {
+   "date": "2026-11-06",
    "mode": "paper",
    "state": "ACTIVE",
    "ok": true

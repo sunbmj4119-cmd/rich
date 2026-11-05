@@ -42,7 +42,48 @@
    "avg": 114571.6
   }
  },
- "pending": [],
+ "pending": [
+  {
+   "side": "sell",
+   "code": "034730",
+   "qty": 1,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-05"
+  },
+  {
+   "side": "sell",
+   "code": "000990",
+   "qty": 10,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-05"
+  },
+  {
+   "side": "sell",
+   "code": "357780",
+   "qty": 3,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-05"
+  },
+  {
+   "side": "sell",
+   "code": "009155",
+   "qty": 2,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-05"
+  },
+  {
+   "side": "buy",
+   "code": "017670",
+   "qty": 12,
+   "kind": "limit",
+   "limit": 78700,
+   "date": "2026-11-05"
+  }
+ ],
  "fills": [
   {
    "side": "buy",
@@ -186,6 +227,10 @@
   {
    "date": "2026-11-04",
    "equity": 10205444
+  },
+  {
+   "date": "2026-11-05",
+   "equity": 9814594
   }
  ]
 }

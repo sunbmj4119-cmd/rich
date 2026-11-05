@@ -1,75 +1,20 @@
 {
- "made": "2026-11-04",
+ "made": "2026-11-05",
  "model": "S:REV3_LV:5:H5:crash",
  "model_desc": "3일반전+저변동 · 5종목 · 5일 보유 · 급락장 제외",
  "orders": [
   {
    "session": "open",
    "kind": "stock",
-   "code": "021240",
-   "name": "코웨이",
+   "code": "024110",
+   "name": "기업은행",
    "side": "sell",
-   "qty": 3,
-   "est_price": 106700.0
-  },
-  {
-   "session": "open",
-   "kind": "stock",
-   "code": "030200",
-   "name": "KT",
-   "side": "sell",
-   "qty": 8,
-   "est_price": 49700.0
-  },
-  {
-   "session": "open",
-   "kind": "stock",
-   "code": "161390",
-   "name": "한국타이어앤테크놀로지",
-   "side": "sell",
-   "qty": 6,
-   "est_price": 57700.0
-  },
-  {
-   "session": "open",
-   "kind": "stock",
-   "code": "033780",
-   "name": "KT&G",
-   "side": "buy",
-   "qty": 1,
-   "est_price": 194100.0
-  },
-  {
-   "session": "open",
-   "kind": "stock",
-   "code": "055550",
-   "name": "신한지주",
-   "side": "buy",
-   "qty": 4,
-   "est_price": 87800.0
-  },
-  {
-   "session": "open",
-   "kind": "stock",
-   "code": "088980",
-   "name": "맥쿼리인프라",
-   "side": "buy",
-   "qty": 38,
-   "est_price": 9640.0
-  },
-  {
-   "session": "open",
-   "kind": "etf",
-   "sleeve": "aw",
-   "code": "122630",
-   "name": "KODEX 레버리지",
-   "side": "buy",
-   "qty": 1,
-   "est_price": 70500.0
+   "qty": 20,
+   "est_price": 19500.0
   }
  ],
  "notes": [],
- "equity_est": 1907905,
+ "equity_est": 1916671,
  "aw": {
   "regime": "급락",
   "target": [
@@ -148,72 +93,72 @@
   ],
   "sleeves": {
    "live": {
-    "days": 7,
-    "sr_star": 0.518,
+    "days": 8,
+    "sr_star": 0.522,
     "vol_star": 0.2983,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 3% (100% 면 경보) · 낙폭 -2.7% (경고선 -9.0%)"
+     "정상 — 감쇠 누적 3% (100% 면 경보) · 낙폭 -2.7% (경고선 -9.7%)"
     ],
     "cusum": {
-     "S": 0.036,
-     "h": 1.0792,
-     "level": 0.033,
+     "S": 0.0288,
+     "h": 1.0859,
+     "level": 0.026,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 834,
+     "detect_days_if_zero": 830,
      "false_alarm_years": 7.0
     },
     "dd": {
      "now": -0.0274,
-     "p95": -0.0896,
-     "p99": -0.1311
+     "p95": -0.0965,
+     "p99": -0.1404
     },
     "expect": {
-     "sr_bt": 1.036,
+     "sr_bt": 1.044,
      "vol": 0.2983,
      "src": "short_lab 채택 규칙 2019~",
-     "sr_star": 0.518
+     "sr_star": 0.522
     }
    },
    "aw": {
-    "days": 7,
-    "sr_star": 0.615,
+    "days": 8,
+    "sr_star": 0.617,
     "vol_star": 0.0524,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 4% (100% 면 경보) · 낙폭 -0.6% (경고선 -1.6%)"
+     "정상 — 감쇠 누적 2% (100% 면 경보) · 낙폭 -0.6% (경고선 -1.7%)"
     ],
     "cusum": {
-     "S": 0.0542,
-     "h": 1.2376,
-     "level": 0.044,
+     "S": 0.0206,
+     "h": 1.2407,
+     "level": 0.017,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 746,
+     "detect_days_if_zero": 744,
      "false_alarm_years": 7.0
     },
     "dd": {
      "now": -0.0062,
-     "p95": -0.016,
-     "p99": -0.0236
+     "p95": -0.0173,
+     "p99": -0.0254
     },
     "expect": {
-     "sr_bt": 1.23,
+     "sr_bt": 1.233,
      "vol": 0.0524,
      "src": "전천후 혼합 2016~",
      "sr_oos": 0.968,
-     "sr_star": 0.615
+     "sr_star": 0.617
     }
    }
   },
   "log": [],
-  "orders_before": 7,
-  "orders_after": 7,
+  "orders_before": 1,
+  "orders_after": 1,
   "limits": {
    "decay_action": "alert",
    "drawdown_action": "alert",
@@ -226,7 +171,7 @@
    "false_alarm_years": 7.0
   },
   "recon": {
-   "date": "2026-11-04",
+   "date": "2026-11-06",
    "mode": "paper",
    "state": "ACTIVE",
    "why": [
