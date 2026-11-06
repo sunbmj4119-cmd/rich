@@ -1,9 +1,9 @@
 {
- "_exits": {},
- "034730": {
-  "entry_date": "2026-10-30",
-  "partial_done": false,
-  "last_shares": 1
+ "_exits": {
+  "034730": "2026-11-06",
+  "000990": "2026-11-06",
+  "009155": "2026-11-06",
+  "357780": "2026-11-06"
  },
  "078930": {
   "entry_date": "2026-10-30",
@@ -15,20 +15,10 @@
   "partial_done": false,
   "last_shares": 22
  },
- "000990": {
-  "entry_date": "2026-10-30",
-  "partial_done": false,
-  "last_shares": 10
- },
  "028050": {
   "entry_date": "2026-10-30",
   "partial_done": false,
   "last_shares": 15
- },
- "009155": {
-  "entry_date": "2026-10-30",
-  "partial_done": false,
-  "last_shares": 2
  },
  "006800": {
   "entry_date": "2026-10-30",
@@ -40,14 +30,14 @@
   "partial_done": false,
   "last_shares": 18
  },
- "357780": {
-  "entry_date": "2026-11-03",
-  "partial_done": false,
-  "last_shares": 3
- },
  "161890": {
   "entry_date": "2026-11-04",
   "partial_done": false,
   "last_shares": 8
+ },
+ "017670": {
+  "entry_date": "2026-11-06",
+  "partial_done": false,
+  "last_shares": 12
  }
 }

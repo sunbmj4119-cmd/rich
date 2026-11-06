@@ -1,20 +1,20 @@
 {
- "made": "2026-11-05",
+ "made": "2026-11-06",
  "model": "S:REV3_LV:5:H5:crash",
  "model_desc": "3일반전+저변동 · 5종목 · 5일 보유 · 급락장 제외",
  "orders": [
   {
    "session": "open",
    "kind": "stock",
-   "code": "024110",
-   "name": "기업은행",
+   "code": "029780",
+   "name": "삼성카드",
    "side": "sell",
-   "qty": 20,
-   "est_price": 19500.0
+   "qty": 9,
+   "est_price": 42150.0
   }
  ],
  "notes": [],
- "equity_est": 1916671,
+ "equity_est": 1891756,
  "aw": {
   "regime": "급락",
   "target": [
@@ -93,62 +93,62 @@
   ],
   "sleeves": {
    "live": {
-    "days": 8,
-    "sr_star": 0.522,
-    "vol_star": 0.2983,
+    "days": 9,
+    "sr_star": 0.523,
+    "vol_star": 0.2982,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 3% (100% 면 경보) · 낙폭 -2.7% (경고선 -9.7%)"
+     "정상 — 감쇠 누적 5% (100% 면 경보) · 낙폭 -2.9% (경고선 -10.0%)"
     ],
     "cusum": {
-     "S": 0.0288,
-     "h": 1.0859,
-     "level": 0.026,
+     "S": 0.0522,
+     "h": 1.0876,
+     "level": 0.048,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 830,
+     "detect_days_if_zero": 829,
      "false_alarm_years": 7.0
     },
     "dd": {
-     "now": -0.0274,
-     "p95": -0.0965,
-     "p99": -0.1404
+     "now": -0.0286,
+     "p95": -0.1001,
+     "p99": -0.1441
     },
     "expect": {
-     "sr_bt": 1.044,
-     "vol": 0.2983,
+     "sr_bt": 1.046,
+     "vol": 0.2982,
      "src": "short_lab 채택 규칙 2019~",
-     "sr_star": 0.522
+     "sr_star": 0.523
     }
    },
    "aw": {
-    "days": 8,
+    "days": 9,
     "sr_star": 0.617,
     "vol_star": 0.0524,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 2% (100% 면 경보) · 낙폭 -0.6% (경고선 -1.7%)"
+     "정상 — 감쇠 누적 6% (100% 면 경보) · 낙폭 -0.6% (경고선 -1.8%)"
     ],
     "cusum": {
-     "S": 0.0206,
+     "S": 0.081,
      "h": 1.2407,
-     "level": 0.017,
+     "level": 0.065,
      "alarms": 0,
      "last_alarm_idx": null,
      "detect_days_if_zero": 744,
      "false_alarm_years": 7.0
     },
     "dd": {
-     "now": -0.0062,
-     "p95": -0.0173,
-     "p99": -0.0254
+     "now": -0.0063,
+     "p95": -0.0179,
+     "p99": -0.026
     },
     "expect": {
-     "sr_bt": 1.233,
+     "sr_bt": 1.234,
      "vol": 0.0524,
      "src": "전천후 혼합 2016~",
      "sr_oos": 0.968,

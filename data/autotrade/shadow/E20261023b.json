@@ -1,10 +1,6 @@
 {
- "cash": 1355502.6749999998,
+ "cash": 4947806.125,
  "positions": {
-  "034730": {
-   "shares": 1,
-   "avg": 495241.75
-  },
   "078930": {
    "shares": 11,
    "avg": 81021.35
@@ -13,17 +9,9 @@
    "shares": 22,
    "avg": 43865.700000000004
   },
-  "000990": {
-   "shares": 10,
-   "avg": 90435.45
-  },
   "006800": {
    "shares": 37,
    "avg": 25187.725000000002
-  },
-  "267250": {
-   "shares": 7,
-   "avg": 139308.65
   },
   "028050": {
    "shares": 15,
@@ -32,56 +20,48 @@
   "089860": {
    "shares": 18,
    "avg": 51176.65
-  },
-  "357780": {
-   "shares": 3,
-   "avg": 287931.25
-  },
-  "009155": {
-   "shares": 2,
-   "avg": 393088.75
   }
  },
  "pending": [
   {
    "side": "sell",
-   "code": "034730",
-   "qty": 1,
+   "code": "028050",
+   "qty": 15,
    "kind": "market",
    "limit": null,
-   "date": "2026-11-05"
+   "date": "2026-11-06"
   },
   {
    "side": "sell",
+   "code": "006800",
+   "qty": 37,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-06"
+  },
+  {
+   "side": "buy",
+   "code": "034730",
+   "qty": 2,
+   "kind": "limit",
+   "limit": 461500,
+   "date": "2026-11-06"
+  },
+  {
+   "side": "buy",
    "code": "000990",
    "qty": 10,
-   "kind": "market",
-   "limit": null,
-   "date": "2026-11-05"
+   "kind": "limit",
+   "limit": 86600,
+   "date": "2026-11-06"
   },
   {
-   "side": "sell",
+   "side": "buy",
    "code": "357780",
    "qty": 3,
-   "kind": "market",
-   "limit": null,
-   "date": "2026-11-05"
-  },
-  {
-   "side": "sell",
-   "code": "267250",
-   "qty": 7,
-   "kind": "market",
-   "limit": null,
-   "date": "2026-11-05"
-  },
-  {
-   "side": "sell",
-   "code": "009155",
-   "qty": 2,
-   "kind": "market",
-   "limit": null,
-   "date": "2026-11-05"
+   "kind": "limit",
+   "limit": 255000,
+   "date": "2026-11-06"
   }
  ],
  "fills": [
@@ -194,6 +174,66 @@
    "status": "체결",
    "fill": 392500.0,
    "fill_date": "2026-11-03"
+  },
+  {
+   "side": "sell",
+   "code": "034730",
+   "qty": 1,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-05",
+   "status": "체결",
+   "fill": 457000.0,
+   "fill_date": "2026-11-06",
+   "pnl": -38927.25
+  },
+  {
+   "side": "sell",
+   "code": "000990",
+   "qty": 10,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-05",
+   "status": "체결",
+   "fill": 85800.0,
+   "fill_date": "2026-11-06",
+   "pnl": -47641.49999999994
+  },
+  {
+   "side": "sell",
+   "code": "357780",
+   "qty": 3,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-05",
+   "status": "체결",
+   "fill": 252500.0,
+   "fill_date": "2026-11-06",
+   "pnl": -107430.0
+  },
+  {
+   "side": "sell",
+   "code": "267250",
+   "qty": 7,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-05",
+   "status": "체결",
+   "fill": 124600.0,
+   "fill_date": "2026-11-06",
+   "pnl": -104268.84999999992
+  },
+  {
+   "side": "sell",
+   "code": "009155",
+   "qty": 2,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-05",
+   "status": "체결",
+   "fill": 326500.0,
+   "fill_date": "2026-11-06",
+   "pnl": -134157.0
   }
  ],
  "start": "2026-10-29",
@@ -221,6 +261,10 @@
   {
    "date": "2026-11-05",
    "equity": 9715453
+  },
+  {
+   "date": "2026-11-06",
+   "equity": 9516456
   }
  ]
 }

@@ -1,51 +1,8 @@
 {
- "made": "2026-11-05",
+ "made": "2026-11-06",
  "model": "S:MOM:10:BAND:none",
- "orders": [
-  {
-   "side": "sell",
-   "code": "PM",
-   "qty": 3.6634,
-   "est_price": 205.91,
-   "sleeve": "us"
-  },
-  {
-   "side": "sell",
-   "code": "COP",
-   "qty": 4.9508,
-   "est_price": 137.55,
-   "sleeve": "us"
-  },
-  {
-   "side": "sell",
-   "code": "CVX",
-   "qty": 2.8315,
-   "est_price": 218.13,
-   "sleeve": "us"
-  },
-  {
-   "side": "buy",
-   "code": "GILD",
-   "usd": 742.08,
-   "est_price": 171.4,
-   "sleeve": "us"
-  },
-  {
-   "side": "buy",
-   "code": "MDT",
-   "usd": 742.08,
-   "est_price": 104.09,
-   "sleeve": "us"
-  },
-  {
-   "side": "buy",
-   "code": "MSFT",
-   "usd": 742.08,
-   "est_price": 541.81,
-   "sleeve": "us"
-  }
- ],
- "equity_usd": 7420.75,
+ "orders": [],
+ "equity_usd": 7323.16,
  "target": [
   "ABBV",
   "AMGN",
@@ -65,40 +22,40 @@
   ],
   "sleeves": {
    "us": {
-    "days": 6,
-    "sr_star": 0.53,
-    "vol_star": 0.1849,
+    "days": 7,
+    "sr_star": 0.528,
+    "vol_star": 0.1848,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 5% (100% 면 경보) · 낙폭 -1.7% (경고선 -5.2%)"
+     "정상 — 감쇠 누적 8% (100% 면 경보) · 낙폭 -3.0% (경고선 -5.6%)"
     ],
     "cusum": {
-     "S": 0.0515,
-     "h": 1.0994,
-     "level": 0.047,
+     "S": 0.0895,
+     "h": 1.096,
+     "level": 0.082,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 822,
+     "detect_days_if_zero": 824,
      "false_alarm_years": 7.0
     },
     "dd": {
-     "now": -0.017,
-     "p95": -0.0522,
-     "p99": -0.0782
+     "now": -0.0299,
+     "p95": -0.056,
+     "p99": -0.0823
     },
     "expect": {
-     "sr_bt": 1.061,
-     "vol": 0.1849,
+     "sr_bt": 1.056,
+     "vol": 0.1848,
      "src": "미국 추세 상위 10 2016~",
-     "sr_star": 0.53
+     "sr_star": 0.528
     }
    }
   },
   "log": [],
-  "orders_before": 6,
-  "orders_after": 6,
+  "orders_before": 0,
+  "orders_after": 0,
   "limits": {
    "decay_action": "alert",
    "drawdown_action": "alert",
