@@ -55,7 +55,8 @@ short:
   initial_cash: 10000000
   buy_buffer: 0.02         # 수량 계산 때 어제 종가보다 2% 비싸게 잡는다 (시가 갭 상승 대비)
   rule: {pool: SLOW, every: 5, L: 250, how: sharpe, k: 1, sticky: 0.0}
-  broker: paper            # paper(지금) | toss(토스증권 — 오라클 서버에서만, 연습 서버 없음) | kis_demo | kis_real  (src/short_exec.py)
+  broker: toss             # toss(토스증권 — 오라클 서버에서만, 연습 서버 없음) | paper | kis_demo | kis_real  (src/short_exec.py)
+                           # 실제 주문은 live_trading:true + 서버 setup.sh --live + 준비도 점검표 '준비됨' 이 모두 있어야 나간다
   broker_sleeves: [aw]     # 증권사가 따라 할 몫 — 전천후만 (단기 몫은 시도 전체 반영 DSR 32% → 앞으로의 모의 성적이 쌓일 때까지 모의로만)
   broker_capital: null     # 증권사 계좌에서 쓸 돈 (null = 연결 때 현금 전부). 처음엔 작게 시작 권장
   exec_on: github          # 아침 주문을 보내는 곳 하나: github(예약이 몇 시간 늦을 수 있음) | oracle(서버 08:40 정시 — 실계좌는 이쪽 권장)

@@ -15,6 +15,7 @@
 #          bash setup.sh --history  한국거래소 긴 역사(2000~2018 수급·상장폐지 포함) 받기 — 뒤에서 돌고 앱을 닫아도 계속
 #          bash setup.sh --link     토스 계좌를 거울 계좌로 연결 (config short.broker: toss 로 바꾼 뒤 · 빈 계좌만)
 #          bash setup.sh --live     실제 돈 주문 최종 확인값 저장 (준비도 점검표가 모두 통과한 뒤에만 의미 있음)
+#          bash setup.sh --smoke    1주 실주문 시험 (평일 정규장 · 실제 돈 1주 값 + 수수료 — 묻고 나서만)
 #
 #   이 스크립트는 비밀 값을 화면에 출력하지 않는다. 키는 ~/.rich/secrets.env 에만 저장한다.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -270,10 +271,11 @@ run_history() {
 }
 
 run_link() {
-  step "토스 계좌를 거울 계좌로 연결 — 빈 계좌(현금만)여야 합니다"
+  step "토스 계좌를 거울 계좌로 연결 — 이미 있던 종목은 '직접 보유분'으로 기록하고 자동매매는 건드리지 않습니다"
+  echo "  실제 돈 주문을 켜기(--live) 전까지는 다시 연결해도 안전합니다 (자동매매 금액 short.broker_capital 을 바꿨을 때 등)"
   git -C "$DIR" pull -q --ff-only || true
   set -a; . "$STATE/secrets.env"; set +a
-  "$DIR/.venv/bin/python" "$DIR/src/short_exec.py" --phase link || true
+  ( cd "$DIR" && "$DIR/.venv/bin/python" src/short_exec.py --phase link ) || true
   git -C "$DIR" add data/short/mirror_status.json 2>/dev/null || true   # 공개: 연결 여부만 (자본·보유는 ~/.rich/mirror.json 에만)
   git -C "$DIR" diff --cached --quiet || { git -C "$DIR" commit -q -m "mirror link $(date +%F) (oracle)" && git -C "$DIR" pull -q --rebase && git -C "$DIR" push -q && ok "연결 정보를 GitHub 에 올렸습니다"; }
 }
@@ -292,6 +294,19 @@ set_live() {
   fi
 }
 
+run_smoke() {
+  step "1주 실주문 시험 — KODEX 미국달러선물 1주를 사고(지정가) 체결되면 바로 팝니다 (평일 09:05~15:10)"
+  echo "  실제 돈이 움직입니다: 1주 값(약 1만 4천원)으로 사고 팔며, 수수료·가격 차이로 수십~수백 원이 듭니다."
+  printf "  진행하려면 yes 입력 (취소: 그냥 Enter): "
+  IFS= read -r v || v=""
+  [ "$v" = "yes" ] || { no "취소 — 바뀐 것 없음"; return 0; }
+  git -C "$DIR" pull -q --ff-only || true
+  set -a; . "$STATE/secrets.env"; set +a
+  ( cd "$DIR" && "$DIR/.venv/bin/python" src/short_exec.py --phase smoke --yes ) || true
+  git -C "$DIR" add data/toss/smoke.json 2>/dev/null || true
+  git -C "$DIR" diff --cached --quiet || { git -C "$DIR" commit -q -m "toss smoke $(date +%F) (oracle)" && git -C "$DIR" pull -q --rebase && git -C "$DIR" push -q && ok "결과를 GitHub 에 올렸습니다"; }
+}
+
 unset_live() {
   tmp="$(mktemp)"; { grep -v "^AUTOTRADE_CONFIRM=" "$STATE/secrets.env" || true; } > "$tmp"; mv "$tmp" "$STATE/secrets.env"; chmod 600 "$STATE/secrets.env"
   ok "실제 돈 주문 확인값을 지웠습니다 — 이제 주문은 만들기만 하고 보내지 않습니다"
@@ -308,6 +323,7 @@ case "$MODE" in
   --link)  run_link ;;
   --live)  set_live ;;
   --unlive) unset_live ;;
+  --smoke) run_smoke ;;
   *)       install_packages; tune_system; get_code; deploy_key; secrets_file; check
            echo; echo "다음 단계: 위 ✗ 항목을 해결한 뒤 'bash ~/rich/deploy/oracle/setup.sh --check' 로 다시 확인하세요." ;;
 esac

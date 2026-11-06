@@ -191,7 +191,10 @@ def seq_from_accounts(tok):
         items = (r.json() or {}).get("result") or []
         env = load_env()
         for it in items:
-            if str(it.get("accountNo")) == str(env.get("TOSS_ACCOUNT")) or it.get("accountType") == "BROKERAGE":
+            if str(it.get("accountNo")) == str(env.get("TOSS_ACCOUNT")) and it.get("accountSeq") is not None:
+                return it.get("accountSeq")
+        for it in items:
+            if it.get("accountType") == "BROKERAGE" and it.get("accountSeq") is not None:
                 return it.get("accountSeq")
     except Exception:
         return None
@@ -318,8 +321,9 @@ def main():
             res.setdefault("tried", []).append(entry)
     # 4) 읽기 전용 점검 — 상태 코드와 '항목 이름'만 남긴다 (금액·종목·수량은 저장소에 올리지 않음)
     if tok and res.get("accounts"):
-        seq = env.get("TOSS_ACCOUNT_SEQ") or seq_from_accounts(tok)
-        if seq and not env.get("TOSS_ACCOUNT_SEQ"):
+        seq = env.get("TOSS_ACCOUNT_SEQ")
+        seq = seq if seq not in (None, "") else seq_from_accounts(tok)          # accountSeq 는 0 일 수도 있다
+        if seq is not None and not env.get("TOSS_ACCOUNT_SEQ"):
             lines = [ln for ln in open(SECRETS, encoding="utf-8") if not ln.startswith("TOSS_ACCOUNT_SEQ=")]
             lines.append(f"TOSS_ACCOUNT_SEQ={seq}\n")
             with open(os.open(SECRETS, os.O_WRONLY | os.O_TRUNC, 0o600), "w", encoding="utf-8") as fh:
@@ -330,7 +334,7 @@ def main():
                                    ("prices", "/api/v1/prices", {"symbols": "069500"}), ("commissions", "/api/v1/commissions", None)):
             try:
                 r = requests.get(BASE + path, params=params, timeout=15, headers={"Authorization": f"Bearer {tok}", "Accept": "application/json",
-                                                                                 **({"X-Tossinvest-Account": str(seq)} if seq else {})})
+                                                                                 **({"X-Tossinvest-Account": str(seq)} if seq is not None else {})})
                 j = r.json() if r.headers.get("content-type", "").startswith("application/json") else None
             except Exception as e:
                 checks[name] = {"error": type(e).__name__}
@@ -341,6 +345,7 @@ def main():
             print(f"  {'✓' if r.status_code == 200 else '✗'} {path} → {r.status_code}")
             time.sleep(0.3)
         res["readonly"] = checks
+        res["account_header"] = "보냄" if seq is not None else "못 찾음"
     json.dump(res, open(os.path.join(OUT, "probe.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     ok = bool(res.get("accounts"))
     print(f"\n결과: {'연결 성공' if ok else '아직 연결 안 됨'} — data/toss/probe.json")

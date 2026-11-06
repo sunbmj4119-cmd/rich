@@ -20,6 +20,7 @@
 """
 import json
 import math
+import re
 import os
 import time
 
@@ -241,14 +242,19 @@ class KISBroker:
 # ══════════════════════════════════════════════════════════════
 class TossBroker:
     """토스증권 오픈API (https://openapi.tossinvest.com) — 미리 등록한 IP(오라클 서버)에서만 된다. 모의투자 서버는 없다.
+    명세 1.2.28 (data/toss/api_detail.json) 기준으로 확인한 형식:
+      헤더  X-Tossinvest-Account: accountSeq (GET /api/v1/accounts 의 accountSeq, 정수)
+      주문  POST /api/v1/orders  {symbol, side BUY|SELL, orderType LIMIT|MARKET, timeInForce DAY|OPG(국내 시가단일가)|CLS(미국),
+                                 quantity "정수 문자열", price "호가 단위 정수 문자열"(LIMIT 만), clientOrderId(멱등성 키 10분)}
+            1억원 이상은 confirmHighValueOrder 가 없으면 거절 — 착오 주문 방지로 그대로 둔다
+      보유  GET /api/v1/holdings → result.items[] {symbol, marketCountry KR|US, quantity, averagePurchasePrice, …}
+      현금  GET /api/v1/buying-power?currency=KRW → result.cashBuyingPower
+      체결  GET /api/v1/orders?status=CLOSED&from&to (cursor) → orders[].execution {filledQuantity, averageFilledPrice, …}
+      취소  POST /api/v1/orders/{orderId}/cancel
     토큰은 클라이언트당 하나만 유효 → 서버의 점검·수집기와 같은 토큰 파일(~/.rich/toss_token.json)을 같이 쓴다.
-    주문은 VERIFIED(사람이 data/toss/api_detail.json 으로 요청 형식을 확인한 명세 버전)와 서버 명세 버전이 같을 때만 보낸다.
-    그 전에는 주문을 만들기만 하고 '보내지 않음'으로 기록한다."""
+    주문은 VERIFIED(형식을 확인한 명세 버전)와 서버가 받은 명세 버전이 같을 때만 — 토스가 명세를 바꾸면 다시 확인할 때까지 멈춘다."""
     name = "toss"
-    VERIFIED = None                 # 예: "1.2.24" — 주문 요청 형식을 명세로 확인한 버전
-    CODE_KEYS = ("symbol", "stockCode", "code", "ticker", "productCode")
-    QTY_KEYS = ("quantity", "holdingQuantity", "totalQuantity", "qty", "balanceQuantity")
-    AVG_KEYS = ("averagePrice", "avgPrice", "averagePurchasePrice", "purchasePrice", "avgPurchasePrice")
+    VERIFIED = "1.2.28"
 
     def __init__(self, live_orders=False, env=None, session=None):
         import requests
@@ -264,13 +270,17 @@ class TossBroker:
         self.live_orders = live_orders
         self.is_live = bool(live_orders)
         self._tok = None
-        self.seq = self.env.get("TOSS_ACCOUNT_SEQ")
+        v = self.env.get("TOSS_ACCOUNT_SEQ")
+        self.seq = int(v) if v not in (None, "") else None
 
     def spec_version(self):
         try:
             return json.load(open("data/toss/api_detail.json", encoding="utf-8")).get("version")
         except (OSError, ValueError):
             return None
+
+    def verified(self):
+        return bool(self.VERIFIED) and self.spec_version() == self.VERIFIED
 
     def token(self, fresh=False):
         if fresh:
@@ -286,88 +296,120 @@ class TossBroker:
         return self._tok
 
     def _req(self, method, path, params=None, body=None, account=True):
+        st, j = 0, {}
         for i in range(4):
             h = {"Authorization": f"Bearer {self.token()}", "Accept": "application/json"}
             if account:
                 h["X-Tossinvest-Account"] = str(self.account_seq())
             r = self.rq.request(method, self.base + path, params=params, json=body, headers=h, timeout=20)
-            if r.status_code == 401 and i == 0:
+            st = r.status_code
+            if st == 401 and i == 0:
                 self.token(fresh=True)
                 continue
-            if r.status_code in (429, 500, 502, 503, 504):
+            if st in (429, 500, 502, 503, 504) and method == "GET":        # 주문(POST)은 다시 보내지 않는다 — 멱등성 키로만
                 time.sleep(1.5 * (i + 1))
                 continue
             try:
                 j = r.json()
             except ValueError:
                 j = {"raw": r.text[:300]}
-            return r.status_code, j
-        return r.status_code, {}
+            return st, j
+        return st, j
 
     def account_seq(self):
-        if not self.seq:
+        if self.seq is None:
             st, j = self._req("GET", "/api/v1/accounts", account=False)
             items = (j or {}).get("result") or []
             want = str(self.env.get("TOSS_ACCOUNT") or "")
             pick = next((x for x in items if str(x.get("accountNo")) == want), None) or \
                 next((x for x in items if x.get("accountType") == "BROKERAGE"), None)
-            if not pick:
+            if not pick or pick.get("accountSeq") is None:
                 raise RuntimeError(f"토스 계좌를 찾지 못함 (상태 {st})")
-            self.seq = pick["accountSeq"]
+            self.seq = int(pick["accountSeq"])
         return self.seq
 
     @staticmethod
     def _num(v):
         if isinstance(v, dict):
-            v = v.get("amount", v.get("value", v.get("krw")))
+            v = v.get("amount", v.get("krw", v.get("value")))
         try:
             return float(v)
         except (TypeError, ValueError):
             return None
 
-    def _pick(self, d, keys):
-        for k in keys:
-            if k in d and d[k] is not None:
-                return d[k]
-        return None
+    @staticmethod
+    def _err(j):
+        e = (j or {}).get("error") or {}
+        return f"{e.get('code', '')} {e.get('message', '')}".strip() or str(j)[:200]
 
-    def account(self):
+    def account(self, market="KR"):
         st, j = self._req("GET", "/api/v1/holdings")
         if st != 200:
-            raise RuntimeError(f"보유 조회 실패 {st}: {str(j)[:200]}")
-        items = ((j or {}).get("result") or {}).get("items") or []
+            raise RuntimeError(f"보유 조회 실패 {st}: {self._err(j)}")
         pos = {}
-        for it in items:
-            code = self._pick(it, self.CODE_KEYS)
-            q = self._num(self._pick(it, self.QTY_KEYS))
-            if code is None or q is None:
-                raise RuntimeError(f"보유 항목 형식을 모름 — 키 {sorted(it.keys())} (api_detail.json 확인 필요)")
+        for it in ((j or {}).get("result") or {}).get("items") or []:
+            if market and it.get("marketCountry") not in (None, market):
+                continue
+            q = self._num(it.get("quantity"))
+            if not it.get("symbol") or q is None:
+                raise RuntimeError(f"보유 항목 형식이 명세와 다름 — 키 {sorted(it.keys())}")
             if q > 0:
-                pos[str(code)] = {"shares": q, "avg": self._num(self._pick(it, self.AVG_KEYS)) or 0.0}
+                pos[str(it["symbol"])] = {"shares": q, "avg": self._num(it.get("averagePurchasePrice")) or 0.0}
         st, j = self._req("GET", "/api/v1/buying-power", {"currency": "KRW"})
         if st != 200:
-            raise RuntimeError(f"매수 가능 금액 조회 실패 {st}")
+            raise RuntimeError(f"매수 가능 금액 조회 실패 {st}: {self._err(j)}")
         cash = self._num(((j or {}).get("result") or {}).get("cashBuyingPower"))
         return {"cash": cash or 0.0, "positions": pos}
 
     def price(self, code):
         st, j = self._req("GET", "/api/v1/prices", {"symbols": code})
         res = (j or {}).get("result")
-        it = res[0] if isinstance(res, list) and res else res if isinstance(res, dict) else {}
-        return self._num(self._pick(it or {}, ("currentPrice", "price", "lastPrice", "close", "tradePrice")))
+        it = res[0] if isinstance(res, list) and res else {}
+        return self._num(it.get("lastPrice"))
 
-    def order(self, side, code, qty, kind="market", price=None, date=None):
-        if qty <= 0:
-            return {"ok": False, "order_no": "", "msg": "수량 0"}
-        ver = self.spec_version()
-        if not self.VERIFIED or ver != self.VERIFIED:
-            return {"ok": False, "order_no": "", "msg": f"토스 주문 형식 확인 전(명세 {ver}, 확인 {self.VERIFIED}) — 보내지 않음"}
+    def order(self, side, code, qty, kind="market", price=None, date=None, tif="DAY", client_id=None):
+        if int(qty) <= 0 or int(qty) != qty:
+            return {"ok": False, "order_no": "", "msg": "수량은 1 이상 정수만"}
+        if not self.verified():
+            return {"ok": False, "order_no": "", "msg": f"토스 명세가 바뀜(서버 {self.spec_version()}, 확인 {self.VERIFIED}) — 다시 확인할 때까지 보내지 않음"}
+        body = {"symbol": str(code), "side": "BUY" if side == "buy" else "SELL",
+                "orderType": "MARKET" if kind == "market" else "LIMIT", "timeInForce": tif, "quantity": str(int(qty))}
+        if kind != "market":
+            body["price"] = str(int(price))
+        if client_id:
+            body["clientOrderId"] = re.sub(r"[^A-Za-z0-9_-]", "", client_id)[:36]
         if not self.live_orders:
-            return {"ok": False, "order_no": "", "msg": "DRY-RUN (실제 주문 잠김) — 보내지 않음"}
-        raise NotImplementedError("주문 요청 형식은 api_detail.json 확인 뒤 채운다")
+            return {"ok": False, "order_no": "", "msg": "DRY-RUN (실제 주문 잠김) — 보내지 않음", "body": body}
+        st, j = self._req("POST", "/api/v1/orders", body=body)
+        ok = st == 200 and bool(((j or {}).get("result") or {}).get("orderId"))
+        return {"ok": ok, "order_no": ((j or {}).get("result") or {}).get("orderId", ""), "msg": "접수" if ok else f"{st} {self._err(j)}"}
+
+    def order_status(self, order_id):
+        st, j = self._req("GET", f"/api/v1/orders/{order_id}")
+        return (j or {}).get("result") if st == 200 else None
+
+    def cancel(self, order_id):
+        st, j = self._req("POST", f"/api/v1/orders/{order_id}/cancel", body={})
+        return {"ok": st == 200, "msg": "취소" if st == 200 else f"{st} {self._err(j)}"}
 
     def daily_fills(self, start, end):
-        return []                   # 주문 목록 조회 형식 확인 뒤 채운다 (대사는 보유 수량으로 계속된다)
+        out, cursor = [], None
+        for _ in range(20):
+            params = {"status": "CLOSED", "from": start, "to": end, "limit": 100, **({"cursor": cursor} if cursor else {})}
+            st, j = self._req("GET", "/api/v1/orders", params)
+            if st != 200:
+                raise RuntimeError(f"주문 목록 조회 실패 {st}: {self._err(j)}")
+            res = (j or {}).get("result") or {}
+            for o in res.get("orders") or []:
+                ex = o.get("execution") or {}
+                f = self._num(ex.get("filledQuantity")) or 0
+                out.append({"order_no": o.get("orderId", ""), "code": o.get("symbol", ""), "date": (o.get("orderedAt") or "")[:10],
+                            "side": (o.get("side") or "").lower(), "qty": self._num(o.get("quantity")) or 0, "filled": f,
+                            "avg": self._num(ex.get("averageFilledPrice")) or 0.0, "status": o.get("status")})
+            if not res.get("hasNext"):
+                break
+            cursor = res.get("nextCursor")
+        return out
 
 
 def make_broker(cfg):

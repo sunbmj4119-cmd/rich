@@ -514,7 +514,7 @@ def test_dsr_counts_all_trials():
 
 
 def test_toss_broker_readonly_and_order_lock():
-    """토스: 보유·매수 가능 금액 해석 · 계좌 식별값 자동 찾기 · 주문 형식 확인 전에는 절대 보내지 않음."""
+    """토스(명세 1.2.28): 보유·매수 가능 금액 해석 · accountSeq 0 도 헤더로 · 주문 본문 형식 · 명세가 바뀌면 안 보냄 · 체결 조회."""
     import types
     import brokers
     fake_tp = types.SimpleNamespace(BASE="https://x", TOKEN="/nonexistent/tok", load_env=lambda: {},
@@ -531,27 +531,48 @@ def test_toss_broker_readonly_and_order_lock():
 
     class S:
         def request(self, method, url, params=None, json=None, headers=None, timeout=None):
-            calls.append((method, url, headers.get("X-Tossinvest-Account")))
+            calls.append((method, url, headers.get("X-Tossinvest-Account"), json, params))
             if url.endswith("/api/v1/accounts"):
-                return R(200, {"result": [{"accountNo": "111", "accountSeq": 7, "accountType": "BROKERAGE"}]})
+                return R(200, {"result": [{"accountNo": "111", "accountSeq": 0, "accountType": "BROKERAGE"}]})
             if url.endswith("/api/v1/holdings"):
-                return R(200, {"result": {"items": [{"symbol": "069500", "quantity": "3", "averagePrice": {"amount": "90000"}},
-                                                    {"symbol": "114800", "quantity": "0", "averagePrice": "1000"}]}})
+                return R(200, {"result": {"items": [
+                    {"symbol": "069500", "marketCountry": "KR", "quantity": "3", "averagePurchasePrice": "90000"},
+                    {"symbol": "AAPL", "marketCountry": "US", "quantity": "2", "averagePurchasePrice": "180.5"},
+                    {"symbol": "114800", "marketCountry": "KR", "quantity": "0", "averagePurchasePrice": "1000"}]}})
             if url.endswith("/api/v1/buying-power"):
                 return R(200, {"result": {"currency": "KRW", "cashBuyingPower": "1234567"}})
+            if url.endswith("/api/v1/orders") and method == "POST":
+                return R(200, {"result": {"orderId": "OID1", "clientOrderId": json.get("clientOrderId")}})
+            if url.endswith("/api/v1/orders") and method == "GET":
+                return R(200, {"result": {"orders": [{"orderId": "OID1", "symbol": "069500", "side": "BUY", "status": "FILLED",
+                                                      "quantity": "1", "orderedAt": "2026-11-06T08:41:00+09:00",
+                                                      "execution": {"filledQuantity": "1", "averageFilledPrice": "90100"}}],
+                                           "nextCursor": None, "hasNext": False}})
             return R(404, {})
+    old_spec = brokers.TossBroker.spec_version
     try:
         tb = brokers.TossBroker(env={"TOSS_CLIENT_ID": "a", "TOSS_CLIENT_SECRET": "b", "TOSS_ACCOUNT": "111"}, session=S())
+        tb.spec_version = lambda: "1.2.28"
         a = tb.account()
-        assert a == {"cash": 1234567.0, "positions": {"069500": {"shares": 3.0, "avg": 90000.0}}}
-        assert tb.seq == 7 and all(h == "7" for m, u, h in calls if not u.endswith("/accounts"))
-        r = tb.order("buy", "069500", 1, "limit", 91000)
-        assert not r["ok"] and "확인 전" in r["msg"]
+        assert a == {"cash": 1234567.0, "positions": {"069500": {"shares": 3.0, "avg": 90000.0}}}      # 미국 보유는 국내 대사에서 뺀다
+        assert tb.seq == 0 and all(h == "0" for m, u, h, b, p in calls if not u.endswith("/accounts"))  # accountSeq 0 도 헤더로
+        r = tb.order("buy", "069500", 2, "limit", 101700, tif="OPG", client_id="m20261106b069500")
+        assert not r["ok"] and r["body"] == {"symbol": "069500", "side": "BUY", "orderType": "LIMIT", "timeInForce": "OPG",
+                                             "quantity": "2", "price": "101700", "clientOrderId": "m20261106b069500"}  # 잠김 = 안 보냄
+        assert not any(m == "POST" for m, *_ in calls)
+        tb.live_orders = True
+        r = tb.order("sell", "069500", 1, "market", tif="OPG")
+        posted = [b for m, u, h, b, p in calls if m == "POST"]
+        assert r["ok"] and r["order_no"] == "OID1" and "price" not in posted[-1] and posted[-1]["orderType"] == "MARKET"
+        tb.spec_version = lambda: "1.3.0"                                                             # 토스가 명세를 바꾸면 멈춤
         n = len(calls)
-        brokers.TossBroker.VERIFIED = "9.9.9"                     # 확인 버전이 서버 명세와 다르면 여전히 안 보냄
-        assert not tb.order("buy", "069500", 1, "limit", 91000)["ok"] and len(calls) == n
+        assert not tb.order("buy", "069500", 1, "limit", 1000)["ok"] and len(calls) == n
+        assert not tb.order("buy", "069500", 1.5, "limit", 1000)["ok"]                               # 정수 수량만
+        f = tb.daily_fills("2026-11-06", "2026-11-06")
+        assert f == [{"order_no": "OID1", "code": "069500", "date": "2026-11-06", "side": "buy", "qty": 1.0, "filled": 1.0,
+                      "avg": 90100.0, "status": "FILLED"}]
     finally:
-        brokers.TossBroker.VERIFIED = None
+        brokers.TossBroker.spec_version = old_spec
         sys.modules.pop("toss_probe", None)
 
 
