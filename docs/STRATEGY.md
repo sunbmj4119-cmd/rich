@@ -589,8 +589,11 @@ LPPL 거품(한국 거품 표본 1개), 한국 개별주 짝매매(공매도 제
 - 주문 증권사는 **토스증권 오픈API** (`short.broker: toss`, `src/brokers.py TossBroker`). 토스는 미리 등록한 IP 에서만 받으므로 주문·잔고 대사는 **오라클 서버**에서만
   (아침 08:40 `run.sh` · 저녁 16:10 `evening.sh`). GitHub 계산은 서버가 남긴 대사 기록(`data/short/recon.json`)만 읽고, 1영업일 넘게 묵으면 새 매수를 막는다.
 - 토큰은 클라이언트당 하나만 유효 → 서버의 점검·수집기와 같은 토큰 파일을 같이 쓴다.
-- **주문 형식 잠금**: 토스 명세 요약에 주문 요청 칸이 빠져 있어, 서버에서 받은 상세 명세(`data/toss/api_detail.json`, `setup.sh --probe`)로
-  형식을 확인한 버전(`TossBroker.VERIFIED`)과 서버 명세 버전이 같을 때만 주문을 보낸다. 그 전에는 주문을 만들어 기록만 한다.
+- **주문 형식 확인 (명세 1.2.28, 2026-11-06)**: `POST /api/v1/orders` {symbol, side BUY|SELL, orderType LIMIT|MARKET,
+  timeInForce **OPG**(국내 시가 단일가 = 연구의 '다음 날 시가 체결'과 같음)|DAY, quantity 정수 문자열, price 호가 단위(LIMIT 만),
+  clientOrderId(멱등성 키 — 같은 날 같은 주문은 한 번만)}. 매수 = 지정가(어제 종가 × 1.12, 가격 보호) + OPG, 매도 = 시장가 + OPG.
+  체결 = `GET /api/v1/orders?status=CLOSED` 의 execution(filledQuantity·averageFilledPrice). 1억원 이상 주문은 확인 플래그 없이 거절되게 그대로 둔다.
+  `TossBroker.VERIFIED` 와 서버가 받은 명세 버전이 다르면(토스가 명세를 바꾸면) 다시 확인할 때까지 주문을 보내지 않는다.
 - 토스에는 연습(모의투자) 서버가 없다 → 준비도 점검표의 증권사 항목: 연결 점검 20거래일(주문 잠금 상태에서 매일 잔고 조회·해석) +
   주문 형식 확인 + 1주 실주문 시험(사기 → 체결 확인 → 팔기).
 - 연결(`setup.sh --link`) 때 계좌에 이미 있던 종목은 **직접 보유분**(서버 `~/.rich/mirror.json` 의 external)으로 기록 — 자동매매는 그 수량을 비교·매도하지 않는다.

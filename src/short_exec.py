@@ -201,8 +201,8 @@ def diff_orders(target, broker_pos, est, collar, late=False):
     out = []
     codes = sorted(set(target) | set(broker_pos))
     for c in codes:
-        have = int((broker_pos.get(c) or {}).get("shares", 0))
-        d = int(target.get(c, 0)) - have
+        have = float((broker_pos.get(c) or {}).get("shares", 0))
+        d = int(round(float(target.get(c, 0)) - have))
         if d < 0:
             out.append(({"side": "sell", "code": c, "qty": -d, "kind": "market", "price": 0}, "시장가 매도"))
         elif d > 0:
@@ -282,9 +282,13 @@ def execute(cfg, dry=False, now=None, where=None):
         if o["kind"] == "skip" or (o["code"], o["side"]) in done:
             rows.append({**o, "ts": ts, "plan_date": plan.get("made", ""), "broker": tag, "ok": False, "msg": note if o["kind"] == "skip" else "이미 보냄"})
             continue
+        extra = {}
+        if bname == "toss":                           # 9시 전 = 장 개시 주문(시가 단일가) · 같은 날 같은 주문은 토스가 한 번만 받게
+            extra = {"tif": "OPG" if now.strftime("%H:%M") < "09:00" else "DAY",
+                     "client_id": f"m{str(plan.get('made', '')).replace('-', '')}{o['side'][0]}{o['code']}"}
         try:
             r = ({"ok": False, "order_no": "", "msg": "DRY-RUN — 보내지 않음"} if dry
-                 else b.order(o["side"], o["code"], o["qty"], o["kind"], o.get("price"), date=plan.get("made")))
+                 else b.order(o["side"], o["code"], int(o["qty"]), o["kind"], o.get("price"), date=plan.get("made"), **extra))
         except Exception as ex:                       # 한 주문이 실패해도 나머지는 계속 (기록은 남김)
             r = {"ok": False, "order_no": "", "msg": f"{type(ex).__name__}: {ex}"}
         rows.append({**o, "ts": ts, "plan_date": plan.get("made", ""), "broker": tag, "ok": bool(r.get("ok")),
@@ -434,9 +438,70 @@ def link(cfg):
     return m
 
 
+SMOKE = "data/toss/smoke.json"
+
+
+def smoke(cfg, yes=False, code="261240", wait=90):
+    """1주 실주문 시험 (토스·서버·정규장 안에서만): 지정가로 1주 사고 → 체결 확인 → 시장가로 1주 팔고 → 체결 확인.
+    실제 돈(1주 값 + 수수료)이 움직인다 — yes 가 있어야만 한다. 결과(성공 여부·왕복 차이 bp)만 공개 파일로."""
+    now = kst_now()
+    if not yes:
+        print("1주 실주문 시험은 --yes 가 있어야 합니다 (setup.sh --smoke 로 실행)")
+        return None
+    if not on_server():
+        print("토스는 서버에서만")
+        return None
+    if now.weekday() > 4 or not ("09:05" <= now.strftime("%H:%M") <= "15:10"):
+        print("정규장(평일 09:05~15:10)에만 합니다")
+        return None
+    b = brokers.TossBroker(live_orders=True)
+    if not b.verified():
+        print(f"토스 명세 확인 전 — 서버 {b.spec_version()} / 확인 {b.VERIFIED}")
+        return None
+    day = now.strftime("%Y%m%d")
+    res = {"date": now.strftime("%Y-%m-%d %H:%M"), "code": code, "ok": False, "steps": []}
+
+    def wait_fill(oid):
+        for _ in range(int(wait / 3)):
+            o = b.order_status(oid) or {}
+            stt = o.get("status")
+            if stt in ("FILLED", "CANCELED", "REJECTED"):
+                return o
+            time.sleep(3)
+        return b.order_status(oid) or {}
+    px = b.price(code)
+    if not px:
+        res["summary"] = "현재가 조회 실패"
+    else:
+        lim = brokers.round_tick(px * 1.01, up=True)
+        r = b.order("buy", code, 1, "limit", lim, tif="DAY", client_id=f"smk{day}b")
+        res["steps"].append({"step": "매수 접수", "ok": r["ok"], "msg": r["msg"][:120]})
+        o = wait_fill(r["order_no"]) if r["ok"] else {}
+        fb = (o.get("execution") or {}).get("averageFilledPrice")
+        res["steps"].append({"step": "매수 체결", "ok": o.get("status") == "FILLED", "status": o.get("status")})
+        if r["ok"] and o.get("status") != "FILLED":
+            res["steps"].append({"step": "매수 취소", **b.cancel(r["order_no"])})
+        if o.get("status") == "FILLED":
+            r2 = b.order("sell", code, 1, "market", tif="DAY", client_id=f"smk{day}s")
+            res["steps"].append({"step": "매도 접수", "ok": r2["ok"], "msg": r2["msg"][:120]})
+            o2 = wait_fill(r2["order_no"]) if r2["ok"] else {}
+            fs = (o2.get("execution") or {}).get("averageFilledPrice")
+            res["steps"].append({"step": "매도 체결", "ok": o2.get("status") == "FILLED", "status": o2.get("status")})
+            if o2.get("status") == "FILLED" and fb and fs:
+                bp = (float(fb) - float(fs)) / px * 1e4
+                res.update(ok=True, roundtrip_bp=round(bp, 1),
+                           summary=f"사기·팔기 모두 체결 (왕복 가격 차이 {bp:.1f}bp, 수수료 별도)")
+        res.setdefault("summary", "실패 — " + " · ".join(f"{x['step']} {'✓' if x.get('ok') else '✕'}" for x in res["steps"]))
+    os.makedirs(os.path.dirname(SMOKE), exist_ok=True)
+    json.dump(res, open(SMOKE, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    print("1주 실주문 시험:", res["summary"])
+    return res
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--phase", choices=["execute", "reconcile", "link"], required=True)
+    ap.add_argument("--phase", choices=["execute", "reconcile", "link", "smoke"], required=True)
+    ap.add_argument("--yes", action="store_true", help="smoke: 실제 돈으로 1주 사고팔기에 동의")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--where", choices=["github", "oracle"], default=None, help="어디서 돌리나 (short.exec_on 과 다르면 건너뜀)")
     ap.add_argument("--after-plan", action="store_true", help="서버 장 마감 뒤 대사: 어제 계획이 다 체결된 뒤 보유와 비교")
@@ -446,6 +511,8 @@ def main():
         execute(cfg, a.dry_run, where=a.where)
     elif a.phase == "link":
         link(cfg)
+    elif a.phase == "smoke":
+        smoke(cfg, yes=a.yes)
     else:
         reconcile(cfg, after_plan=a.after_plan)
 
