@@ -1,11 +1,11 @@
 {
- "time": "2026-10-25 11:07:20 UTC",
+ "time": "2026-11-06 11:41:49 UTC",
  "base": "https://openapi.tossinvest.com",
  "egress_ip": "129.225.178.181",
  "spec": {
   "url": "https://openapi.tossinvest.com/openapi-docs/latest/openapi.json",
-  "version": "1.2.24",
-  "n_ops": 41
+  "version": "1.2.28",
+  "n_ops": 43
  },
  "token": {
   "status": 200,
@@ -30,7 +30,132 @@
    "result"
   ],
   "id_field": "accountNo",
-  "id_masked": "***6834",
-  "saved_to_secrets": true
+  "id_masked": "***6834"
+ },
+ "readonly": {
+  "holdings": {
+   "status": 400,
+   "shape": {
+    "error": {
+     "requestId": "str",
+     "code": "str",
+     "message": "str"
+    }
+   },
+   "error": "{'error': {'requestId': '6q0Bxk65W2SZGtE2', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
+  },
+  "buying_power": {
+   "status": 400,
+   "shape": {
+    "error": {
+     "requestId": "str",
+     "code": "str",
+     "message": "str"
+    }
+   },
+   "error": "{'error': {'requestId': '6YYISjZDT6XssoiK', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
+  },
+  "orders": {
+   "status": 400,
+   "shape": {
+    "error": {
+     "requestId": "str",
+     "code": "str",
+     "message": "str"
+    }
+   },
+   "error": "{'error': {'requestId': '6ij1w078v8DEZq5w', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
+  },
+  "calendar_kr": {
+   "status": 200,
+   "shape": {
+    "result": {
+     "today": {
+      "date": "str",
+      "integrated": {
+       "preMarket": {
+        "startTime": "…",
+        "singlePriceAuctionStartTime": "…",
+        "endTime": "…"
+       },
+       "regularMarket": {
+        "startTime": "…",
+        "singlePriceAuctionStartTime": "…",
+        "endTime": "…"
+       },
+       "afterMarket": {
+        "startTime": "…",
+        "singlePriceAuctionEndTime": "…",
+        "endTime": "…"
+       }
+      }
+     },
+     "previousBusinessDay": {
+      "date": "str",
+      "integrated": {
+       "preMarket": {
+        "startTime": "…",
+        "singlePriceAuctionStartTime": "…",
+        "endTime": "…"
+       },
+       "regularMarket": {
+        "startTime": "…",
+        "singlePriceAuctionStartTime": "…",
+        "endTime": "…"
+       },
+       "afterMarket": {
+        "startTime": "…",
+        "singlePriceAuctionEndTime": "…",
+        "endTime": "…"
+       }
+      }
+     },
+     "nextBusinessDay": {
+      "date": "str",
+      "integrated": {
+       "preMarket": {
+        "startTime": "…",
+        "singlePriceAuctionStartTime": "…",
+        "endTime": "…"
+       },
+       "regularMarket": {
+        "startTime": "…",
+        "singlePriceAuctionStartTime": "…",
+        "endTime": "…"
+       },
+       "afterMarket": {
+        "startTime": "…",
+        "singlePriceAuctionEndTime": "…",
+        "endTime": "…"
+       }
+      }
+     }
+    }
+   }
+  },
+  "prices": {
+   "status": 200,
+   "shape": {
+    "result": [
+     {
+      "symbol": "str",
+      "timestamp": "str",
+      "lastPrice": "str",
+      "currency": "str"
+     }
+    ]
+   }
+  },
+  "commissions": {
+   "status": 400,
+   "shape": {
+    "error": {
+     "requestId": "str",
+     "code": "str",
+     "message": "str"
+    }
+   },
+   "error": "{'error': {'requestId': '62fq9hlLpvBdSgA6', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
+  }
  }
 }

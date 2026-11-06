@@ -1,6 +1,6 @@
 {
  "title": "토스증권 Open API",
- "version": "1.2.24",
+ "version": "1.2.28",
  "servers": [
   {
    "url": "https://openapi.tossinvest.com"
@@ -9,7 +9,7 @@
  "security": [
   "oauth2ClientCredentials"
  ],
- "n_ops": 41,
+ "n_ops": 43,
  "ops": [
   {
    "method": "POST",
@@ -4375,6 +4375,134 @@
   },
   {
    "method": "GET",
+   "path": "/api/v1/rankings/investor-trading",
+   "summary": "투자자별 순매수·순매도 랭킹 조회",
+   "tags": [
+    "Ranking"
+   ],
+   "params": [
+    {
+     "name": "count",
+     "in": "query",
+     "required": false,
+     "desc": "목록별 조회 수 (최대 100). 투자자별 순매수·순매도 목록에 각각 적용되며, 응답 항목 수는 `count` 이하일 수 있습니다."
+    }
+   ],
+   "body": null,
+   "responses": {
+    "200": {
+     "required": [],
+     "props": {
+      "result": {
+       "type": "object",
+       "desc": "",
+       "fields": {
+        "required": [
+         "foreigner",
+         "institution",
+         "individual"
+        ],
+        "props": {
+         "foreigner": {
+          "type": null,
+          "desc": "외국인"
+         },
+         "institution": {
+          "type": null,
+          "desc": "기관"
+         },
+         "individual": {
+          "type": null,
+          "desc": "개인"
+         }
+        }
+       }
+      }
+     }
+    },
+    "400": {
+     "required": [
+      "error"
+     ],
+     "props": {
+      "error": {
+       "type": "object",
+       "desc": "에러 객체. 에러 식별에 필요한 최소 정보(`requestId`, `code`, `message`)와\n필요 시 해결 힌트(`data`)를 포함합",
+       "fields": {
+        "required": [
+         "requestId",
+         "code",
+         "message"
+        ],
+        "props": {
+         "requestId": {
+          "type": "string",
+          "desc": "요청을 식별하는 고유 ID. 응답 헤더 `X-Request-Id` 와 동일한 값입니다.\n토스증권 CS 문의 시 첨부를 권장합니다.\n"
+         },
+         "code": {
+          "type": "string",
+          "desc": "에러 코드. flat string 식별자.\n도메인 에러는 이유를 직접 표현하는 단일 식별자 (예: `invalid-request`, `order"
+         },
+         "message": {
+          "type": "string",
+          "desc": "사용자에게 노출 가능한 에러 메시지. 내부 정책상 노출이 제한되는 경우 빈 문자열로 내려갈 수 있으므로\n클라이언트는 `code` 기반으로 메시지"
+         },
+         "data": {
+          "type": [
+           "object",
+           "null"
+          ],
+          "desc": "에러 해결 힌트. 에러 코드별로 포함 여부와 키 구조가 다르며, 없는 경우 필드 자체가 생략됩니다.\n모든 표준 키가 항상 함께 내려가지 않으며,"
+         }
+        }
+       }
+      }
+     }
+    },
+    "429": {
+     "required": [
+      "error"
+     ],
+     "props": {
+      "error": {
+       "type": "object",
+       "desc": "에러 객체. 에러 식별에 필요한 최소 정보(`requestId`, `code`, `message`)와\n필요 시 해결 힌트(`data`)를 포함합",
+       "fields": {
+        "required": [
+         "requestId",
+         "code",
+         "message"
+        ],
+        "props": {
+         "requestId": {
+          "type": "string",
+          "desc": "요청을 식별하는 고유 ID. 응답 헤더 `X-Request-Id` 와 동일한 값입니다.\n토스증권 CS 문의 시 첨부를 권장합니다.\n"
+         },
+         "code": {
+          "type": "string",
+          "desc": "에러 코드. flat string 식별자.\n도메인 에러는 이유를 직접 표현하는 단일 식별자 (예: `invalid-request`, `order"
+         },
+         "message": {
+          "type": "string",
+          "desc": "사용자에게 노출 가능한 에러 메시지. 내부 정책상 노출이 제한되는 경우 빈 문자열로 내려갈 수 있으므로\n클라이언트는 `code` 기반으로 메시지"
+         },
+         "data": {
+          "type": [
+           "object",
+           "null"
+          ],
+          "desc": "에러 해결 힌트. 에러 코드별로 포함 여부와 키 구조가 다르며, 없는 경우 필드 자체가 생략됩니다.\n모든 표준 키가 항상 함께 내려가지 않으며,"
+         }
+        }
+       }
+      }
+     }
+    },
+    "500": null
+   }
+  },
+  {
+   "method": "GET",
    "path": "/api/v1/market-indicators/prices",
    "summary": "시장 지표 현재가 조회",
    "tags": [
@@ -6131,6 +6259,286 @@
           "fields": {
            "[]": null
           }
+         }
+        }
+       }
+      }
+     }
+    },
+    "400": {
+     "required": [
+      "error"
+     ],
+     "props": {
+      "error": {
+       "type": "object",
+       "desc": "에러 객체. 에러 식별에 필요한 최소 정보(`requestId`, `code`, `message`)와\n필요 시 해결 힌트(`data`)를 포함합",
+       "fields": {
+        "required": [
+         "requestId",
+         "code",
+         "message"
+        ],
+        "props": {
+         "requestId": {
+          "type": "string",
+          "desc": "요청을 식별하는 고유 ID. 응답 헤더 `X-Request-Id` 와 동일한 값입니다.\n토스증권 CS 문의 시 첨부를 권장합니다.\n"
+         },
+         "code": {
+          "type": "string",
+          "desc": "에러 코드. flat string 식별자.\n도메인 에러는 이유를 직접 표현하는 단일 식별자 (예: `invalid-request`, `order"
+         },
+         "message": {
+          "type": "string",
+          "desc": "사용자에게 노출 가능한 에러 메시지. 내부 정책상 노출이 제한되는 경우 빈 문자열로 내려갈 수 있으므로\n클라이언트는 `code` 기반으로 메시지"
+         },
+         "data": {
+          "type": [
+           "object",
+           "null"
+          ],
+          "desc": "에러 해결 힌트. 에러 코드별로 포함 여부와 키 구조가 다르며, 없는 경우 필드 자체가 생략됩니다.\n모든 표준 키가 항상 함께 내려가지 않으며,"
+         }
+        }
+       }
+      }
+     }
+    },
+    "401": {
+     "required": [
+      "error"
+     ],
+     "props": {
+      "error": {
+       "type": "object",
+       "desc": "에러 객체. 에러 식별에 필요한 최소 정보(`requestId`, `code`, `message`)와\n필요 시 해결 힌트(`data`)를 포함합",
+       "fields": {
+        "required": [
+         "requestId",
+         "code",
+         "message"
+        ],
+        "props": {
+         "requestId": {
+          "type": "string",
+          "desc": "요청을 식별하는 고유 ID. 응답 헤더 `X-Request-Id` 와 동일한 값입니다.\n토스증권 CS 문의 시 첨부를 권장합니다.\n"
+         },
+         "code": {
+          "type": "string",
+          "desc": "에러 코드. flat string 식별자.\n도메인 에러는 이유를 직접 표현하는 단일 식별자 (예: `invalid-request`, `order"
+         },
+         "message": {
+          "type": "string",
+          "desc": "사용자에게 노출 가능한 에러 메시지. 내부 정책상 노출이 제한되는 경우 빈 문자열로 내려갈 수 있으므로\n클라이언트는 `code` 기반으로 메시지"
+         },
+         "data": {
+          "type": [
+           "object",
+           "null"
+          ],
+          "desc": "에러 해결 힌트. 에러 코드별로 포함 여부와 키 구조가 다르며, 없는 경우 필드 자체가 생략됩니다.\n모든 표준 키가 항상 함께 내려가지 않으며,"
+         }
+        }
+       }
+      }
+     }
+    },
+    "404": {
+     "required": [
+      "error"
+     ],
+     "props": {
+      "error": {
+       "type": "object",
+       "desc": "에러 객체. 에러 식별에 필요한 최소 정보(`requestId`, `code`, `message`)와\n필요 시 해결 힌트(`data`)를 포함합",
+       "fields": {
+        "required": [
+         "requestId",
+         "code",
+         "message"
+        ],
+        "props": {
+         "requestId": {
+          "type": "string",
+          "desc": "요청을 식별하는 고유 ID. 응답 헤더 `X-Request-Id` 와 동일한 값입니다.\n토스증권 CS 문의 시 첨부를 권장합니다.\n"
+         },
+         "code": {
+          "type": "string",
+          "desc": "에러 코드. flat string 식별자.\n도메인 에러는 이유를 직접 표현하는 단일 식별자 (예: `invalid-request`, `order"
+         },
+         "message": {
+          "type": "string",
+          "desc": "사용자에게 노출 가능한 에러 메시지. 내부 정책상 노출이 제한되는 경우 빈 문자열로 내려갈 수 있으므로\n클라이언트는 `code` 기반으로 메시지"
+         },
+         "data": {
+          "type": [
+           "object",
+           "null"
+          ],
+          "desc": "에러 해결 힌트. 에러 코드별로 포함 여부와 키 구조가 다르며, 없는 경우 필드 자체가 생략됩니다.\n모든 표준 키가 항상 함께 내려가지 않으며,"
+         }
+        }
+       }
+      }
+     }
+    },
+    "429": {
+     "required": [
+      "error"
+     ],
+     "props": {
+      "error": {
+       "type": "object",
+       "desc": "에러 객체. 에러 식별에 필요한 최소 정보(`requestId`, `code`, `message`)와\n필요 시 해결 힌트(`data`)를 포함합",
+       "fields": {
+        "required": [
+         "requestId",
+         "code",
+         "message"
+        ],
+        "props": {
+         "requestId": {
+          "type": "string",
+          "desc": "요청을 식별하는 고유 ID. 응답 헤더 `X-Request-Id` 와 동일한 값입니다.\n토스증권 CS 문의 시 첨부를 권장합니다.\n"
+         },
+         "code": {
+          "type": "string",
+          "desc": "에러 코드. flat string 식별자.\n도메인 에러는 이유를 직접 표현하는 단일 식별자 (예: `invalid-request`, `order"
+         },
+         "message": {
+          "type": "string",
+          "desc": "사용자에게 노출 가능한 에러 메시지. 내부 정책상 노출이 제한되는 경우 빈 문자열로 내려갈 수 있으므로\n클라이언트는 `code` 기반으로 메시지"
+         },
+         "data": {
+          "type": [
+           "object",
+           "null"
+          ],
+          "desc": "에러 해결 힌트. 에러 코드별로 포함 여부와 키 구조가 다르며, 없는 경우 필드 자체가 생략됩니다.\n모든 표준 키가 항상 함께 내려가지 않으며,"
+         }
+        }
+       }
+      }
+     }
+    },
+    "500": {
+     "required": [
+      "error"
+     ],
+     "props": {
+      "error": {
+       "type": "object",
+       "desc": "에러 객체. 에러 식별에 필요한 최소 정보(`requestId`, `code`, `message`)와\n필요 시 해결 힌트(`data`)를 포함합",
+       "fields": {
+        "required": [
+         "requestId",
+         "code",
+         "message"
+        ],
+        "props": {
+         "requestId": {
+          "type": "string",
+          "desc": "요청을 식별하는 고유 ID. 응답 헤더 `X-Request-Id` 와 동일한 값입니다.\n토스증권 CS 문의 시 첨부를 권장합니다.\n"
+         },
+         "code": {
+          "type": "string",
+          "desc": "에러 코드. flat string 식별자.\n도메인 에러는 이유를 직접 표현하는 단일 식별자 (예: `invalid-request`, `order"
+         },
+         "message": {
+          "type": "string",
+          "desc": "사용자에게 노출 가능한 에러 메시지. 내부 정책상 노출이 제한되는 경우 빈 문자열로 내려갈 수 있으므로\n클라이언트는 `code` 기반으로 메시지"
+         },
+         "data": {
+          "type": [
+           "object",
+           "null"
+          ],
+          "desc": "에러 해결 힌트. 에러 코드별로 포함 여부와 키 구조가 다르며, 없는 경우 필드 자체가 생략됩니다.\n모든 표준 키가 항상 함께 내려가지 않으며,"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/transactions",
+   "summary": "거래내역 조회",
+   "tags": [
+    "Transaction"
+   ],
+   "params": [
+    {
+     "name": "X-Tossinvest-Account",
+     "in": "header",
+     "required": true,
+     "desc": "API 요청 시 사용할 계좌의 accountSeq.\n`GET /api/v1/accounts` 응답의 `accountSeq` 값을 사용합니다.\n"
+    },
+    {
+     "name": "transactionTypes",
+     "in": "query",
+     "required": false,
+     "desc": "거래 유형 필터. 콤마(`,`)로 구분해 여러 값을 넣을 수 있으며 OR 조건입니다.\n지원하지 않는 값이 있으면 400 (`invalid-req"
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": false,
+     "desc": "조회 시작일 (inclusive, KST 기준). 결제일(`settlementDate`) 기준. 미지정 시 하한 없음.\n`from`이 `to`보"
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": false,
+     "desc": "조회 종료일 (inclusive, KST 기준). 결제일(`settlementDate`) 기준. 미결제는 예상 결제일로 조회합니다. 미래 날짜도"
+    },
+    {
+     "name": "cursor",
+     "in": "query",
+     "required": false,
+     "desc": "페이지네이션 커서. 직전 응답의 `nextCursor` 값을 그대로 넣습니다. 미지정 시 첫 페이지.\n커서 오류로 400 (`invalid-re"
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "desc": "페이지 최대 크기 (기본 20, 최대 100). 범위 밖이면 400 (`invalid-request`). 반환 건수가 limit보다 적어도 다음"
+    }
+   ],
+   "body": null,
+   "responses": {
+    "200": {
+     "required": [],
+     "props": {
+      "result": {
+       "type": "object",
+       "desc": "거래내역 페이징 응답.\n조회 조건에 맞는 미결제 내역을 먼저 반환하고, 각 그룹 안에서는 해당 내역의 정렬 기준 시각이 최신인 순서로 정렬합니다",
+       "fields": {
+        "required": [
+         "transactions",
+         "nextCursor",
+         "hasNext"
+        ],
+        "props": {
+         "transactions": {
+          "type": "array",
+          "desc": "거래 목록. 조건에 맞는 미결제 내역을 먼저 반환하며, 각 그룹 안에서는 정렬 기준 시각의 최신순입니다.",
+          "fields": {
+           "[]": null
+          }
+         },
+         "nextCursor": {
+          "type": [
+           "string",
+           "null"
+          ],
+          "desc": "다음 페이지 커서. 다음 페이지가 없으면 null입니다. 값의 길이와 내부 구조에 의존하지 말고 그대로 전달하세요. 문서 예시의 커서는 실제 요"
+         },
+         "hasNext": {
+          "type": "boolean",
+          "desc": "다음 페이지 존재 여부"
          }
         }
        }
