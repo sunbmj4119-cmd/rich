@@ -185,20 +185,37 @@ def shape(j, depth=0):
     return type(j).__name__
 
 
-def seq_from_accounts(tok):
-    try:
-        r = requests.get(BASE + "/api/v1/accounts", timeout=15, headers={"Authorization": f"Bearer {tok}", "Accept": "application/json"})
-        items = (r.json() or {}).get("result") or []
-        env = load_env()
-        for it in items:
-            if str(it.get("accountNo")) == str(env.get("TOSS_ACCOUNT")) and it.get("accountSeq") is not None:
-                return it.get("accountSeq")
-        for it in items:
-            if it.get("accountType") == "BROKERAGE" and it.get("accountSeq") is not None:
-                return it.get("accountSeq")
-    except Exception:
-        return None
-    return None
+def pick_seq(items, want=None):
+    """계좌 목록에서 accountSeq — 내 계좌번호가 맞는 것, 없으면 종합매매(BROKERAGE). 0 도 정상 값이다."""
+    items = [it for it in (items or []) if isinstance(it, dict) and it.get("accountSeq") is not None]
+    norm = lambda x: re.sub(r"\D", "", str(x or ""))                       # 계좌번호 '-' 표기 차이 무시
+    hit = next((it for it in items if want and norm(it.get("accountNo")) == norm(want)), None) or \
+        next((it for it in items if it.get("accountType") == "BROKERAGE"), None) or (items[0] if len(items) == 1 else None)
+    return hit.get("accountSeq") if hit else None
+
+
+def seq_from_accounts(tok, tries=3):
+    """계좌 목록을 다시 불러 accountSeq 를 찾는다 (요청 한도 429 면 잠깐 쉬고 다시). (값, 이유)"""
+    why = "응답 없음"
+    for i in range(tries):
+        try:
+            r = requests.get(BASE + "/api/v1/accounts", timeout=15, headers={"Authorization": f"Bearer {tok}", "Accept": "application/json"})
+        except Exception as e:
+            why = type(e).__name__
+            time.sleep(1.5 * (i + 1))
+            continue
+        if r.status_code == 200:
+            try:
+                items = (r.json() or {}).get("result") or []
+            except Exception:
+                return None, "응답 형식 오류"
+            seq = pick_seq(items, load_env().get("TOSS_ACCOUNT"))
+            return seq, ("" if seq is not None else f"계좌 {len(items)}개 중 맞는 것 없음")
+        why = f"상태 {r.status_code}"
+        if r.status_code not in (429, 500, 502, 503, 504):
+            break
+        time.sleep(1.5 * (i + 1))
+    return None, why
 
 
 def get_spec():
@@ -297,6 +314,7 @@ def main():
             items = j if isinstance(j, list) else next((v for v in (j or {}).values() if isinstance(v, list)), None) if isinstance(j, dict) else None
             if r.status_code == 200 and items is not None:
                 entry["count"] = len(items)
+                res["_seq"] = pick_seq(items, env.get("TOSS_ACCOUNT"))         # 두 번째 호출 없이 (요청 한도에 걸렸었다)
                 entry["item_keys"] = sorted(items[0].keys()) if items and isinstance(items[0], dict) else None
                 entry["top_keys"] = sorted(j.keys()) if isinstance(j, dict) else None
                 ident = None
@@ -321,8 +339,11 @@ def main():
             res.setdefault("tried", []).append(entry)
     # 4) 읽기 전용 점검 — 상태 코드와 '항목 이름'만 남긴다 (금액·종목·수량은 저장소에 올리지 않음)
     if tok and res.get("accounts"):
-        seq = env.get("TOSS_ACCOUNT_SEQ")
-        seq = seq if seq not in (None, "") else seq_from_accounts(tok)          # accountSeq 는 0 일 수도 있다
+        seq, why = env.get("TOSS_ACCOUNT_SEQ"), ""
+        if seq in (None, ""):                                                   # accountSeq 는 0 일 수도 있다
+            seq = res.get("_seq")
+        if seq is None:
+            seq, why = seq_from_accounts(tok)
         if seq is not None and not env.get("TOSS_ACCOUNT_SEQ"):
             lines = [ln for ln in open(SECRETS, encoding="utf-8") if not ln.startswith("TOSS_ACCOUNT_SEQ=")]
             lines.append(f"TOSS_ACCOUNT_SEQ={seq}\n")
@@ -345,7 +366,9 @@ def main():
             print(f"  {'✓' if r.status_code == 200 else '✗'} {path} → {r.status_code}")
             time.sleep(0.3)
         res["readonly"] = checks
-        res["account_header"] = "보냄" if seq is not None else "못 찾음"
+        res["account_header"] = "보냄" if seq is not None else f"못 찾음 ({why})"
+        print(f"  계좌 헤더: {res['account_header']}")
+    res.pop("_seq", None)
     json.dump(res, open(os.path.join(OUT, "probe.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     ok = bool(res.get("accounts"))
     print(f"\n결과: {'연결 성공' if ok else '아직 연결 안 됨'} — data/toss/probe.json")

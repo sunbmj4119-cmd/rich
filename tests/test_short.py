@@ -580,9 +580,10 @@ def test_toss_reconcile_off_server_reads_file():
     """토스는 GitHub 에서 접속이 안 됨 → 서버가 남긴 대사 기록을 읽고, 1영업일 넘게 묵으면 새 매수 금지."""
     import short_exec as SX
     with tempfile.TemporaryDirectory() as d:
-        old = (SX.RECON, SX.MIRROR, SX.on_server)
+        old = (SX.RECON, SX.MIRROR, SX.MIRROR_STATUS, SX.on_server)
         try:
             SX.RECON, SX.MIRROR = os.path.join(d, "recon.json"), os.path.join(d, "mirror.json")
+            SX.MIRROR_STATUS = os.path.join(d, "mirror_status.json")                       # 저장소의 실제 연결 기록과 분리
             SX.on_server = lambda: False
             cfg = {"short": {"broker": "toss"}}
             r = SX.reconcile(cfg, acc={})
@@ -602,7 +603,7 @@ def test_toss_reconcile_off_server_reads_file():
             assert "123456789" not in txt and '"expect"' not in txt and "broker_px" not in txt     # 공개 파일엔 금액·수량 없음
             assert pub["mismatch_codes"] == ["069500"] and pub["slippage_bp"] == [3.2]
         finally:
-            SX.RECON, SX.MIRROR, SX.on_server = old
+            SX.RECON, SX.MIRROR, SX.MIRROR_STATUS, SX.on_server = old
 
 
 if __name__ == "__main__":
