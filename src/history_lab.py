@@ -331,7 +331,7 @@ def krx_panel():
         P[k] = piv(o, col)
     for k in ("O", "H", "L", "C"):
         P[k][~(P[k] > 0)] = np.nan
-    P["VAL"] = P["C"] * P["V"]
+    P["VAL"] = piv(o, "거래대금") if "거래대금" in o.columns else P["C"] * P["V"]   # 실제 거래대금 (수정주가 × 거래량은 분할 전후로 어긋남)
     # 시가총액: 해마다 기준일 시총 × (종가 / 기준일 종가) — 그 해 안에선 주식 수가 같다고 근사
     MC = np.full(P["C"].shape, np.nan)
     U = np.zeros(P["C"].shape, bool)

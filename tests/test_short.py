@@ -606,6 +606,73 @@ def test_toss_reconcile_off_server_reads_file():
             SX.RECON, SX.MIRROR, SX.MIRROR_STATUS, SX.on_server = old
 
 
+def test_krx_history_collector_resume_and_block():
+    """KRX 긴 역사 수집기: 일봉은 KRX 직접(상장폐지 포함), 이어 받기, 빈 응답이 이어지면 그 단계만 멈춤, 접속 안 되면 바로 끝."""
+    import types
+    mode = {"m": "ok", "n": 0}
+
+    def mcap(d, market="KOSPI"):
+        if mode["m"] == "dead":
+            return pd.DataFrame()
+        y, n = int(d[:4]), 130
+        return pd.DataFrame({"시가총액": np.arange(n, 0, -1) * 1e9}, index=pd.Index([f"{(i + y) % 300:06d}" for i in range(n)], name="티커"))
+
+    def bars(s, e, *a, **k):
+        idx = pd.bdate_range(s, e)[:3]
+        return pd.DataFrame({"시가": 1, "고가": 2, "저가": 1, "종가": 2, "거래량": 10, "거래대금": 20}, index=pd.Index(idx, name="날짜"))
+
+    def ohlcv(s, e, c, adj=True):
+        mode["n"] += 1
+        return pd.DataFrame() if mode["m"] == "block" else bars(s, e)
+
+    def flows(s, e, c, detail=False):
+        idx = pd.bdate_range(s, e)[:3]
+        return pd.DataFrame({"기관합계": 1, "개인": -2, "외국인합계": 1}, index=pd.Index(idx, name="날짜"))
+    stock = SimpleNamespace(get_market_cap=mcap, get_market_ticker_name=lambda c: "", get_market_trading_value_by_date=flows,
+                            get_etf_ohlcv_by_date=lambda s, e, c: bars(s, e) if int(s[:4]) >= 2010 else pd.DataFrame())
+    pk, web, kw = types.ModuleType("pykrx"), types.ModuleType("pykrx.website"), SimpleNamespace(get_market_ohlcv_by_date=ohlcv)
+    pk.stock, web.krx, pk.website = stock, kw, web
+    saved = {k: sys.modules.get(k) for k in ("pykrx", "pykrx.website")}
+    sys.modules.update({"pykrx": pk, "pykrx.website": web})
+    import collect_krx_history as C
+    old = (C.DIR, C.CACHE, C.time.sleep, sys.argv)
+    try:
+        with tempfile.TemporaryDirectory() as d:
+            C.DIR, C.CACHE, C.time.sleep = d, os.path.join(d, "krx_cache"), (lambda x: None)
+            sys.argv = ["x", "--years", "2016", "2018", "--top", "20"]
+            C.main()
+            o = pd.read_csv(os.path.join(d, "krx_ohlcv.csv.gz"), dtype={"종목코드": str})
+            f = pd.read_csv(os.path.join(d, "krx_flows.csv.gz"), dtype={"종목코드": str})
+            assert "거래대금" in o.columns and list(f.columns) == ["날짜", "종목코드", "외국인순매수", "기관순매수", "개인순매수"]
+            n1, mode["n"] = mode["n"], 0
+            C.main()                                                                # 이어 받기: 다시 받지 않는다
+            assert n1 > 0 and mode["n"] == 0
+            u = pd.read_csv(os.path.join(d, "krx_universe.csv.gz"), dtype={"종목코드": str})
+            need = C.needed_years(u, 2016, 2018)
+            assert all(v == list(range(v[0], v[-1] + 1)) and 2016 <= v[0] and v[-1] <= 2018 for v in need.values())
+        with tempfile.TemporaryDirectory() as d:
+            C.DIR, C.CACHE = d, os.path.join(d, "krx_cache")
+            mode.update(m="block", n=0)
+            sys.argv = ["x", "--years", "2000", "2018", "--top", "20"]
+            C.main()                                                                # 일봉만 멈추고 수급·ETF 는 계속
+            assert mode["n"] == 60 and not os.path.exists(os.path.join(d, "krx_ohlcv.csv.gz"))
+            assert os.path.exists(os.path.join(d, "krx_flows.csv.gz")) and not glob_any(os.path.join(d, "krx_cache"), "ohlcvk_")
+            mode["m"] = "dead"
+            try:
+                C.main()
+                raise AssertionError("접속이 안 되면 바로 끝나야 함")
+            except SystemExit as ex:
+                assert ex.code == 2
+    finally:
+        C.DIR, C.CACHE, C.time.sleep, sys.argv = old
+        for k, v in saved.items():
+            sys.modules.pop(k, None) if v is None else sys.modules.__setitem__(k, v)
+
+
+def glob_any(d, prefix):
+    return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
+
+
 if __name__ == "__main__":
     for k, fn in list(globals().items()):
         if k.startswith("test_"):

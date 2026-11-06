@@ -470,8 +470,16 @@ def smoke(cfg, yes=False, code="261240", wait=90):
             time.sleep(3)
         return b.order_status(oid) or {}
     px = b.price(code)
+    try:
+        cash = b.account()["cash"]
+    except Exception as ex:
+        cash = None
+        print(f"매수 가능 금액 조회 실패: {ex}")
     if not px:
         res["summary"] = "현재가 조회 실패"
+    elif cash is not None and cash < px * 1.03:
+        print(f"매수 가능 현금이 1주 값({px:,.0f}원)보다 적습니다 — 토스 계좌에 2만 원 이상 넣은 뒤 다시 하세요 (아무 주문도 안 보냄)")
+        return None
     else:
         lim = brokers.round_tick(px * 1.01, up=True)
         r = b.order("buy", code, 1, "limit", lim, tif="DAY", client_id=f"smk{day}b")

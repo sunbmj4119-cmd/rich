@@ -176,7 +176,8 @@ check() {
   echo "  │ GitHub 쓰기   : $gh"
   echo "  │ 키 파일 항목  : ${names:-비어 있음}"
   echo "  │ 자동 실행     : $([ "$cronl" -gt 0 ] && echo '주문 08:40 등록' || echo '주문 아직') · $([ "$crone" -gt 0 ] && echo '대사 16:10 등록' || echo '대사 아직')"
-  echo "  │ 긴 역사 자료  : $(ls "$DIR"/data/history/krx_*.csv.gz 2>/dev/null | wc -l | tr -d ' ')개 파일 $(pgrep -f collect_krx_history.py >/dev/null 2>&1 && echo '(받는 중)' || true)"
+  echo "  │ 긴 역사 자료  : $(ls "$DIR"/data/history/krx_*.csv.gz 2>/dev/null | wc -l | tr -d ' ')개 파일 · 받아 둔 조각 $(ls "$DIR"/data/history/krx_cache 2>/dev/null | wc -l | tr -d ' ')개 $(pgrep -f collect_krx_history.py >/dev/null 2>&1 && echo '(받는 중)' || true)"
+  [ -f "$STATE/logs/krx_history.log" ] && echo "  │   마지막 줄   : $(grep -v -e 'Warning' -e '^ *df = ' "$STATE/logs/krx_history.log" | tail -n 1 | cut -c1-90)"
   echo "  │ 토스 수집     : $([ "$cronc" -gt 0 ] && echo '등록됨 (평일 18:50)' || echo '아직 안 함') · 원본 파일 ${rawn}개"
   echo "  │ 바깥으로 나가는 IP : $out_ip   ← 토스 '허용 IP'에 이 값을 등록 (보낼 때는 가려도 됩니다)"
   echo "  └──────────────────────────────────────────"
@@ -257,16 +258,21 @@ install_cron() {
 }
 
 run_history() {
-  step "한국거래소 긴 역사 받기 — 뒤에서 돌고, 앱을 닫거나 접속이 끊겨도 계속됩니다 (1~2시간)"
+  step "한국거래소 긴 역사 받기 — 뒤에서 돌고, 앱을 닫거나 접속이 끊겨도 계속됩니다 (2~3시간)"
   git -C "$DIR" pull -q --ff-only || true
   grep -q '^KRX_ID=.\+' "$STATE/secrets.env" 2>/dev/null || { no "KRX_ID 가 없습니다 — 먼저 bash ~/rich/deploy/oracle/setup.sh --keys"; return 0; }
   mkdir -p "$STATE/logs"
-  if pgrep -f "collect_krx_history.py" >/dev/null 2>&1; then
-    ok "이미 받는 중입니다 — 진행 보기: tail -f $STATE/logs/krx_history.log"
-    return 0
+  if pgrep -f "collect_krx_history.py|collect_history.sh" >/dev/null 2>&1; then
+    pkill -f "collect_history.sh" 2>/dev/null || true
+    pkill -f "collect_krx_history.py" 2>/dev/null || true
+    sleep 2
+    ok "받던 것을 멈추고 최신 코드로 다시 시작합니다 (받아 둔 것은 이어서 씀)"
   fi
   nohup bash "$DIR/deploy/oracle/collect_history.sh" > "$STATE/logs/krx_history.log" 2>&1 &
-  ok "시작했습니다. 진행 보기: tail -f $STATE/logs/krx_history.log   (그만 보기: Ctrl+C — 받기는 계속됨)"
+  sleep 20
+  echo "  ── 처음 몇 줄 ──"; tail -n 6 "$STATE/logs/krx_history.log" | sed 's/^/  /'
+  ok "뒤에서 받는 중입니다. 진행 보기: tail -n 5 $STATE/logs/krx_history.log   (몇 번이든 다시 봐도 됨)"
+  echo "  '0) KRX 접속 확인 ✗' 가 보이면 KRX 아이디·비밀번호 문제입니다 — 화면을 캡처해 보내 주세요."
   echo "  끝나면 저절로 GitHub 에 올라갑니다. 채팅으로 '수집 끝'이라고만 알려 주세요."
 }
 
