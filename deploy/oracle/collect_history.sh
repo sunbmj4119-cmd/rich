@@ -8,9 +8,9 @@ cd "$DIR"
 git pull -q --ff-only
 set -a; [ -f "$STATE/secrets.env" ] && . "$STATE/secrets.env"; set +a
 [ -n "${KRX_ID:-}" ] || echo "주의: KRX_ID 가 secrets.env 에 없습니다 — KRX 로그인이 필요한 자료는 비어 있을 수 있습니다"
-.venv/bin/pip install -q pykrx >/dev/null 2>&1 || true
+.venv/bin/pip install -q -U pykrx >/dev/null 2>&1 || true        # KRX 로그인 지원판
 mkdir -p "$STATE/logs"
-.venv/bin/python src/collect_krx_history.py "$@" 2>&1 | tee "$STATE/logs/krx_history_$(date +%F).log"
+.venv/bin/python -u src/collect_krx_history.py "$@" 2>&1 | tee "$STATE/logs/krx_history_$(date +%F).log"
 git add data/history/krx_universe.csv.gz data/history/krx_ohlcv.csv.gz data/history/krx_flows.csv.gz data/history/krx_etf.csv.gz 2>/dev/null || true
 git commit -q -m "KRX 긴 역사 $(date +%F) (oracle)" || { echo "변경 없음"; exit 0; }
 git pull -q --rebase && git push -q && echo "GitHub 에 올림 — 다음 밤 evolve.yml 의 긴 역사 검증이 수급 모델까지 잽니다"

@@ -9,17 +9,27 @@ KRX 긴 역사 수집기 — Oracle 서버(또는 집 PC)에서 '한 번' 돌린
     krx_flows.csv.gz    : 같은 종목들의 외국인·기관·개인 순매수 금액 2000~2018
     krx_etf.csv.gz      : 국내 ETF 12종 상장일부터 전 기간
   이어 받기: 종목·연도마다 data/history/krx_cache/ 에 저장 → 끊겨도 다시 돌리면 이어서 (KRX 차단을 피하려 호출마다 쉼)
-  시간: 대략 1~2시간
+  시간: 대략 2~3시간 (종목마다 그 종목이 상위 150 이던 해 ± 1년만 받는다)
+  일봉은 KRX 에서 직접(수정주가) — pykrx 기본(수정주가=네이버)은 상장폐지 종목이 비어 생존편향이 그대로 남는다.
+  진행 보기: tail -n 5 ~/.rich/logs/krx_history.log  (경고는 숨기고 진행 줄만 남김)
 
   서버: bash ~/rich/deploy/oracle/collect_history.sh   (받고 → GitHub 에 올림)
   직접: python src/collect_krx_history.py [--years 2000 2018] [--top 150]
 """
 import argparse
+import glob
 import os
 import sys
 import time
+import warnings
 
 import pandas as pd
+
+warnings.filterwarnings("ignore")                     # pykrx 안의 pandas 경고가 로그를 덮어 진행이 안 보였다
+try:
+    sys.stdout.reconfigure(line_buffering=True)       # 파이프(tee)로 나가도 진행 줄이 바로 보이게
+except Exception:
+    pass
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -36,14 +46,19 @@ def stock_api():
         sys.exit(f"pykrx 를 쓸 수 없습니다 ({type(ex).__name__}: {ex}) — pip install pykrx, KRX_ID/KRX_PW 확인")
 
 
-def cached(name, fn):
+def cached(name, fn, keep_empty=True):
+    """한 번 받은 것은 저장해 두고 다시 쓴다. 빈 결과는 (차단·일시 오류일 수 있어) keep_empty=False 면 저장하지 않는다."""
     p = os.path.join(CACHE, name + ".pkl")
     if os.path.exists(p):
-        return pd.read_pickle(p)
+        try:
+            return pd.read_pickle(p)
+        except Exception:                             # 받는 중에 끊겨 반쯤 쓴 파일 → 다시 받는다
+            os.remove(p)
     df = fn()
-    if df is not None:
+    if df is not None and (keep_empty or not df.empty):
         os.makedirs(CACHE, exist_ok=True)
-        df.to_pickle(p)
+        df.to_pickle(p + ".tmp")
+        os.replace(p + ".tmp", p)
     return df
 
 
@@ -91,38 +106,67 @@ def universe(stock, years, top):
     return u
 
 
-def per_code(stock, codes, years, kind):
-    out = []
+class Blocked(Exception):
+    pass
+
+
+def per_code(stock, need, kind, t0=None):
+    """need: {종목코드: [연도…]}. 연도마다 받아 저장(이어 받기). 빈 응답이 계속되면 차단·로그인 문제로 보고 멈춘다."""
+    from pykrx.website import krx as KW                # KRX 직접 (수정주가, 상장폐지 종목 포함)
+    out, empty_run, calls, t0 = [], 0, 0, t0 or time.time()
+    codes = sorted(need)
+    total = sum(len(v) for v in need.values())
+    done = 0
     for i, c in enumerate(codes):
-        for y in years:
+        for y in need[c]:
             s, e = f"{y}0101", f"{y}1231"
+            hit = os.path.exists(os.path.join(CACHE, f"{kind}k_{c}_{y}.pkl"))
 
             def get():
                 try:
                     if kind == "ohlcv":
-                        df = stock.get_market_ohlcv_by_date(s, e, c, adjusted=True)
+                        df = KW.get_market_ohlcv_by_date(s, e, c, True)
                     elif kind == "etf":
                         df = stock.get_etf_ohlcv_by_date(s, e, c)
                     else:
                         df = stock.get_market_trading_value_by_date(s, e, c, detail=False)
-                except Exception:
+                except Exception as ex:
+                    print(f"    ! {kind} {c} {y}: {type(ex).__name__} {str(ex)[:80]}")
                     return pd.DataFrame()
                 finally:
                     time.sleep(0.35)
                 return df if df is not None else pd.DataFrame()
-            df = cached(f"{kind}_{c}_{y}", get)
+            df = cached(f"{kind}k_{c}_{y}", get, keep_empty=False)
+            done += 1
+            calls += 0 if hit else 1
+            if df is not None and not df.empty:
+                empty_run = 0                              # 받아 둔 것이든 새로 받은 것이든 자료가 있으면 정상
+            elif not hit:
+                empty_run += 1
+                if empty_run >= 60:
+                    raise Blocked(f"{kind}: 빈 응답이 {empty_run}번 이어짐 (마지막 {c} {y}) — KRX 차단이나 로그인 만료로 보입니다. "
+                                  "잠시 뒤 다시 실행하면 받은 데까지 이어 받습니다")
             if df is None or df.empty:
                 continue
             df = df.reset_index().rename(columns={df.reset_index().columns[0]: "날짜"})
             df["종목코드"] = c
             out.append(df)
-        if (i + 1) % 20 == 0:
-            print(f"    {kind} {i + 1}/{len(codes)}")
+        if (i + 1) % 10 == 0 or i + 1 == len(codes):
+            el = time.time() - t0
+            left = (total - done) * (el / max(calls, 1)) if calls else 0
+            print(f"    {kind} 종목 {i + 1}/{len(codes)} · 연도 {done}/{total} · 새로 받음 {calls} · "
+                  f"{el / 60:.0f}분 지남" + (f" · 남은 시간 약 {left / 60:.0f}분" if calls >= 20 else ""))
     if not out:
         return pd.DataFrame()
     d = pd.concat(out, ignore_index=True)
     d["날짜"] = pd.to_datetime(d["날짜"]).dt.strftime("%Y-%m-%d")
     return d
+
+
+def needed_years(u, y0, y1):
+    """종목마다 받을 해: 상위 150 이던 해(연말 기준) 의 다음 해가 실제로 담는 해, 그 앞 1년은 신호 계산용."""
+    yrs = u.assign(y=pd.to_datetime(u["기준일"]).dt.year).groupby("종목코드")["y"].agg(["min", "max"])
+    return {c: list(range(max(y0, int(r["min"])), min(y1, int(r["max"]) + 1) + 1)) for c, r in yrs.iterrows()}
 
 
 def tidy_flows(f):
@@ -136,37 +180,63 @@ def tidy_flows(f):
     return out
 
 
+def check_login(stock):
+    """시작하자마자 한 번 받아 본다 — 안 되면 몇 시간 돌다 빈 파일을 올리는 대신 바로 이유를 알린다."""
+    for d in ("20181228", "20181227"):
+        try:
+            df = stock.get_market_cap(d, market="KOSPI")
+            if df is not None and len(df) > 100:
+                print(f"0) KRX 접속 확인 ✓ ({d} 코스피 {len(df)}종목)")
+                return True
+        except Exception as ex:
+            print(f"   KRX 접속 오류: {type(ex).__name__} {str(ex)[:120]}")
+    print("0) KRX 접속 확인 ✗ — 빈 응답. KRX_ID/KRX_PW(setup.sh --keys) 와 KRX 정보데이터시스템 로그인이 되는지 확인하세요")
+    return False
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--years", nargs=2, type=int, default=[2000, 2018])
     ap.add_argument("--top", type=int, default=150)
     a = ap.parse_args()
     stock = stock_api()
+    if not check_login(stock):
+        sys.exit(2)
+    for f in glob.glob(os.path.join(CACHE, "ohlcv_*.pkl")) + glob.glob(os.path.join(CACHE, "flows_*.pkl")) + \
+            glob.glob(os.path.join(CACHE, "etf_*.pkl")):
+        os.remove(f)                                    # 예전 판(네이버 일봉, 빈 응답까지 저장) 캐시는 버린다
     years = list(range(a.years[0], a.years[1] + 1))
     os.makedirs(DIR, exist_ok=True)
     t0 = time.time()
     print("1) 해마다 시가총액 상위 (상장폐지 포함)")
     u = universe(stock, years, a.top)
     u.to_csv(os.path.join(DIR, "krx_universe.csv.gz"), index=False)
-    codes = sorted(u["종목코드"].unique())
-    print(f"   종목 {len(codes)}개 (해마다 상위 {a.top}의 합집합)")
-    print("2) 수정 일봉")
-    o = per_code(stock, codes, years, "ohlcv")
-    if not o.empty:
-        keep = [c for c in ("날짜", "종목코드", "시가", "고가", "저가", "종가", "거래량") if c in o.columns]
-        o[keep].to_csv(os.path.join(DIR, "krx_ohlcv.csv.gz"), index=False)
-    print(f"   {len(o):,}행")
+    need = needed_years(u, a.years[0], a.years[1])
+    print(f"   종목 {len(need)}개 (해마다 상위 {a.top}의 합집합) · 받을 종목·연도 {sum(map(len, need.values()))}개")
+    stopped = []
+
+    def step(kind, need_k, out, keep=None, tidy=None):
+        try:
+            d = per_code(stock, need_k, kind)
+        except Blocked as ex:
+            print(f"   멈춤: {ex}")
+            stopped.append(kind)
+            return
+        d = tidy(d) if tidy else d
+        if not d.empty:
+            cols = [c for c in keep if c in d.columns] if keep else list(d.columns)
+            d[cols].to_csv(os.path.join(DIR, out), index=False)
+        print(f"   {len(d):,}행 · 종목 {d['종목코드'].nunique() if not d.empty else 0}개 → {out}")
+
+    print("2) 수정 일봉 (KRX 직접 — 상장폐지 종목 포함)")
+    step("ohlcv", need, "krx_ohlcv.csv.gz", keep=("날짜", "종목코드", "시가", "고가", "저가", "종가", "거래량", "거래대금"))
     print("3) 투자자별 순매수 (외국인·기관·개인)")
-    f = tidy_flows(per_code(stock, codes, years, "flows"))
-    if not f.empty:
-        f.to_csv(os.path.join(DIR, "krx_flows.csv.gz"), index=False)
-    print(f"   {len(f):,}행")
+    step("flows", need, "krx_flows.csv.gz", tidy=tidy_flows)
     print("4) 국내 ETF 12종 전 기간")
-    e = per_code(stock, ETF_CODES, list(range(2002, pd.Timestamp.now().year + 1)), "etf")
-    if not e.empty:
-        keep = [c for c in ("날짜", "종목코드", "시가", "고가", "저가", "종가", "거래량") if c in e.columns]
-        e[keep].to_csv(os.path.join(DIR, "krx_etf.csv.gz"), index=False)
-    print(f"   {len(e):,}행")
+    step("etf", {c: list(range(2002, pd.Timestamp.now().year + 1)) for c in ETF_CODES}, "krx_etf.csv.gz",
+         keep=("날짜", "종목코드", "시가", "고가", "저가", "종가", "거래량"))
+    if stopped:
+        print(f"일부 멈춤 ({', '.join(stopped)}) — 다시 실행하면 받은 데까지 이어 받습니다")
     print(f"끝 ({(time.time() - t0) / 60:.0f}분) → {DIR}/krx_*.csv.gz")
 
 
