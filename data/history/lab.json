@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-05 23:15",
+ "generated": "2026-11-06 22:47",
  "oos_end": "2013-12-31",
  "assumptions": {
   "div": 0.015,
@@ -2538,9 +2538,9 @@
  "kr_attr": [
   {
    "sector": "건설·건자재",
-   "trades": 2598,
-   "avg_bp": 159.3,
-   "win": 0.478
+   "trades": 2604,
+   "avg_bp": 156.2,
+   "win": 0.477
   },
   {
    "sector": "운송·물류",
@@ -2550,31 +2550,31 @@
   },
   {
    "sector": "IT·전자",
-   "trades": 5688,
-   "avg_bp": 86.9,
+   "trades": 5693,
+   "avg_bp": 86.2,
    "win": 0.525
   },
   {
    "sector": "반도체",
-   "trades": 7405,
-   "avg_bp": 79.3,
+   "trades": 7406,
+   "avg_bp": 78.9,
    "win": 0.493
   },
   {
    "sector": "조선·기계·방산",
-   "trades": 5700,
-   "avg_bp": 71.6,
+   "trades": 5703,
+   "avg_bp": 71.1,
    "win": 0.484
   },
   {
    "sector": "배터리·2차전지",
-   "trades": 3015,
-   "avg_bp": 51.1,
+   "trades": 3017,
+   "avg_bp": 50.7,
    "win": 0.496
   },
   {
    "sector": "바이오·제약",
-   "trades": 7908,
+   "trades": 7909,
    "avg_bp": 28.8,
    "win": 0.465
   },
@@ -2592,20 +2592,20 @@
   },
   {
    "sector": "화학·에너지",
-   "trades": 13683,
-   "avg_bp": -4.9,
+   "trades": 13694,
+   "avg_bp": -5.0,
    "win": 0.453
   },
   {
    "sector": "지주",
-   "trades": 10419,
-   "avg_bp": -7.5,
+   "trades": 10421,
+   "avg_bp": -7.7,
    "win": 0.474
   },
   {
    "sector": "통신·인터넷",
-   "trades": 8092,
-   "avg_bp": -14.2,
+   "trades": 8094,
+   "avg_bp": -14.3,
    "win": 0.454
   },
   {
@@ -2621,9 +2621,110 @@
    "win": 0.447
   }
  ],
+ "kr_pit": {
+  "from": "2000-01-04",
+  "to": "2018-12-28",
+  "n_codes": 346,
+  "flow_models": {
+   "S:FOR20:10:BAND:crash": 0.292,
+   "S:FOR20:10:BAND:none": 0.245,
+   "S:FOR20:10:BAND:trend": 0.543,
+   "S:FOR20:10:H10:crash": 0.166,
+   "S:FOR20:10:H10:none": 0.222,
+   "S:FOR20:10:H10:trend": 0.489,
+   "S:FOR20:10:H1:crash": 0.026,
+   "S:FOR20:10:H1:none": 0.02,
+   "S:FOR20:10:H1:trend": 0.285,
+   "S:FOR20:10:H3:crash": 0.067,
+   "S:FOR20:10:H3:none": 0.1,
+   "S:FOR20:10:H3:trend": 0.315,
+   "S:FOR20:10:H5:crash": 0.168,
+   "S:FOR20:10:H5:none": 0.176,
+   "S:FOR20:10:H5:trend": 0.441,
+   "S:FOR20:5:BAND:crash": 0.215,
+   "S:FOR20:5:BAND:none": 0.29,
+   "S:FOR20:5:BAND:trend": 0.484,
+   "S:FOR20:5:H10:crash": 0.231,
+   "S:FOR20:5:H10:none": 0.3,
+   "S:FOR20:5:H10:trend": 0.478,
+   "S:FOR20:5:H1:crash": -0.045,
+   "S:FOR20:5:H1:none": -0.093,
+   "S:FOR20:5:H1:trend": 0.163,
+   "S:FOR20:5:H3:crash": 0.106,
+   "S:FOR20:5:H3:none": 0.098,
+   "S:FOR20:5:H3:trend": 0.258,
+   "S:FOR20:5:H5:crash": 0.193,
+   "S:FOR20:5:H5:none": 0.197,
+   "S:FOR20:5:H5:trend": 0.408,
+   "S:REVC_FLOW:10:BAND:crash": -0.521,
+   "S:REVC_FLOW:10:BAND:none": -0.857,
+   "S:REVC_FLOW:10:BAND:trend": -0.523,
+   "S:REVC_FLOW:10:H10:crash": 0.439,
+   "S:REVC_FLOW:10:H10:none": 0.5,
+   "S:REVC_FLOW:10:H10:trend": 0.488,
+   "S:REVC_FLOW:10:H1:crash": -1.015,
+   "S:REVC_FLOW:10:H1:none": -1.069,
+   "S:REVC_FLOW:10:H1:trend": -1.019,
+   "S:REVC_FLOW:10:H3:crash": 0.272,
+   "S:REVC_FLOW:10:H3:none": 0.161,
+   "S:REVC_FLOW:10:H3:trend": 0.12,
+   "S:REVC_FLOW:10:H5:crash": 0.43,
+   "S:REVC_FLOW:10:H5:none": 0.422,
+   "S:REVC_FLOW:10:H5:trend": 0.374,
+   "S:REVC_FLOW:5:BAND:crash": -0.929,
+   "S:REVC_FLOW:5:BAND:none": -1.01,
+   "S:REVC_FLOW:5:BAND:trend": -0.897,
+   "S:REVC_FLOW:5:H10:crash": 0.293,
+   "S:REVC_FLOW:5:H10:none": 0.509,
+   "S:REVC_FLOW:5:H10:trend": 0.366,
+   "S:REVC_FLOW:5:H1:crash": -0.958,
+   "S:REVC_FLOW:5:H1:none": -1.004,
+   "S:REVC_FLOW:5:H1:trend": -0.983,
+   "S:REVC_FLOW:5:H3:crash": 0.268,
+   "S:REVC_FLOW:5:H3:none": 0.087,
+   "S:REVC_FLOW:5:H3:trend": 0.054,
+   "S:REVC_FLOW:5:H5:crash": 0.314,
+   "S:REVC_FLOW:5:H5:none": 0.316,
+   "S:REVC_FLOW:5:H5:trend": 0.257
+  },
+  "meta": {
+   "수급 포함 (지금과 같음)": {
+    "stats": {
+     "cagr": -0.0301,
+     "vol": 0.168,
+     "sharpe": -0.097,
+     "mdd": -0.6742
+    },
+    "bench": {
+     "cagr": 0.064,
+     "vol": 0.2108,
+     "sharpe": 0.4,
+     "mdd": -0.5454
+    },
+    "p": 0.982,
+    "switches": 240
+   },
+   "가격 신호만": {
+    "stats": {
+     "cagr": -0.0152,
+     "vol": 0.1622,
+     "sharpe": -0.013,
+     "mdd": -0.7071
+    },
+    "bench": {
+     "cagr": 0.064,
+     "vol": 0.2108,
+     "sharpe": 0.4,
+     "mdd": -0.5454
+    },
+    "p": 0.955,
+    "switches": 234
+   }
+  }
+ },
  "gate": {
-  "n": 280,
-  "n_fail": 98,
+  "n": 340,
+  "n_fail": 134,
   "etf_fail": [
    "E:day_rev",
    "E:ls_rev",
@@ -2641,11 +2742,11 @@
    ]
   },
   "by_hold": {
-   "H1": 48,
-   "H3": 9,
-   "H5": 1,
-   "H10": 0,
-   "BAND": 36
+   "H1": 56,
+   "H3": 21,
+   "H5": 7,
+   "H10": 2,
+   "BAND": 44
   }
  }
 }
