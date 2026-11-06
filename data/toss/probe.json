@@ -1,5 +1,5 @@
 {
- "time": "2026-11-06 11:41:49 UTC",
+ "time": "2026-11-06 11:54:05 UTC",
  "base": "https://openapi.tossinvest.com",
  "egress_ip": "129.225.178.181",
  "spec": {
@@ -8,14 +8,8 @@
   "n_ops": 43
  },
  "token": {
-  "status": 200,
-  "expires_in": 86399,
-  "token_type": "Bearer",
-  "fields": [
-   "access_token",
-   "expires_in",
-   "token_type"
-  ]
+  "status": "cached",
+  "expires_in": 85663
  },
  "accounts": {
   "path": "/api/v1/accounts",
@@ -42,7 +36,7 @@
      "message": "str"
     }
    },
-   "error": "{'error': {'requestId': '6q0Bxk65W2SZGtE2', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
+   "error": "{'error': {'requestId': '6i3cApBtE2Ee4j1F', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
   },
   "buying_power": {
    "status": 400,
@@ -53,7 +47,7 @@
      "message": "str"
     }
    },
-   "error": "{'error': {'requestId': '6YYISjZDT6XssoiK', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
+   "error": "{'error': {'requestId': '6MMfRhedmovGDHkK', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
   },
   "orders": {
    "status": 400,
@@ -64,7 +58,7 @@
      "message": "str"
     }
    },
-   "error": "{'error': {'requestId': '6ij1w078v8DEZq5w', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
+   "error": "{'error': {'requestId': '6Yxo9IFrVolUBJhw', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
   },
   "calendar_kr": {
    "status": 200,
@@ -155,7 +149,8 @@
      "message": "str"
     }
    },
-   "error": "{'error': {'requestId': '62fq9hlLpvBdSgA6', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
+   "error": "{'error': {'requestId': '6htPvzJOdatChIKl', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
   }
- }
+ },
+ "account_header": "못 찾음"
 }
