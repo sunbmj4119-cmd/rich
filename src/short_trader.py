@@ -379,7 +379,17 @@ def aw_state(D, T):
             "target_named": [{"code": ETF_CODE[j], "name": ETF_NAME[ETF_CODE[j]], "group": AW.ASSETS[ETF_CODE[j]][2],
                               "w": round(float(x), 4)} for j, x in sorted(enumerate(m["target"]), key=lambda z: -z[1]) if x > 0.001],
             "backtest": {"from": str(m["dates"][s].date()), "stats": st, "years": ys, "switches": m["switches"]},
-            "data_date": str(m["dates"][-1].date())}
+            "data_date": str(m["dates"][-1].date()), "size": _size_tomorrow(m)}
+
+
+def _size_tomorrow(m):
+    """자산 규모별 전략(size_policy)의 내일 목표 비중 두 개 — 공개 계획에 싣는다 (금액 없음). 서버가 계좌 금액으로 주식 수를 정한다."""
+    try:
+        import size_policy as SZ
+        return SZ.tomorrow(m)
+    except Exception as ex:
+        print(f"  (규모별 목표 계산 실패: {type(ex).__name__} {ex})")
+        return None
 
 
 # ══════════════════════════════════════════════════════════════
@@ -523,6 +533,14 @@ def run(cfg=None, now=None):
             if transfer and transfer.get("pending"):
                 plan["transfer"] = {"from": "aw", "to": "live", "amount": round(transfer["pending"])}
             plan["aw"] = {"regime": aw["regime"]["name"], "target": aw["target_named"]}
+            if aw.get("size"):
+                plan["size"] = aw["size"]
+                try:                                   # 규모별 전략의 앞으로의 모의 기록 (20만 원 · 시작일부터 매번 처음부터 계산)
+                    import size_policy as SZ
+                    fw = SZ.forward(SZ.conf(cfg))
+                    json.dump(fw, open(os.path.join(DIR, "size_forward.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+                except Exception as ex:
+                    print(f"  (규모별 모의 기록 실패: {type(ex).__name__} {ex})")
         except Exception as ex:                         # 전천후 계산이 실패해도 단기 몫은 그대로 돈다
             print(f"  (전천후 몫 계산 실패: {type(ex).__name__} {ex})")
     # 4) 리스크 매니저 (거부권) — 모델이 낸 주문을 저장 직전에 검사. 검사 자체가 실패하면 새 매수 보류

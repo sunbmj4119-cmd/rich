@@ -30,6 +30,7 @@ import os
 import sys
 import time
 
+import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -184,6 +185,33 @@ def targets(acc, plan, mirror, sleeves):
     return {c: int(q * mirror["scale"]) for c, q in after_plan(acc, plan, sleeves).items()}
 
 
+def size_targets(cfg, plan, mirror, acct, bpos):
+    """자산 규모별 전략의 오늘 목표 주식 수. 자동매매 자산 = 자동매매 보유 평가액 + (계좌 현금 − 연결 때 내 현금).
+    다시 맞추는 날(매달 첫 거래일·처음)만 새로 정하고, 다른 날은 지난번 목표를 유지(안 채워진 주문만 다시)."""
+    import size_policy as SZ
+    sz = plan.get("size")
+    if not sz:
+        return None, "계획에 규모별 목표가 없음 (어젯밤 계산 실패) — 오늘은 보내지 않음"
+    sp = SZ.conf(cfg)
+    px = {c: float(v) for c, v in (sz.get("px") or {}).items() if v}
+    held = sum(float(p["shares"]) * float(px.get(c) or p.get("avg") or 0) for c, p in bpos.items())
+    cash = max(0.0, float(acct.get("cash") or 0) - float(mirror.get("external_cash") or 0))
+    eq = cash + held
+    hwm = max(float(mirror.get("hwm") or 0), eq)
+    keep = mirror.get("last_target")
+    if keep is not None and not sz.get("rebalance"):
+        return {c: int(q) for c, q in keep.items()}, {"hwm": round(hwm), "last_eq": round(eq), "rebalanced": False}
+    a = SZ.aggr_share(hwm, sp)
+    w = SZ.blend(sz.get("aw") or {}, sz.get("aggr") or {}, a)
+    codes = sorted(c for c in set(w) | set(px) if c in px)
+    pa = np.array([px[c] for c in codes], float)
+    import allweather as AW
+    cb = AW.costs(pa)[0]
+    q = SZ.allocate([w.get(c, 0.0) for c in codes], pa, eq * (1 - sp["cash_buffer"]), cb)
+    tgt = {c: int(n) for c, n in zip(codes, q) if n > 0}
+    return tgt, {"hwm": round(hwm), "aggr": a, "last_target": tgt, "last_eq": round(eq), "last_rebalance": plan.get("made"), "rebalanced": True}
+
+
 def own_positions(broker_pos, mirror):
     """증권사 보유 − 연결 때 이미 있던 '직접 보유분'(mirror.external) = 자동매매가 관리하는 수량.
     직접 산 종목은 비교하지도, 팔지도 않는다."""
@@ -272,9 +300,21 @@ def execute(cfg, dry=False, now=None, where=None):
         return []
     now = now or kst_now()
     sl = mirror.get("sleeves") or sleeves_of(cfg)
-    tgt = targets(acc, plan, mirror, sl)
-    bpos = own_positions(b.account()["positions"], mirror)
+    acct = b.account()
+    bpos = own_positions(acct["positions"], mirror)
     est = last_prices()
+    if "size" in sl:                                   # 자산 규모별 전략: 계좌 금액으로 정수 주식 수를 정한다
+        tgt, info = size_targets(cfg, plan, mirror, acct, bpos)
+        if tgt is None:
+            print("  " + info)
+            return []
+        mirror.update(info)
+        write_private(MIRROR, mirror)
+        est.update({c: v for c, v in ((plan.get("size") or {}).get("px") or {}).items() if v})
+        print(f"  규모별: 자동매매 자산 {info.get('last_eq', 0):,}원 · 고점 {info.get('hwm', 0):,.0f}원 · 공격 몫 {info.get('aggr', mirror.get('aggr', 0)):.0%}"
+              + (" · 오늘 다시 맞춤" if info.get("rebalanced") else " · 목표 유지"))
+    else:
+        tgt = targets(acc, plan, mirror, sl)
     for o in plan.get("orders") or []:
         est.setdefault(o["code"], o.get("est_price"))
     for c in tgt:
@@ -388,7 +428,9 @@ def reconcile(cfg, acc=None, save=True, after_plan=False):
                        "why": ["토스 연결 정상 (보유·매수 가능 금액 해석) — 주문 잠김 상태라 보유 비교는 실제 주문 뒤부터"]}
                 raise StopIteration
             sl = mirror.get("sleeves") or sleeves_of(cfg)
-            if after_plan:
+            if "size" in sl:                               # 규모별: 그날 아침 정한 목표와 비교
+                expect = {c: int(q) for c, q in (mirror.get("last_target") or {}).items()}
+            elif after_plan:
                 expect = targets(acc, RK.jload(PLAN, {}) or {}, mirror, sl)
             else:
                 expect = {c: int(q * mirror["scale"]) for c, q in sleeve_holdings(acc, sl).items()}
@@ -424,6 +466,8 @@ def link(cfg):
         print("연결할 증권사 없음:", why)
         return None
     a = b.account()
+    if "size" in sleeves_of(cfg):
+        return link_size(cfg, b, bname, a)
     ext = {c: float(p["shares"]) for c, p in a["positions"].items()}
     if ext:
         print(f"증권사 계좌에 이미 {len(ext)}종목이 있습니다 — '직접 보유분'으로 기록하고 자동매매는 그 수량을 건드리지 않습니다")
@@ -444,6 +488,38 @@ def link(cfg):
     json.dump({"linked": True, "broker": bname, "date": m["date"], "sleeves": sl, "external_codes": len(ext)},
               open(MIRROR_STATUS, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"거울 계좌 연결: {bname} 자본 {cap:,.0f}원 · 따라 할 몫 {sl} (모의 평가액 {val:,.0f}원) · 배율 {m['scale']:.4f} — 다음 아침부터 주문")
+    return m
+
+
+def link_size(cfg, b, bname, a):
+    """규모별 전략 연결: 자동매매 돈 = short.broker_capital (없으면 현금 전부). 그 밖의 현금·종목은 '내 것'으로 두고 건드리지 않는다.
+    이미 규모별로 연결돼 있으면(입금 뒤 다시 연결) 자동매매가 산 종목은 그대로 자동매매 것으로 둔다."""
+    old = RK.jload(MIRROR, None) or {}
+    same = old.get("broker") == bname and "size" in (old.get("sleeves") or [])
+    ext = (old.get("external") or {}) if same else {c: float(p["shares"]) for c, p in a["positions"].items()}
+    own = own_positions(a["positions"], {"external": ext})
+    px = {}
+    for c in own:
+        try:
+            px[c] = float(b.price(c) or own[c].get("avg") or 0)
+        except Exception:
+            px[c] = float(own[c].get("avg") or 0)
+    own_val = sum(float(p["shares"]) * px.get(c, 0) for c, p in own.items())
+    cash = float(a["cash"])
+    cap = float((cfg.get("short") or {}).get("broker_capital") or (cash + own_val))
+    bot_cash = min(cash, max(0.0, cap - own_val))
+    m = {"broker": bname, "date": kst_now().strftime("%Y-%m-%d"), "sleeves": ["size"], "capital": round(cap),
+         "external": ext, "external_cash": round(cash - bot_cash), "hwm": round(max(float(old.get("hwm") or 0) if same else 0, own_val + bot_cash)),
+         "last_target": old.get("last_target") if same else None}
+    if own_val + bot_cash <= 0:
+        print("자동매매에 쓸 돈이 0 — 토스 계좌에 입금한 뒤 다시 연결하세요")
+        return None
+    write_private(MIRROR, m)
+    json.dump({"linked": True, "broker": bname, "date": m["date"], "sleeves": ["size"], "external_codes": len(ext)},
+              open(MIRROR_STATUS, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    import size_policy as SZ
+    print(f"거울 계좌 연결 (자산 규모별): 자동매매 돈 {own_val + bot_cash:,.0f}원 (현금 {bot_cash:,.0f} + 자동매매 종목 {own_val:,.0f}) · "
+          f"내 현금 {m['external_cash']:,}원·내 종목 {len(ext)}개는 건드리지 않음 · 지금 공격 몫 {SZ.aggr_share(m['hwm'], SZ.conf(cfg)):.0%}")
     return m
 
 
