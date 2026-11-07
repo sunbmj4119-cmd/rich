@@ -311,6 +311,44 @@ def models_long(path, bench, market, design_from, periods, meta_from="2002-01-02
 KRX = {k: os.path.join("data/history", f"krx_{k}.csv.gz") for k in ("universe", "ohlcv", "flows")}
 
 
+NICE = np.array([1 / 50, 1 / 25, 1 / 20, 1 / 10, 1 / 5, 1 / 4, 1 / 3, 1 / 2, 2 / 3, 1.5, 2, 3, 4, 5, 10, 20, 25, 50])
+
+
+def krx_adjust(C, FR, dates, gap_max=20):
+    """분할·병합·증자 보정 계수 fac (T×N, 보정가 = 원본가 × fac — 맨 끝 날 기준) 와 끊김 breaks.
+    KRX 등락률은 '기준가'(분할·권리락 반영) 대비라 그날 계수 = (종가 / (1+등락률)) / 전일 종가 — 유무상 증자까지 정확.
+    등락률이 없으면 가격제한폭(15%, 2015-06-15 부터 30%)을 넘는 날만 가까운 분할 비율(1/50 … 50)로, 없으면 변화 전부를 계수로."""
+    T, N = C.shape
+    lim = np.where(dates < pd.Timestamp("2015-06-15"), 0.16, 0.31)[:, None]
+    prev = pd.DataFrame(C).ffill().shift(1).to_numpy()
+    idx = np.where(np.isfinite(C), np.arange(T)[:, None], np.nan)
+    last = pd.DataFrame(idx).ffill().shift(1).to_numpy()
+    gap = np.arange(T)[:, None] - last                                     # 직전 거래가 며칠 전인가
+    ok = np.isfinite(C) & np.isfinite(prev) & (prev > 0) & (gap <= gap_max)
+    f = np.ones((T, N))
+    breaks = np.isfinite(C) & np.isfinite(prev) & ~ok                    # 오래 비었다가 다시 나타난 날
+    with np.errstate(divide="ignore", invalid="ignore"):
+        raw = C / prev
+        if FR is not None:
+            base = C / (1 + FR / 100.0)
+            g = base / prev
+            use = ok & np.isfinite(g) & (np.abs(g - 1) > 0.003)          # 소수 둘째 자리 반올림 오차는 무시
+            f[use] = g[use]
+        else:
+            jump = ok & (np.abs(raw - 1) > lim)
+            for t, j in zip(*np.nonzero(jump)):
+                k = NICE[np.argmin(np.abs(np.log(raw[t, j] / NICE)))]
+                f[t, j] = k if abs(raw[t, j] / k - 1) < lim[t, 0] else raw[t, j]
+                breaks[t, j] = True                                       # 그날 실제 등락은 알 수 없음 → 수익에서 뺀다
+    fac = np.ones((T, N))
+    fac[:-1] = np.cumprod(f[::-1], axis=0)[::-1][1:]                    # fac[s] = s 다음 날부터 끝까지 계수의 곱
+    adj = C * fac
+    with np.errstate(divide="ignore", invalid="ignore"):
+        r = adj / pd.DataFrame(adj).ffill().shift(1).to_numpy() - 1
+    breaks |= np.nan_to_num(np.abs(r) > lim, nan=False).astype(bool)      # 보정 뒤에도 제한폭을 넘으면 자료 오류로 보고 뺀다
+    return fac, breaks
+
+
 def krx_panel():
     """KRX 긴 역사(collect_krx_history.py)로 '그때 실제 대형주' 패널: 해마다 시총 상위 100 = 유니버스(상장폐지 포함),
     외국인·기관·개인 순매수, 시가총액 ≈ 연말 시총 × 종가 비율. 파일이 없으면 None."""
@@ -331,7 +369,14 @@ def krx_panel():
         P[k] = piv(o, col)
     for k in ("O", "H", "L", "C"):
         P[k][~(P[k] > 0)] = np.nan
-    P["VAL"] = piv(o, "거래대금") if "거래대금" in o.columns else P["C"] * P["V"]   # 실제 거래대금 (수정주가 × 거래량은 분할 전후로 어긋남)
+    P["VAL"] = piv(o, "거래대금") if "거래대금" in o.columns else P["C"] * P["V"]   # 실제 거래대금 (분할과 무관)
+    # KRX '수정주가' 요청이 실제로는 원본가로 왔다 (2018-05-04 삼성전자 50:1 분할이 -98% 로 보임) → 여기서 보정
+    fac, brk = krx_adjust(P["C"], piv(o, "등락률") if "등락률" in o.columns else None, dates)
+    for k in ("O", "H", "L", "C"):
+        P[k] = P[k] * fac
+    with np.errstate(divide="ignore", invalid="ignore"):
+        P["V"] = P["V"] / fac
+    P["adj_events"] = int((np.abs(np.diff(fac, axis=0)) > 1e-9).sum())
     # 시가총액: 해마다 기준일 시총 × (종가 / 기준일 종가) — 그 해 안에선 주식 수가 같다고 근사
     MC = np.full(P["C"].shape, np.nan)
     U = np.zeros(P["C"].shape, bool)
@@ -351,9 +396,7 @@ def krx_panel():
             if r["순위"] <= 100:
                 U[t0 + 1:t1, j] = True                       # 기준일 다음 날부터 다음 기준일까지 (그날 이후 정보 없음)
     P["MC"], P["U"] = MC, U & ~np.isnan(MC)
-    r = P["C"][1:] / P["C"][:-1] - 1
-    lim = np.where(dates[1:] < pd.Timestamp("2015-06-15"), 0.16, 0.31)[:, None]
-    P["breaks"] = np.r_[np.zeros((1, len(codes)), bool), np.nan_to_num(np.abs(r) > lim, nan=False).astype(bool)]
+    P["breaks"] = brk
     for k, col in (("FOR", "외국인순매수"), ("INS", "기관순매수"), ("IND", "개인순매수")):
         P[k] = piv(f, col)
     P["Cf"] = pd.DataFrame(P["C"]).ffill().to_numpy(copy=True)

@@ -10,7 +10,8 @@ KRX 긴 역사 수집기 — Oracle 서버(또는 집 PC)에서 '한 번' 돌린
     krx_etf.csv.gz      : 국내 ETF 12종 상장일부터 전 기간
   이어 받기: 종목·연도마다 data/history/krx_cache/ 에 저장 → 끊겨도 다시 돌리면 이어서 (KRX 차단을 피하려 호출마다 쉼)
   시간: 대략 2~3시간 (종목마다 그 종목이 상위 150 이던 해 ± 1년만 받는다)
-  일봉은 KRX 에서 직접(수정주가) — pykrx 기본(수정주가=네이버)은 상장폐지 종목이 비어 생존편향이 그대로 남는다.
+  일봉은 KRX 에서 직접 — pykrx 기본(수정주가=네이버)은 상장폐지 종목이 비어 생존편향이 그대로 남는다.
+  KRX 의 '수정주가' 요청은 실제로는 원본가로 온다 → 등락률(기준가 대비)도 남겨 history_lab.krx_adjust 가 분할·증자를 보정.
   진행 보기: tail -n 5 ~/.rich/logs/krx_history.log  (경고는 숨기고 진행 줄만 남김)
 
   서버: bash ~/rich/deploy/oracle/collect_history.sh   (받고 → GitHub 에 올림)
@@ -229,7 +230,7 @@ def main():
         print(f"   {len(d):,}행 · 종목 {d['종목코드'].nunique() if not d.empty else 0}개 → {out}")
 
     print("2) 수정 일봉 (KRX 직접 — 상장폐지 종목 포함)")
-    step("ohlcv", need, "krx_ohlcv.csv.gz", keep=("날짜", "종목코드", "시가", "고가", "저가", "종가", "거래량", "거래대금"))
+    step("ohlcv", need, "krx_ohlcv.csv.gz", keep=("날짜", "종목코드", "시가", "고가", "저가", "종가", "거래량", "거래대금", "등락률"))
     print("3) 투자자별 순매수 (외국인·기관·개인)")
     step("flows", need, "krx_flows.csv.gz", tidy=tidy_flows)
     print("4) 국내 ETF 12종 전 기간")

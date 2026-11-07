@@ -315,6 +315,14 @@ def readiness(short_ui, cfg=None):
         n = 0
     eta = (pd.Timestamp.now() + pd.offsets.BDay(max(0, 60 - n))).strftime("%Y-%m-%d") if n < 60 else None
     add("paper_days", "모의 기록 60거래일 이상", n >= 60, f"{n}일", "60일", eta, "짧은 기록의 좋은 성적은 운과 구분이 안 된다 (Quantopian 888개 연구)")
+    # 1-1) 단기 몫을 실제 돈에 붙이려면: 상장폐지 포함 긴 역사(2002~2018 그때의 대형주)에서 고르기 규칙이 지수를 이겨야 한다
+    if "live" in sl:
+        pit = ((jload("data/history/lab.json", {}) or {}).get("kr_pit") or {}).get("meta", {}).get("수급 포함 (지금과 같음)") or {}
+        st, bn, pv = pit.get("stats") or {}, pit.get("bench") or {}, pit.get("p")
+        ok = bool(st) and st.get("cagr", -1) > bn.get("cagr", 0) and pv is not None and pv < 0.10
+        now = (f"연 {st.get('cagr', 0) * 100:+.1f}% vs 지수 {bn.get('cagr', 0) * 100:+.1f}% · p={pv}" if st else "긴 역사 결과 없음")
+        add("short_long_history", "단기 몫: 긴 역사(상장폐지 포함)에서 지수보다 나음", ok, now, "지수 초과 · p<0.10", None,
+            "2002~2018 그때의 시총 상위 종목으로, 지금과 같은 고르기 규칙을 그대로 돌린 결과 (history_lab.pit_report)")
     # 2) 감시 경고 없음 (최근 20번)
     rows = []
     if os.path.exists(JOURNAL):
