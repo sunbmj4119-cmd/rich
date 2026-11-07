@@ -351,7 +351,7 @@ def main():
                 fh.writelines(lines)
         checks = {}
         for name, path, params in (("holdings", "/api/v1/holdings", None), ("buying_power", "/api/v1/buying-power", {"currency": "KRW"}),
-                                   ("orders", "/api/v1/orders", None), ("calendar_kr", "/api/v1/market-calendar/KR", None),
+                                   ("orders", "/api/v1/orders", {"status": "OPEN"}),     # status 는 필수 (OPEN | CLOSED) ("calendar_kr", "/api/v1/market-calendar/KR", None),
                                    ("prices", "/api/v1/prices", {"symbols": "069500"}), ("commissions", "/api/v1/commissions", None)):
             try:
                 r = requests.get(BASE + path, params=params, timeout=15, headers={"Authorization": f"Bearer {tok}", "Accept": "application/json",

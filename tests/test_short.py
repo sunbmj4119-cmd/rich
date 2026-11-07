@@ -669,6 +669,20 @@ def test_krx_history_collector_resume_and_block():
             sys.modules.pop(k, None) if v is None else sys.modules.__setitem__(k, v)
 
 
+def test_krx_adjust_splits_and_rights():
+    """KRX 원본가 보정: 등락률(기준가 대비)로 50:1 분할·유상증자 정확히, 등락률 없으면 분할 비율로 추정하고 그날은 끊김."""
+    import history_lab as H
+    d = pd.bdate_range("2018-01-02", periods=8)
+    C = np.array([[100., 1000], [102, 1000], [104, 1000], [2.1, 1000], [2.12, 900], [2.1, 880], [np.nan, 880], [2.2, 880]])
+    FR = np.array([[0, 0], [2, 0], [1.96, 0], [0.96, 0], [0.95, -5.26], [-0.94, -2.22], [np.nan, 0], [4.76, 0]])
+    fac, b = H.krx_adjust(C, FR, d)
+    A = C * fac
+    assert abs(A[3, 0] / A[2, 0] - 1.0096) < 1e-3 and abs(A[0, 0] - 2.0) < 1e-3      # 분할 날도 실제 등락(+0.96%) 그대로
+    assert abs(A[4, 1] / A[3, 1] - (1 - 0.0526)) < 1e-3 and not b.any()             # 증자 권리락: 기준가 대비 -5.26%
+    fac2, b2 = H.krx_adjust(C, None, d)
+    assert abs((C * fac2)[2, 0] - 2.08) < 1e-6 and b2[3, 0] and b2.sum() == 1         # 1/50 로 추정, 분할 날만 끊김
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
