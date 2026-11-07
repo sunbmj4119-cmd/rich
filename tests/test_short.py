@@ -857,6 +857,57 @@ def test_bdw_rules_and_withdraw_hint():
     assert SX.withdraw_hint(400_000, 200_000) and not SX.withdraw_hint(399_999, 200_000) and not SX.withdraw_hint(1, 0)
 
 
+def test_bdw_intraday_exits_and_portfolio():
+    """불장단타왕 분봉 엔진: -1% 손절 · +2% 절반 익절 뒤 본절 · +6% 목표 · 선 이탈 · 시간 손절 · 동시 2종목·하루 손실 한도."""
+    import bdw_intraday as BI
+    R = BI.RULES
+    V = BI.VENUES["upbit"]
+    cin = lambda e: e * (1 + V["fee"])                                           # noqa: E731
+    sell = 1 - V["fee"] - V["slip"]
+
+    def A(o, h, lo, c, vw):
+        n = len(o)
+        ts = pd.date_range("2024-01-01", periods=n, freq="5min").to_numpy()
+        return {"o": np.array(o, float), "h": np.array(h, float), "lo": np.array(lo, float), "c": np.array(c, float),
+                "vw": np.array(vw, float), "last": np.zeros(n, bool), "day": np.zeros(n), "ts": ts}
+    e = 100 * (1 + V["slip"])
+    k, net, ent, why = BI.simulate_trade(A([100, 100, 100], [100, 100.5, 100], [100, 98.5, 100], [100, 99.5, 100], [90, 90, 90]), 0, "upbit", R)
+    assert why == "손절" and abs(net - (e * 0.99 * sell / cin(e) - 1)) < 1e-9
+    k, net, ent, why = BI.simulate_trade(A([100, 100, 101, 101], [100, 102.5, 101, 101], [100, 99.5, 99.9, 99], [100, 101, 100.5, 100], [90] * 4), 0, "upbit", R)
+    assert why == "본전 손절" and abs(net - ((0.5 * e * 1.02 + 0.5 * e) * sell / cin(e) - 1)) < 1e-9
+    k, net, ent, why = BI.simulate_trade(A([100, 100, 103], [100, 102.5, 107], [100, 99.5, 102], [100, 101, 106], [90] * 3), 0, "upbit", R)
+    assert why == "목표 +6%" and abs(net - ((0.5 * e * 1.02 + 0.5 * e * 1.06) * sell / cin(e) - 1)) < 1e-9
+    k, net, ent, why = BI.simulate_trade(A([100, 100, 100.4, 100.2], [100, 100.5, 100.5, 100.3], [100, 99.6, 99.8, 100], [100, 100.4, 100.2, 100], [90, 90, 101, 101]), 0, "upbit", R)
+    assert why == "선 이탈" and k == 3                                          # 2봉 종가가 선 아래 → 3봉 시가
+    o = [100] + [100] * 8
+    k, net, ent, why = BI.simulate_trade(A(o, [100.3] * 9, [99.5] * 9, [99.8] * 9, [90] * 9), 0, "upbit", R)
+    assert why == "시간 손절" and k == 1 + R["time_bars"]                       # 6봉째 종가가 매입가 아래 → 다음 봉
+    # 포트폴리오: 같은 시각 후보 3개 → 동시 2종목까지 · 하루 손실 한도
+    t0 = pd.Timestamp("2024-01-02 10:00")
+    c = pd.DataFrame([{"sym": f"S{i}", "t_sig": t0, "t_in": t0, "t_out": t0 + pd.Timedelta(minutes=30), "net": -0.03, "why": "손절",
+                       "value_day": 100 - i, "ret_day": 0.01} for i in range(3)])
+    tk, curve = BI.portfolio(c)
+    assert len(tk) == 2 and set(tk["sym"]) == {"S0", "S1"}
+    later = pd.DataFrame([{"sym": "S9", "t_sig": t0 + pd.Timedelta(hours=1), "t_in": t0 + pd.Timedelta(hours=1), "t_out": t0 + pd.Timedelta(hours=2),
+                           "net": 0.02, "why": "x", "value_day": 1, "ret_day": 0.0}])
+    tk2, _ = BI.portfolio(pd.concat([c, later], ignore_index=True), {"day_limit": 0.02})
+    assert "S9" not in set(tk2["sym"])                                          # 오전에 -3%×50%×2 = -3% → 하루 한도 -2% 넘어 멈춤
+    # 전체 흐름: 무작위 걸음 자료 두 종목 + 기준
+    rng = np.random.default_rng(5)
+    data = {}
+    for sym in ("BTC", "AAA", "BBB"):
+        n = 4000
+        ts = pd.date_range("2024-01-01", periods=n, freq="5min")
+        cl = 100 * np.exp(np.cumsum(rng.normal(0.0002, 0.004, n)))
+        op = np.r_[cl[0], cl[:-1]]
+        data[sym] = pd.DataFrame({"ts": ts, "open": op, "high": np.maximum(op, cl) * 1.002, "low": np.minimum(op, cl) * 0.998,
+                                  "close": cl, "volume": rng.lognormal(10, 1, n)})
+    cand = BI.candidates(data, "upbit", bench="BTC")
+    tk, curve = BI.portfolio(cand)
+    sm = BI.summary(tk, curve)
+    assert sm["trades"] == len(tk) and (len(tk) == 0 or (tk["t_out"] >= tk["t_in"]).all())
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 

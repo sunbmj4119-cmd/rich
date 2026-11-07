@@ -16,6 +16,7 @@
 #          bash setup.sh --link     토스 계좌를 거울 계좌로 연결 (config short.broker: toss 로 바꾼 뒤 · 빈 계좌만)
 #          bash setup.sh --live     실제 돈 주문 최종 확인값 저장 (준비도 점검표가 모두 통과한 뒤에만 의미 있음)
 #          bash setup.sh --smoke    1주 실주문 시험 (평일 정규장 · 실제 돈 1주 값 + 수수료 — 묻고 나서만)
+#          bash setup.sh --candles  토스 분봉 받기(국내 101·미국 104종목, 옛날까지) + 불장단타왕 규칙 검증 — 뒤에서 돌고 앱을 닫아도 계속
 #
 #   이 스크립트는 비밀 값을 화면에 출력하지 않는다. 키는 ~/.rich/secrets.env 에만 저장한다.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -276,6 +277,21 @@ run_history() {
   echo "  끝나면 저절로 GitHub 에 올라갑니다. 채팅으로 '수집 끝'이라고만 알려 주세요."
 }
 
+run_candles() {
+  step "토스 분봉 받기 + 불장단타왕 규칙 검증 — 뒤에서 돌고, 앱을 닫거나 접속이 끊겨도 계속됩니다 (몇 시간)"
+  git -C "$DIR" pull -q --ff-only || true
+  grep -q '"intervals"' "$DIR/data/toss/probe.json" 2>/dev/null || { no "캔들 점검 전입니다 — 먼저 bash ~/rich/deploy/oracle/setup.sh --probe"; return 0; }
+  mkdir -p "$STATE/logs"
+  if pgrep -f "candles.sh|toss_candles.py" >/dev/null 2>&1; then
+    ok "이미 받는 중입니다 — 진행 보기: tail -n 5 $STATE/logs/candles.log"
+    return 0
+  fi
+  nohup bash "$DIR/deploy/oracle/candles.sh" > "$STATE/logs/candles.log" 2>&1 &
+  sleep 20
+  echo "  ── 처음 몇 줄 ──"; tail -n 6 "$STATE/logs/candles.log" | sed 's/^/  /'
+  ok "뒤에서 받는 중입니다. 진행 보기: tail -n 5 $STATE/logs/candles.log"
+}
+
 run_link() {
   step "토스 계좌를 거울 계좌로 연결 — 이미 있던 종목은 '직접 보유분'으로 기록하고 자동매매는 건드리지 않습니다"
   echo "  실제 돈 주문을 켜기(--live) 전까지는 다시 연결해도 안전합니다 (자동매매 금액 short.broker_capital 을 바꿨을 때 등)"
@@ -330,6 +346,7 @@ case "$MODE" in
   --live)  set_live ;;
   --unlive) unset_live ;;
   --smoke) run_smoke ;;
+  --candles) run_candles ;;
   *)       install_packages; tune_system; get_code; deploy_key; secrets_file; check
            echo; echo "다음 단계: 위 ✗ 항목을 해결한 뒤 'bash ~/rich/deploy/oracle/setup.sh --check' 로 다시 확인하세요." ;;
 esac

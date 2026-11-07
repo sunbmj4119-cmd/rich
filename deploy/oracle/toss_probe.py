@@ -218,6 +218,61 @@ def seq_from_accounts(tok, tries=3):
     return None, why
 
 
+def candles_probe(spec, tok, seq=None, pages=40):
+    """캔들(봉) 점검: 봉 단위 목록(명세의 enum) · 응답 항목 이름 · 봉 단위별로 얼마나 옛날까지 받을 수 있는지 (005930 · AAPL).
+    가격 자체는 남기지 않고 개수·시각·항목 이름만."""
+    out = {"intervals": None, "interval_desc": None, "tests": {}}
+    try:
+        op = ((spec or {}).get("paths") or {}).get("/api/v1/candles", {}).get("get") or {}
+        for prm in op.get("parameters") or []:
+            prm = resolve(spec, prm)
+            if prm.get("name") == "interval":
+                sch = resolve(spec, prm.get("schema") or {})
+                out["intervals"] = sch.get("enum") or [x.get("const") for x in (sch.get("oneOf") or []) if isinstance(x, dict) and x.get("const")]
+                out["interval_desc"] = (prm.get("description") or sch.get("description") or "")[:600]
+    except Exception as ex:
+        out["spec_error"] = type(ex).__name__
+    ivs = out["intervals"] or ["1m", "5m", "15m", "1h", "1d"]
+    hdr = {"Authorization": f"Bearer {tok}", "Accept": "application/json", **({"X-Tossinvest-Account": str(seq)} if seq is not None else {})}
+    for sym in ("005930", "AAPL"):
+        for iv in ivs:
+            info = {"pages": 0, "bars": 0}
+            before = None
+            for pg in range(pages if iv == ivs[0] or "5" in str(iv) else 3):
+                prm = {"symbol": sym, "interval": iv, "count": 200, **({"before": before} if before else {})}
+                try:
+                    r = requests.get(BASE + "/api/v1/candles", params=prm, headers=hdr, timeout=15)
+                except Exception as ex:
+                    info["error"] = type(ex).__name__
+                    break
+                info["status"] = r.status_code
+                if r.status_code != 200:
+                    try:
+                        j = r.json()
+                        info["error"] = mask({k: j[k] for k in list(j)[:3]} if isinstance(j, dict) else "")
+                    except Exception:
+                        info["error"] = r.text[:120]
+                    break
+                j = r.json().get("result") or {}
+                cs = j.get("candles") or []
+                if pg == 0 and cs:
+                    info["keys"] = sorted(cs[0].keys()) if isinstance(cs[0], dict) else None
+                    info["newest"] = (cs[0] or {}).get("timestamp") if isinstance(cs[0], dict) else None
+                info["pages"] += 1
+                info["bars"] += len(cs)
+                if cs and isinstance(cs[-1], dict):
+                    info["oldest"] = cs[-1].get("timestamp")
+                before = j.get("nextBefore")
+                if not before or not cs:
+                    info["end"] = True
+                    break
+                time.sleep(0.25)
+            out["tests"][f"{sym}:{iv}"] = info
+            print(f"  캔들 {sym} {iv}: {info.get('status')} · {info['bars']}봉 · {info.get('oldest', '—')} ~ {info.get('newest', '—')}" + (" (끝까지)" if info.get("end") else ""))
+            time.sleep(0.3)
+    return out
+
+
 def get_spec():
     for u in SPEC_URLS:
         try:
@@ -368,6 +423,8 @@ def main():
         res["readonly"] = checks
         res["account_header"] = "보냄" if seq is not None else f"못 찾음 ({why})"
         print(f"  계좌 헤더: {res['account_header']}")
+        print("5) 캔들(분봉) 점검 — 봉 단위·얼마나 옛날까지 (가격은 남기지 않음)")
+        res["candles"] = candles_probe(spec, tok, seq)
     res.pop("_seq", None)
     json.dump(res, open(os.path.join(OUT, "probe.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     ok = bool(res.get("accounts"))

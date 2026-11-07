@@ -108,6 +108,18 @@ cd ~/rich && git pull && bash ~/rich/deploy/oracle/setup.sh --link
 - 나중에 더 넣고 싶으면: 입금 → 저에게 금액을 알려 주시면 설정(`broker_capital`)을 바꿔 드림 → 이 명령을 다시.
 - 주문은 아직 잠겨 있습니다 (준비도 점검표가 모두 ✓ 이고 `--live` 를 해야 실제로 나감).
 
+### ⑪ 분봉 받기 + 불장단타왕 규칙 검증 (조회만 — 주문 없음)
+```
+cd ~/rich && git pull && bash ~/rich/deploy/oracle/setup.sh --probe
+```
+`5) 캔들(분봉) 점검` 줄들이 나오면 (봉 단위·얼마나 옛날까지), 이어서:
+```
+bash ~/rich/deploy/oracle/setup.sh --candles
+```
+- 국내 101종목·미국 104종목의 분봉을 받을 수 있는 가장 옛날까지 받고(몇 시간, 뒤에서 돎), 끝나면 규칙 검증까지 해서 결과만 GitHub 에 올립니다.
+- 원본 분봉은 서버(`~/.rich/candles/`)에만 남습니다. 진행 보기: `tail -n 5 ~/.rich/logs/candles.log`
+- 끝나면 채팅으로 **"분봉 끝"**.
+
 ### 그 뒤 (제가 "이제 하세요" 라고 알려 드릴 때)
 
 | 단계 | 명령 | 언제 |
