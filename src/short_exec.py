@@ -212,6 +212,15 @@ def size_targets(cfg, plan, mirror, acct, bpos):
     return tgt, {"hwm": round(hwm), "aggr": a, "last_target": tgt, "last_eq": round(eq), "last_rebalance": plan.get("made"), "rebalanced": True}
 
 
+def withdraw_hint(equity, capital, mult=2.0):
+    """수익 출금 안내 (불장단타왕 반복 순위 8위 '수익은 꾸준히 출금한다' · 시드를 늘리는 기준 '시드의 2배'):
+    자동매매 자산이 넣은 돈의 2배 이상이면 True. 금액은 공개하지 않고 참/거짓만 공개 상태에 남긴다."""
+    try:
+        return float(equity or 0) >= mult * float(capital or 0) > 0
+    except (TypeError, ValueError):
+        return False
+
+
 def own_positions(broker_pos, mirror):
     """증권사 보유 − 연결 때 이미 있던 '직접 보유분'(mirror.external) = 자동매매가 관리하는 수량.
     직접 산 종목은 비교하지도, 팔지도 않는다."""
@@ -313,6 +322,8 @@ def execute(cfg, dry=False, now=None, where=None):
         est.update({c: v for c, v in ((plan.get("size") or {}).get("px") or {}).items() if v})
         print(f"  규모별: 자동매매 자산 {info.get('last_eq', 0):,}원 · 고점 {info.get('hwm', 0):,.0f}원 · 공격 몫 {info.get('aggr', mirror.get('aggr', 0)):.0%}"
               + (" · 오늘 다시 맞춤" if info.get("rebalanced") else " · 목표 유지"))
+        if withdraw_hint(info.get("last_eq"), mirror.get("capital")):
+            print("  ★ 자동매매 자산이 넣은 돈의 2배를 넘었습니다 — 초과분 출금을 고려하세요 (불장단타왕 '수익은 꾸준히 출금' · 고점 기준이라 출금해도 다시 공격적으로 가지 않음)")
     else:
         tgt = targets(acc, plan, mirror, sl)
     for o in plan.get("orders") or []:
@@ -348,7 +359,8 @@ def execute(cfg, dry=False, now=None, where=None):
         json.dump({"date": now.strftime("%Y-%m-%d %H:%M"), "broker": tag, "plan": plan.get("made"),
                    "sent": sum(1 for r in rows if r["ok"]), "failed": sum(1 for r in rows if not r["ok"] and r.get("kind") != "skip"),
                    "skipped": sum(1 for r in rows if r.get("kind") == "skip"),
-                   "orders": [{"code": r["code"], "side": r["side"], "ok": bool(r["ok"])} for r in rows]},
+                   "orders": [{"code": r["code"], "side": r["side"], "ok": bool(r["ok"])} for r in rows],
+                   "withdraw_hint": bool("size" in sl and withdraw_hint(mirror.get("last_eq"), mirror.get("capital")))},
                   open(EXEC_STATUS, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     except OSError:
         pass
