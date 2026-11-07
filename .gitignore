@@ -18,3 +18,6 @@ scratchpad/
 # 연구용 캐시 (alpha_lab → prediction_lab)
 data/cache/
 data/history/krx_cache/
+
+# 분봉 원본 (크고 시세 원본이라 올리지 않음 — src/intraday_data.py)
+data/intraday/raw/
