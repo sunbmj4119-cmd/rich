@@ -1,5 +1,5 @@
 {
- "time": "2026-11-06 11:54:05 UTC",
+ "time": "2026-11-07 02:02:36 UTC",
  "base": "https://openapi.tossinvest.com",
  "egress_ip": "129.225.178.181",
  "spec": {
@@ -9,7 +9,7 @@
  },
  "token": {
   "status": "cached",
-  "expires_in": 85663
+  "expires_in": 34752
  },
  "accounts": {
   "path": "/api/v1/accounts",
@@ -28,26 +28,54 @@
  },
  "readonly": {
   "holdings": {
-   "status": 400,
+   "status": 200,
    "shape": {
-    "error": {
-     "requestId": "str",
-     "code": "str",
-     "message": "str"
+    "result": {
+     "totalPurchaseAmount": {
+      "krw": "str",
+      "usd": "NoneType"
+     },
+     "marketValue": {
+      "amount": {
+       "krw": "str",
+       "usd": "NoneType"
+      },
+      "amountAfterCost": {
+       "krw": "str",
+       "usd": "NoneType"
+      }
+     },
+     "profitLoss": {
+      "amount": {
+       "krw": "str",
+       "usd": "NoneType"
+      },
+      "amountAfterCost": {
+       "krw": "str",
+       "usd": "NoneType"
+      },
+      "rate": "str",
+      "rateAfterCost": "str"
+     },
+     "dailyProfitLoss": {
+      "amount": {
+       "krw": "str",
+       "usd": "NoneType"
+      },
+      "rate": "str"
+     },
+     "items": []
     }
-   },
-   "error": "{'error': {'requestId': '6i3cApBtE2Ee4j1F', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
+   }
   },
   "buying_power": {
-   "status": 400,
+   "status": 200,
    "shape": {
-    "error": {
-     "requestId": "str",
-     "code": "str",
-     "message": "str"
+    "result": {
+     "currency": "str",
+     "cashBuyingPower": "str"
     }
-   },
-   "error": "{'error': {'requestId': '6MMfRhedmovGDHkK', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
+   }
   },
   "orders": {
    "status": 400,
@@ -55,10 +83,13 @@
     "error": {
      "requestId": "str",
      "code": "str",
-     "message": "str"
+     "message": "str",
+     "data": {
+      "field": "str"
+     }
     }
    },
-   "error": "{'error': {'requestId': '6Yxo9IFrVolUBJhw', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
+   "error": "{'error': {'requestId': '72Js8bosHOgsOJLB', 'code': 'invalid-request', 'message': '요청 필드가 올바르지 않습니다.', 'data': {'field': 'status'}}}"
   },
   "calendar_kr": {
    "status": 200,
@@ -66,23 +97,7 @@
     "result": {
      "today": {
       "date": "str",
-      "integrated": {
-       "preMarket": {
-        "startTime": "…",
-        "singlePriceAuctionStartTime": "…",
-        "endTime": "…"
-       },
-       "regularMarket": {
-        "startTime": "…",
-        "singlePriceAuctionStartTime": "…",
-        "endTime": "…"
-       },
-       "afterMarket": {
-        "startTime": "…",
-        "singlePriceAuctionEndTime": "…",
-        "endTime": "…"
-       }
-      }
+      "integrated": "NoneType"
      },
      "previousBusinessDay": {
       "date": "str",
@@ -141,16 +156,18 @@
    }
   },
   "commissions": {
-   "status": 400,
+   "status": 200,
    "shape": {
-    "error": {
-     "requestId": "str",
-     "code": "str",
-     "message": "str"
-    }
-   },
-   "error": "{'error': {'requestId': '6htPvzJOdatChIKl', 'code': 'account-header-required', 'message': 'x-tossinvest-account 헤더가 필요합니다.'}}"
+    "result": [
+     {
+      "marketCountry": "str",
+      "commissionRate": "str",
+      "startDate": "str",
+      "endDate": "str"
+     }
+    ]
+   }
   }
  },
- "account_header": "못 찾음"
+ "account_header": "보냄"
 }
