@@ -819,6 +819,22 @@ def test_overnight_stream_timing_and_costs():
     assert st["day_win"] == 1.0 and 0 < st["days_in"] < 1
 
 
+def test_setup_lab_trades_no_overlap_and_costs():
+    """조건 매매: 신호 다음 날 시가에 사서 h일 뒤 시가에 판다 · 보유 중 같은 종목 신호는 세지 않음 · 비용(거래세 포함) 차감."""
+    import setup_lab as SL
+    T, N = 30, 2
+    O = np.full((T, N), 100.0)
+    O[:, 0] = 100 + np.arange(T)
+    S = np.zeros((T, N), bool)
+    S[5, 0] = S[6, 0] = S[12, 0] = True                              # 6일 신호는 5일 거래(6~11일 보유) 중이라 무시
+    P = {"O": O, "dates": pd.bdate_range("2020-01-01", periods=T), "breaks": np.zeros((T, N), bool)}
+    tr = SL.trades(P, np.full(T, 100.0), S, 5, "2020-01-01", None)
+    assert len(tr) == 2 and list(tr["j"]) == [0, 0]
+    cb, cs = SL.COMM + SL.SLIP, SL.COMM + SL.SLIP + SL.TAX
+    assert abs(tr["net"].iloc[0] - (O[11, 0] * (1 - cs) / (O[6, 0] * (1 + cb)) - 1)) < 1e-12
+    assert abs(tr["gross"].iloc[0] - (O[11, 0] / O[6, 0] - 1)) < 1e-12
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
