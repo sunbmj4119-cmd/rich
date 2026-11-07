@@ -10,7 +10,7 @@
   합격 (두 시대 모두): 거래 100번 이상 · 건당 순수익 > 0 이고 날짜별로 묶은 t ≥ 3 · 총수익이 무작위 30번의 95% 위 ·
         최대낙폭이 기준 보유보다 작음 · 비용 2배에서도 건당 순수익 > 0
 
-  python src/intraday_lab.py --venue kr --dir ~/.rich/candles/5m/kr --bench 069500
+  python src/intraday_lab.py --venue kr --dir ~/.rich/candles/1m/kr --bench 069500     (1분봉이면 정규장만 5분봉으로 묶어 씀)
   python src/intraday_lab.py --venue upbit --dir data/intraday/raw/upbit/5m --bench KRW-BTC
 """
 import argparse
@@ -49,9 +49,26 @@ def load_dir(path, venue):
         d["high"] = d[["high", "open", "close"]].max(axis=1)
         d["low"] = d[["low", "open", "close"]].min(axis=1)
         d["volume"] = d["volume"].fillna(0)
+        d = regular_5m(d, venue)
         if len(d) > 500:
             data[sym] = d.reset_index(drop=True)
     return data
+
+
+SESSION = {"kr": ("09:00", "15:30"), "us": ("09:30", "16:00")}
+
+
+def regular_5m(d, venue):
+    """주식: 정규장 봉만 (넥스트레이드·프리·애프터 제외) · 1분봉이면 5분봉으로 묶는다 (봉 시작 시각 기준)."""
+    if venue in SESSION:
+        t = d["ts"].dt.strftime("%H:%M")
+        a, b = SESSION[venue]
+        d = d[(t >= a) & (t < b) & (d["ts"].dt.dayofweek < 5)]
+    if len(d) > 2 and d["ts"].diff().dropna().median() < pd.Timedelta(minutes=5):
+        g = d.set_index("ts").resample("5min", label="left", closed="left").agg(
+            {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"})
+        d = g.dropna(subset=["close"]).reset_index()
+    return d
 
 
 def random_candidates(data, venue, n_like, seed, rules=None):
