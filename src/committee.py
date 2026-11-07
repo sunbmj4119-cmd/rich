@@ -308,9 +308,12 @@ def readiness(short_ui, cfg=None):
         items.append({"key": key, "name": name, "ok": bool(ok), "now": now, "need": need, "eta": eta, "info": info})
     # 1) 모의 기록 길이 (따라 할 몫)
     try:
-        eq = pd.read_csv("data/short/equity.csv")
-        since = (acc.get("aw") or {}).get("since") if sl == ["aw"] else acc.get("start")
-        n = int((eq["날짜"].astype(str) >= str(since)).sum()) if since else len(eq)
+        if "size" in sl:                                   # 자산 규모별 전략: 그 전략 자체의 앞으로의 모의 기록 (20만 원부터)
+            n = int((jload("data/short/size_forward.json", {}) or {}).get("days") or 0)
+        else:
+            eq = pd.read_csv("data/short/equity.csv")
+            since = (acc.get("aw") or {}).get("since") if sl == ["aw"] else acc.get("start")
+            n = int((eq["날짜"].astype(str) >= str(since)).sum()) if since else len(eq)
     except (OSError, ValueError, KeyError):
         n = 0
     eta = (pd.Timestamp.now() + pd.offsets.BDay(max(0, 60 - n))).strftime("%Y-%m-%d") if n < 60 else None
@@ -384,6 +387,12 @@ def readiness(short_ui, cfg=None):
     if "aw" in sl:
         ev_ok &= bool(aw_oos and aw_oos >= 0.5)
         ev_now.append(f"전천후 긴 역사 표본 외 샤프 {aw_oos}")
+    if "size" in sl:                                       # 두 엔진 모두 설계에 안 쓴 옛 시대(대용 2005~2018)에서 샤프 0.5 이상
+        px_ = ((jload("data/size_policy.json", {}) or {}).get("proxy") or {})
+        s_ag = (px_.get("공격 고정") or {}).get("sharpe")
+        s_aw = (px_.get("전천후 고정") or {}).get("sharpe")
+        ev_ok &= bool(s_ag and s_ag >= 0.5 and s_aw and s_aw >= 0.5)
+        ev_now.append(f"규모별: 공격(DM:2) 옛 시대 샤프 {s_ag} · 전천후 {s_aw}")
     if "live" in sl:
         d_all = sc_.get("dsr_all")
         ev_ok &= bool(d_all is not None and d_all >= 0.5)

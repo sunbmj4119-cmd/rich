@@ -743,6 +743,63 @@ def test_stock_stop_loss_take_profit_option():
     assert [x["t"] for x in log if x["side"] == "sell"][0] == 3     # 2일 종가 112 ≥ 110 → 3일 시가에 익절
 
 
+def test_size_policy_rule_allocation_and_execution():
+    """자산 규모별 전략: 작을수록 공격 몫↑, 정수 주식 배분, 시뮬레이션, 서버 실행(계좌 금액 → 주식 수)·연결(내 현금·종목 제외)."""
+    import size_policy as SZ
+    import short_exec as SX
+    import allweather as AW
+    sp = SZ.DEFAULT
+    sh = [SZ.aggr_share(e, sp) for e in (200_000, 3_000_000, 5_000_000, 7_000_000, 10_000_000, 50_000_000)]
+    assert sh == [1.0, 1.0, 0.5, 0.2, 0.0, 0.0] and all(a >= b for a, b in zip(sh, sh[1:]))
+    assert SZ.aggr_share(5_000_000, {**sp, "loss_budget": 2_000_000}) == 1.0           # 감당 손실을 키우면 더 오래 공격적
+    q = SZ.allocate([0.5, 0.5], [161_300, 73_675], 200_000)
+    assert list(q) == [0, 2]                                                            # 1주가 비싸면 살 수 있는 쪽으로 채워 현금으로 놀지 않게
+    assert list(SZ.allocate([0.05, 0.95], [100_000, 10_000], 200_000)) == [0, 19]       # 5% 자리에 10만 원짜리 1주를 몰아넣지 않음
+    q = SZ.allocate([0.5, 0.5, 0.0], [22_590, 14_095, 10_000], 200_000)
+    assert list(q) == [4, 7, 0] and (q * np.array([22_590, 14_095, 10_000])).sum() <= 200_000
+    rng = np.random.default_rng(3)
+    T, A = 300, AW.A
+    dates = pd.bdate_range("2020-01-02", periods=T)
+    Cp = np.cumprod(1 + rng.normal(0.0003, 0.01, (T, A)), axis=0) * rng.uniform(10_000, 120_000, A)
+    Op = Cp * (1 + rng.normal(0, 0.002, (T, A)))
+    W1 = np.zeros((T, A)); W1[:, 0] = 1.0
+    W2 = np.zeros((T, A)); W2[:, 5] = 0.5; W2[:, 8] = 0.5
+    r = SZ.simulate(dates, Op, Cp, W1, W2, 1, 200_000, sp)
+    assert np.isfinite(r["E"][1:]).all() and r["cash"] >= -1e-6 and r["a"][-1] == 1.0
+    big = SZ.simulate(dates, Op, Cp, W1, W2, 1, 20_000_000, sp)
+    assert big["a"][-1] == 0.0                                                          # 큰 돈 = 전천후 쪽
+    cfg = {"short": {"broker_sleeves": ["size"], "size_policy": {}}}
+    plan = {"made": "2026-11-09", "size": {"aw": {"114260": 0.6, "261240": 0.4}, "aggr": {"132030": 0.5, "261240": 0.5},
+                                           "rebalance": True, "px": {"114260": 62_755, "261240": 14_095, "132030": 22_590}}}
+    mirror = {"external_cash": 10_026, "hwm": 0, "last_target": None}
+    acct = {"cash": 210_026, "positions": {}}
+    tgt, info = SX.size_targets(cfg, plan, mirror, acct, {})
+    spent = sum(q * plan["size"]["px"][c] for c, q in tgt.items())
+    assert info["aggr"] == 1.0 and info["last_eq"] == 200_000 and spent <= 200_000 and set(tgt) <= {"132030", "261240"}
+    plan["size"]["rebalance"] = False
+    keep, info2 = SX.size_targets(cfg, plan, {**mirror, "last_target": tgt}, acct, {})
+    assert keep == tgt and not info2["rebalanced"]                                     # 다시 맞추는 날이 아니면 목표 유지
+    assert SX.size_targets(cfg, {"made": "x"}, mirror, acct, {})[0] is None            # 계획에 목표가 없으면 보내지 않음
+
+    class FakeB:
+        def price(self, c):
+            return 20_000.0
+    with tempfile.TemporaryDirectory() as d:
+        old = (SX.MIRROR, SX.MIRROR_STATUS)
+        try:
+            SX.MIRROR, SX.MIRROR_STATUS = os.path.join(d, "m.json"), os.path.join(d, "ms.json")
+            cfg2 = {"short": {"broker_sleeves": ["size"], "broker_capital": 200_000}}
+            m = SX.link_size(cfg2, FakeB(), "toss", {"cash": 210_026, "positions": {"005930": {"shares": 3, "avg": 50_000}}})
+            assert m["external"] == {"005930": 3.0} and m["external_cash"] == 10_026 and m["hwm"] == 200_000
+            pub = json.load(open(SX.MIRROR_STATUS))
+            assert "capital" not in pub and "external_cash" not in pub                 # 금액은 공개 파일에 없음
+            m2 = SX.link_size(cfg2, FakeB(), "toss", {"cash": 110_000, "positions": {"005930": {"shares": 3, "avg": 50_000},
+                                                                                    "261240": {"shares": 5, "avg": 14_000}}})
+            assert m2["external"] == {"005930": 3.0} and m2["external_cash"] == 10_000      # 다시 연결해도 자동매매가 산 종목은 자동매매 것
+        finally:
+            SX.MIRROR, SX.MIRROR_STATUS = old
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
