@@ -835,6 +835,28 @@ def test_setup_lab_trades_no_overlap_and_costs():
     assert abs(tr["gross"].iloc[0] - (O[11, 0] / O[6, 0] - 1)) < 1e-12
 
 
+def test_bdw_rules_and_withdraw_hint():
+    """불장단타왕 규칙: 근거 이탈 청산(다음 날 시가)·시간 손절 · 수익 출금 안내(넣은 돈 2배)."""
+    import bdw_lab as B
+    import short_exec as SX
+    T, N = 40, 1
+    O = np.full((T, N), 100.0)
+    C = np.full((T, N), 101.0)
+    S = np.zeros((T, N), bool)
+    S[5, 0] = True
+    X = np.zeros((T, N), bool)
+    X[9, 0] = True                                                   # 9일 종가 이탈 → 10일 시가 청산
+    P = {"O": O, "Cf": C, "dates": pd.bdate_range("2020-01-01", periods=T), "breaks": np.zeros((T, N), bool)}
+    tr = B.trades_dyn(P, np.full(T, 100.0), S, X, 20, "2020-01-01", None)
+    assert len(tr) == 1 and int(tr["e"].iloc[0]) == 6 and int(tr["x"].iloc[0]) == 10
+    C2 = C.copy()
+    C2[10, 0] = 99.0                                                 # 5일째(6+4=10일) 종가가 매입가 아래 → 11일 시가
+    P2 = {**P, "Cf": C2}
+    tr2 = B.trades_dyn(P2, np.full(T, 100.0), S, np.zeros((T, N), bool), 20, "2020-01-01", None, time_stop=5)
+    assert int(tr2["x"].iloc[0]) == 11
+    assert SX.withdraw_hint(400_000, 200_000) and not SX.withdraw_hint(399_999, 200_000) and not SX.withdraw_hint(1, 0)
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
