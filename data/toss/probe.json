@@ -1,5 +1,5 @@
 {
- "time": "2026-11-07 02:02:36 UTC",
+ "time": "2026-11-07 08:25:11 UTC",
  "base": "https://openapi.tossinvest.com",
  "egress_ip": "129.225.178.181",
  "spec": {
@@ -9,7 +9,7 @@
  },
  "token": {
   "status": "cached",
-  "expires_in": 34752
+  "expires_in": 11797
  },
  "accounts": {
   "path": "/api/v1/accounts",
@@ -78,67 +78,12 @@
    }
   },
   "orders": {
-   "status": 400,
-   "shape": {
-    "error": {
-     "requestId": "str",
-     "code": "str",
-     "message": "str",
-     "data": {
-      "field": "str"
-     }
-    }
-   },
-   "error": "{'error': {'requestId': '72Js8bosHOgsOJLB', 'code': 'invalid-request', 'message': '요청 필드가 올바르지 않습니다.', 'data': {'field': 'status'}}}"
-  },
-  "calendar_kr": {
    "status": 200,
    "shape": {
     "result": {
-     "today": {
-      "date": "str",
-      "integrated": "NoneType"
-     },
-     "previousBusinessDay": {
-      "date": "str",
-      "integrated": {
-       "preMarket": {
-        "startTime": "…",
-        "singlePriceAuctionStartTime": "…",
-        "endTime": "…"
-       },
-       "regularMarket": {
-        "startTime": "…",
-        "singlePriceAuctionStartTime": "…",
-        "endTime": "…"
-       },
-       "afterMarket": {
-        "startTime": "…",
-        "singlePriceAuctionEndTime": "…",
-        "endTime": "…"
-       }
-      }
-     },
-     "nextBusinessDay": {
-      "date": "str",
-      "integrated": {
-       "preMarket": {
-        "startTime": "…",
-        "singlePriceAuctionStartTime": "…",
-        "endTime": "…"
-       },
-       "regularMarket": {
-        "startTime": "…",
-        "singlePriceAuctionStartTime": "…",
-        "endTime": "…"
-       },
-       "afterMarket": {
-        "startTime": "…",
-        "singlePriceAuctionEndTime": "…",
-        "endTime": "…"
-       }
-      }
-     }
+     "orders": [],
+     "nextCursor": "NoneType",
+     "hasNext": "bool"
     }
    }
   },
@@ -169,5 +114,78 @@
    }
   }
  },
- "account_header": "보냄"
+ "account_header": "보냄",
+ "candles": {
+  "intervals": [
+   "1m",
+   "1d"
+  ],
+  "interval_desc": "봉 단위",
+  "tests": {
+   "005930:1m": {
+    "pages": 40,
+    "bars": 8000,
+    "status": 200,
+    "keys": [
+     "closePrice",
+     "currency",
+     "highPrice",
+     "lowPrice",
+     "openPrice",
+     "timestamp",
+     "volume"
+    ],
+    "newest": "2026-11-06T20:00:00.000+09:00",
+    "oldest": "2026-10-22T18:41:00.000+09:00"
+   },
+   "005930:1d": {
+    "pages": 3,
+    "bars": 600,
+    "status": 200,
+    "keys": [
+     "closePrice",
+     "currency",
+     "highPrice",
+     "lowPrice",
+     "openPrice",
+     "timestamp",
+     "volume"
+    ],
+    "newest": "2026-11-06T00:00:00.000+09:00",
+    "oldest": "2024-05-21T00:00:00.000+09:00"
+   },
+   "AAPL:1m": {
+    "pages": 40,
+    "bars": 8000,
+    "status": 200,
+    "keys": [
+     "closePrice",
+     "currency",
+     "highPrice",
+     "lowPrice",
+     "openPrice",
+     "timestamp",
+     "volume"
+    ],
+    "newest": "2026-11-07T10:00:00.000+09:00",
+    "oldest": "2026-10-30T16:19:00.000+09:00"
+   },
+   "AAPL:1d": {
+    "pages": 3,
+    "bars": 600,
+    "status": 200,
+    "keys": [
+     "closePrice",
+     "currency",
+     "highPrice",
+     "lowPrice",
+     "openPrice",
+     "timestamp",
+     "volume"
+    ],
+    "newest": "2026-11-06T14:00:00.000+09:00",
+    "oldest": "2024-06-18T13:00:00.000+09:00"
+   }
+  }
+ }
 }
