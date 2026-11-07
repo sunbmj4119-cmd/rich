@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-07 02:49",
+ "generated": "2026-11-07 04:57",
  "criteria": {
   "s1_p": 0.05,
   "s1_mdd_slack": 0.05,
@@ -1969,12 +1969,196 @@
      "tp": 0.15
     }
    }
+  },
+  "4": {
+   "generated": "2026-11-07 04:57",
+   "n_trials": 3,
+   "passed": [],
+   "secs": 13,
+   "portfolio": {
+    "DM:2 단독 (지금 공격 엔진)": {
+     "A": {
+      "x1": {
+       "cagr": 0.0966,
+       "vol": 0.1508,
+       "sharpe": 0.687,
+       "mdd": -0.1749,
+       "calmar": 0.552,
+       "worst_year": -0.0537,
+       "cvar5": -0.0221,
+       "day_win": 0.54,
+       "days_in": 0.994,
+       "month_win": 0.577,
+       "max_losing_months": 4
+      },
+      "x3": {
+       "cagr": 0.0944,
+       "vol": 0.1508,
+       "sharpe": 0.674,
+       "mdd": -0.1751,
+       "calmar": 0.539,
+       "worst_year": -0.0554,
+       "cvar5": -0.0221
+      }
+     },
+     "B": {
+      "x1": {
+       "cagr": 0.1591,
+       "vol": 0.1922,
+       "sharpe": 0.865,
+       "mdd": -0.2892,
+       "calmar": 0.55,
+       "worst_year": -0.1543,
+       "cvar5": -0.0308,
+       "day_win": 0.559,
+       "days_in": 0.999,
+       "month_win": 0.611,
+       "max_losing_months": 6
+      },
+      "x3": {
+       "cagr": 0.1572,
+       "vol": 0.1922,
+       "sharpe": 0.856,
+       "mdd": -0.2894,
+       "calmar": 0.543,
+       "worst_year": -0.1559,
+       "cvar5": -0.0308
+      }
+     }
+    },
+    "D1 밤사이 보유 (추세 위)": {
+     "A": {
+      "x1": {
+       "cagr": 0.0417,
+       "vol": 0.0792,
+       "sharpe": 0.556,
+       "mdd": -0.1245,
+       "calmar": 0.335,
+       "worst_year": -0.0603,
+       "cvar5": -0.0136,
+       "day_win": 0.561,
+       "days_in": 0.661,
+       "month_win": 0.446,
+       "max_losing_months": 5
+      },
+      "x3": {
+       "cagr": -0.0447,
+       "vol": 0.0792,
+       "sharpe": -0.538,
+       "mdd": -0.4973,
+       "calmar": -0.09,
+       "worst_year": -0.1339,
+       "cvar5": -0.0141
+      }
+     },
+     "B": {
+      "x1": {
+       "cagr": 0.0825,
+       "vol": 0.1544,
+       "sharpe": 0.591,
+       "mdd": -0.2498,
+       "calmar": 0.33,
+       "worst_year": -0.0567,
+       "cvar5": -0.0241,
+       "day_win": 0.548,
+       "days_in": 0.621,
+       "month_win": 0.4,
+       "max_losing_months": 4
+      },
+      "x3": {
+       "cagr": 0.0037,
+       "vol": 0.1544,
+       "sharpe": 0.101,
+       "mdd": -0.3779,
+       "calmar": 0.01,
+       "worst_year": -0.1207,
+       "cvar5": -0.0245
+      }
+     }
+    },
+    "D2 DM:2 50 + 밤사이 50": {
+     "A": {
+      "x1": {
+       "cagr": 0.0708,
+       "vol": 0.0967,
+       "sharpe": 0.756,
+       "mdd": -0.1249,
+       "calmar": 0.567,
+       "worst_year": -0.0539,
+       "cvar5": -0.0149,
+       "day_win": 0.548,
+       "days_in": 0.998,
+       "month_win": 0.595,
+       "max_losing_months": 5
+      },
+      "x3": {
+       "cagr": 0.0248,
+       "vol": 0.0969,
+       "sharpe": 0.302,
+       "mdd": -0.1637,
+       "calmar": 0.152,
+       "worst_year": -0.0952,
+       "cvar5": -0.0152
+      }
+     },
+     "B": {
+      "x1": {
+       "cagr": 0.123,
+       "vol": 0.1533,
+       "sharpe": 0.834,
+       "mdd": -0.2133,
+       "calmar": 0.577,
+       "worst_year": -0.0737,
+       "cvar5": -0.024,
+       "day_win": 0.555,
+       "days_in": 0.999,
+       "month_win": 0.632,
+       "max_losing_months": 5
+      },
+      "x3": {
+       "cagr": 0.0811,
+       "vol": 0.1534,
+       "sharpe": 0.585,
+       "mdd": -0.2178,
+       "calmar": 0.372,
+       "worst_year": -0.0804,
+       "cvar5": -0.0241
+      }
+     }
+    }
+   },
+   "stage2": {
+    "D1 밤사이 보유 (추세 위)": {
+     "pass": false,
+     "why": "A·x1 샤프 0.556 ≤ 0.687; A·x3 샤프 -0.538 ≤ 0.674; A·x3 낙폭 -0.4973 < -0.1751; B·x1 샤프 0.591 ≤ 0.865"
+    },
+    "D2 DM:2 50 + 밤사이 50": {
+     "pass": false,
+     "why": "A·x3 샤프 0.302 ≤ 0.674; B·x1 샤프 0.834 ≤ 0.865; B·x3 샤프 0.585 ≤ 0.856"
+    }
+   },
+   "extra": {
+    "DM:1 (한 자산 몰빵, 참고)": {
+     "A": {
+      "cagr": 0.033,
+      "sharpe": 0.26,
+      "mdd": -0.514
+     },
+     "B": {
+      "cagr": 0.195,
+      "sharpe": 0.78,
+      "mdd": -0.42
+     },
+     "why": "최근 시대만 좋고 옛 시대 연 +3.3% · 낙폭 -51% → 공격 엔진은 DM:2 유지"
+    }
+   }
   }
  },
- "n_trials": 33,
+ "n_trials": 36,
  "passed": {
   "1": [],
   "2": [],
-  "3": []
+  "3": [],
+  "4": []
  }
 }

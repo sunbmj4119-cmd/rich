@@ -355,11 +355,104 @@ def round3():
     return strip(s1), port, s2
 
 
+# ══════════════════════════════════════════════════════════════
+# 4회차 (결과를 보기 전에 정함) — 매일 하는 단기 매매: 추세 위에서만 밤사이 보유 (KODEX 200)
+#   장 마감 단일가(CLS)에 사서 다음 날 장 시작 단일가(OPG)에 판다. 판단 = 전날 저녁 지수가 120일선 위인가.
+#   기존 긴 역사 검증에서 두 시대 모두 샤프 0.7 (보유 0.4·0.56) — 공격 엔진(DM:2)에 섞으면 나아지는가?
+#   합격: 두 시대 모두 DM:2 단독보다 샤프 높고 최대낙폭이 나쁘지 않음 (비용 1배·3배 모두)
+# ══════════════════════════════════════════════════════════════
+def overnight_stream(dates, Op, Cp, stress=1.0, j=0, ma=120, slip_fixed=None):
+    """밤사이 보유 일별 수익: t-1일 저녁 지수가 120일선 위면 t일 종가 단일가에 사서 t+1일 시가 단일가에 판다."""
+    c = AW.ffill(Cp)[:, j]
+    o = Op[:, j]
+    m = pd.Series(c).rolling(ma, min_periods=int(ma * 0.8)).mean().to_numpy()
+    sig = c > m                                         # t일 저녁 신호
+    T = len(c)
+    r = np.zeros(T)
+    for t in range(2, T):
+        if not sig[t - 2] or not np.isfinite(o[t]) or not np.isfinite(c[t - 1]):
+            continue                                   # t-1일 종가에 살지 = t-2일 저녁 신호
+        if slip_fixed is not None:
+            cb = cs = AW.COMM + slip_fixed * stress
+        else:
+            cb = float(AW.costs(np.array([c[t - 1]]), stress)[0][0])
+            cs = float(AW.costs(np.array([o[t]]), stress)[1][0])
+        r[t] = o[t] * (1 - cs) / (c[t - 1] * (1 + cb)) - 1
+    return r
+
+
+def steadiness(r, dates):
+    r = pd.Series(np.nan_to_num(np.asarray(r, float)), index=dates)
+    act = r[r != 0]
+    mo = (1 + r).groupby([r.index.year, r.index.month]).prod() - 1
+    neg = (mo < 0).astype(int).to_numpy()
+    run = best = 0
+    for x in neg:
+        run = run + 1 if x else 0
+        best = max(best, run)
+    return {"day_win": round(float((act > 0).mean()), 3) if len(act) else None, "days_in": round(float(len(act) / max(len(r), 1)), 3),
+            "month_win": round(float((mo > 0).mean()), 3), "max_losing_months": int(best)}
+
+
+def round4():
+    import history_lab as H
+    out, port = {}, {}
+    for era in ("A", "B"):
+        a_, b_ = PORT_ERA[era]
+        for tag, k in (("x1", 1.0), ("x3", 3.0)):
+            cs = card_streams(era, k)
+            if era == "A":
+                dates, Op, Cp = H.proxy_prices(H.load_hist())
+                on = pd.Series(overnight_stream(dates, Op, Cp, k, slip_fixed=H.SLIP["069500"]), index=dates)
+            else:
+                dates, Op, Cp = AW.load_prices()
+                on = pd.Series(overnight_stream(dates, Op, Cp, k), index=dates)
+            dm = cs["DM:2"]
+
+            def win(x):
+                return x[(x.index >= pd.Timestamp(a_)) & ((x.index <= pd.Timestamp(b_)) if b_ else True)]
+            rows = {"DM:2 단독 (지금 공격 엔진)": win(dm), "D1 밤사이 보유 (추세 위)": win(on),
+                    "D2 DM:2 50 + 밤사이 50": combine(on, dm, 0.5, a_, b_)}
+            for n, x in rows.items():
+                st = sstats(x.to_numpy(), x.index)
+                if tag == "x1":
+                    st.update(steadiness(x.to_numpy(), x.index))
+                port.setdefault(n, {}).setdefault(era, {})[tag] = st
+    base = "DM:2 단독 (지금 공격 엔진)"
+    verdict = {}
+    for n in port:
+        if n == base:
+            continue
+        ok, why = True, []
+        for era in ("A", "B"):
+            for tag in ("x1", "x3"):
+                me, b = port[n][era][tag], port[base][era][tag]
+                if me["sharpe"] <= b["sharpe"]:
+                    ok = False
+                    why.append(f"{era}·{tag} 샤프 {me['sharpe']} ≤ {b['sharpe']}")
+                if me["mdd"] < b["mdd"]:
+                    ok = False
+                    why.append(f"{era}·{tag} 낙폭 {me['mdd']} < {b['mdd']}")
+        verdict[n] = {"pass": ok, "why": "통과" if ok else "; ".join(why[:4])}
+    for n, v in port.items():
+        print(f"  {n:24s} " + " | ".join(
+            f"{era} 연 {v[era]['x1']['cagr']:+.1%} 샤프 {v[era]['x1']['sharpe']:.2f} 낙폭 {v[era]['x1']['mdd']:.1%} "
+            f"(3배 {v[era]['x3']['sharpe']:.2f}) 오른 달 {v[era]['x1']['month_win']:.0%} 연속 손실 {v[era]['x1']['max_losing_months']}달"
+            for era in ("A", "B")) + (f"  {'✓' if verdict[n]['pass'] else '✗'} {verdict[n]['why'][:60]}" if n in verdict else "  (기준)"))
+    return port, verdict
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--round", type=int, default=1)
     a = ap.parse_args()
     t0 = time.time()
+    if a.round == 4:
+        print("■ 4회차 — 매일 단기 매매: 추세 위에서만 밤사이 보유 (기준 = DM:2 단독)")
+        port, verdict = round4()
+        save(a.round, t0, {"portfolio": port, "stage2": verdict}, n_trials=len(verdict),
+             passed=[n for n, v in verdict.items() if v["pass"]])
+        return
     if a.round == 3:
         print("■ 3회차 — 종목마다 손절·익절 (S1 = 느린 종목 모델 전부 같은 비중)")
         s1, port, s2 = round3()
