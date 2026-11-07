@@ -714,6 +714,35 @@ def test_no_geared_excludes_leverage_inverse():
     assert SX.guard_geared(pairs, {"short": {"no_geared": False}}) == pairs
 
 
+def test_stock_stop_loss_take_profit_option():
+    """run_stock 의 손절·익절 선택: 전날 종가가 매입가 대비 -sl/+tp 를 넘으면 오늘 시가에 판다 (없으면 예전과 같음)."""
+    T, N = 8, 2
+    O = np.array([[100, 50]] * T, float)
+    C = np.array([[100, 50], [100, 50], [95, 50], [92, 50], [92, 50], [120, 50], [120, 50], [120, 50]], float)
+    O[1:, 0] = C[:-1, 0]                                           # 시가 = 전날 종가
+    R = np.tile([1.0, 2.0], (T, 1))
+    D = SimpleNamespace(T=T, N=N, O=O, Cf=C, gate={"none": np.ones(T, bool)}, ranks=lambda sel, combo=None: R)
+    base = {"id": "x", "kind": "stock", "sel": "REV1", "K": 1, "hold": "H10", "gate": "none"}
+    log = []
+    L.run_stock(D, base, log=log)
+    assert [x["side"] for x in log] == ["buy"]                      # 손절 없으면 순위 1등이라 계속 보유
+    log = []
+    L.run_stock(D, {**base, "sl": 0.07}, log=log)
+    sells = [x["t"] for x in log if x["side"] == "sell"]
+    assert sells and sells[0] == 4                                 # 3일 종가 92 ≤ 100×0.93 → 4일 시가에 손절
+    log = []
+    L.run_stock(D, {**base, "tp": 0.10}, log=log)
+    assert [x for x in log if x["side"] == "buy"][0]["t"] == 1
+    assert [x["t"] for x in log if x["side"] == "sell"][0] == 6     # 100 에 사서 5일 종가 120 ≥ 110 → 6일 시가에 익절
+    O2, C2 = O.copy(), C.copy()
+    C2[2:, 0] = 112.0
+    O2[1:, 0] = C2[:-1, 0]
+    D2 = SimpleNamespace(T=T, N=N, O=O2, Cf=C2, gate={"none": np.ones(T, bool)}, ranks=lambda sel, combo=None: R)
+    log = []
+    L.run_stock(D2, {**base, "tp": 0.10}, log=log)
+    assert [x["t"] for x in log if x["side"] == "sell"][0] == 3     # 2일 종가 112 ≥ 110 → 3일 시가에 익절
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 

@@ -189,6 +189,8 @@ def run_stock(D, m, stress=1.0, record=False, t0=1, log=None):
     O, Cf = D.O, D.Cf
     units = np.zeros(N)
     since = np.full(N, -1)
+    entry = np.zeros(N)
+    sl, tp = m.get("sl"), m.get("tp")                  # 선택: 손절(-sl)·익절(+tp) — 전날 종가가 매입가 대비 넘으면 오늘 시가에 판다
     cash = 1.0
     E = np.ones(T)
     traded = 0.0
@@ -198,6 +200,14 @@ def run_stock(D, m, stress=1.0, record=False, t0=1, log=None):
         po = O[t]
         trad = ~np.isnan(po)
         sell, buys = stock_decide(units, since, R[t - 1], ok[t - 1], t, K, X, mn, mx, trad)
+        if (sl or tp) and (units > 0).any():
+            held = (units > 0) & trad & (entry > 0)
+            hit = np.zeros(N, bool)
+            if sl:
+                hit |= held & (Cf[t - 1] <= entry * (1 - sl))
+            if tp:
+                hit |= held & (Cf[t - 1] >= entry * (1 + tp))
+            sell = sell | hit
         if log is not None:
             for j in np.where(sell)[0]:
                 rk_j = R[t - 1, j]
@@ -210,12 +220,14 @@ def run_stock(D, m, stress=1.0, record=False, t0=1, log=None):
             traded += v
             units[sell] = 0
             since[sell] = -1
+            entry[sell] = 0
         if len(buys):
             eq = cash + (units * np.where(trad, po, Cf[t - 1])).sum()
             amt = min(eq / K, cash / (1 + cb) / len(buys))
             if amt > 0:
                 units[buys] = amt / po[buys]
                 since[buys] = t
+                entry[buys] = po[buys]
                 if log is not None:
                     for j in buys:
                         log.append({"t": t, "j": int(j), "side": "buy", "px": float(po[j]), "rank": int(R[t - 1, j]), "why": "rank"})
