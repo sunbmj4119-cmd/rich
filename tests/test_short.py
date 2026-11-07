@@ -908,6 +908,18 @@ def test_bdw_intraday_exits_and_portfolio():
     assert sm["trades"] == len(tk) and (len(tk) == 0 or (tk["t_out"] >= tk["t_in"]).all())
 
 
+def test_intraday_regular_session_5m():
+    """토스 1분봉(넥스트레이드 08~20시 포함) → 정규장(09:00~15:30)만 5분봉으로 · 미국은 뉴욕 09:30~16:00."""
+    import intraday_lab as IL
+    ts = pd.date_range("2026-11-06 08:00", "2026-11-06 20:00", freq="1min")
+    d = pd.DataFrame({"ts": ts, "open": 1.0, "high": 2.0, "low": 0.5, "close": np.arange(len(ts), dtype=float), "volume": 1.0})
+    r = IL.regular_5m(d, "kr")
+    assert len(r) == 78 and str(r["ts"].iloc[0]) == "2026-11-06 09:00:00" and str(r["ts"].iloc[-1]) == "2026-11-06 15:25:00"
+    assert r["close"].iloc[0] == 64 and r["volume"].iloc[0] == 5                     # 09:00~09:04 다섯 봉, 종가 = 09:04
+    u = IL.regular_5m(d.assign(ts=pd.date_range("2026-11-06 04:00", periods=len(ts), freq="1min")), "us")
+    assert str(u["ts"].iloc[0]) == "2026-11-06 09:30:00" and u["ts"].dt.strftime("%H:%M").max() == "15:55"
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 

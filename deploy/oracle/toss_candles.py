@@ -1,8 +1,9 @@
 """
 토스증권 캔들(분봉) 수집 — 서버에서만 (토스는 등록 IP 에서만 받는다). 조회(GET)만.
 
-  종목: 국내 = 최근 시총 상위 100 (data/universe.csv) · 미국 = data/us_ohlcv.csv 의 종목 (레버리지·인버스 제외)
-  봉 단위: data/toss/probe.json 의 캔들 점검(봉 단위 목록)에서 5분봉을 고른다 (--interval 로 바꿈)
+  종목: 국내 = KODEX 200 + 시총 상위 60 (data/universe.csv) · 미국 = SPY·QQQ + 최근 60일 거래대금 상위 (레버리지·인버스 제외)
+  봉 단위: 토스 캔들은 1m·1d 만 있다(2026-11-07 점검) → 1분봉을 받고 실험실에서 정규장만 5분봉으로 묶는다
+  기간: --days (기본 90일) — 1분봉은 국내 넥스트레이드 포함 하루 ~720봉, 미국은 주간·프리·애프터 포함이라 많다
   저장: 원본은 서버 ~/.rich/candles/<봉>/<종목>.csv.gz 에만 (공개 저장소에 시세 원본을 올리지 않음, 크기도 큼)
         GitHub 에는 data/toss/candles_status.json (종목 수·기간·봉 수만)
   이어 받기: 이미 받은 가장 최근 봉까지만 새로 받는다. --backfill 이면 받을 수 있는 가장 옛날까지 (끊겨도 다시 실행하면 이어서).
@@ -58,13 +59,18 @@ def symbols(market, limit=None):
         last = max(r["날짜"] for r in rows)
         out = ["069500"] + [r["종목코드"] for r in rows if r["날짜"] == last][:100]      # 069500 = 기준(KODEX 200)
     else:
-        seen = []
-        with open(os.path.join(REPO, "data", "us_ohlcv.csv"), encoding="utf-8") as f:
-            for r in csv.DictReader(f):
-                c = r["종목코드"]
-                if c not in seen and c not in GEARED_US:
-                    seen.append(c)
-        out = ["SPY", "QQQ"] + [c for c in seen if c not in ("SPY", "QQQ")]          # 기준(지수 ETF) 먼저
+        val = {}
+        rows = list(csv.DictReader(open(os.path.join(REPO, "data", "us_ohlcv.csv"), encoding="utf-8")))
+        last_days = sorted({r["날짜"] for r in rows})[-60:]
+        keep = set(last_days)
+        for r in rows:
+            if r["날짜"] in keep and r["종목코드"] not in GEARED_US:
+                try:
+                    val[r["종목코드"]] = val.get(r["종목코드"], 0.0) + float(r["종가"]) * float(r["거래량"])
+                except (TypeError, ValueError):
+                    pass
+        ranked = sorted(val, key=lambda c: -val[c])                                   # 최근 60일 거래대금 큰 순
+        out = ["SPY", "QQQ"] + [c for c in ranked if c not in ("SPY", "QQQ")]          # 기준(지수 ETF) 먼저
     return out[:limit] if limit else out
 
 
@@ -107,7 +113,7 @@ def write_all(path, rows):
     os.replace(tmp, path)
 
 
-def fetch(api, sym, iv, have, backfill, max_pages=2000):
+def fetch(api, sym, iv, have, backfill, max_pages=4000, oldest_ok=None):
     """① 가장 최근 → 이미 받은 가장 최근 봉까지 ② backfill 이면 이미 받은 가장 옛날 봉부터 더 옛날로 (끝날 때까지)."""
     new = pages = 0
     newest_have = max(have) if have else None
@@ -132,10 +138,12 @@ def fetch(api, sym, iv, have, backfill, max_pages=2000):
             return new, pages                              # 끝까지 받음
         if newest_have and min(r[0] for r in cs) <= newest_have:
             break
+        if oldest_ok and min(r[0] for r in cs)[:10] < oldest_ok:
+            return new, pages                              # 정한 기간만큼 받음
         before = nxt
     if backfill and have:
         before = min(have)
-        while pages < max_pages:
+        while pages < max_pages and not (oldest_ok and min(have)[:10] < oldest_ok):
             cs, nxt = page(before)
             if not cs or not nxt:
                 break
@@ -179,12 +187,14 @@ def main():
     ap.add_argument("--backfill", action="store_true")
     ap.add_argument("--market", choices=["kr", "us", "all"], default="all")
     ap.add_argument("--interval", default=None, help="봉 단위 (기본: 명세에서 5분봉)")
-    ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--limit", type=int, default=61, help="시장마다 종목 수 (기준 포함, 기본 61)")
+    ap.add_argument("--days", type=int, default=90, help="되채우기 기간(일) — 1분봉은 하루 수백 봉이라 길게 잡으면 몇 시간 걸린다")
     a = ap.parse_args()
-    iv = a.interval or pick_interval("5")
+    iv = a.interval or pick_interval("5") or pick_interval("1")              # 토스는 1m·1d 만 → 1분봉을 받아 실험실에서 5분봉으로
     if not iv:
         raise SystemExit("봉 단위를 모릅니다 — 먼저 setup.sh --probe (캔들 점검) 를 하세요")
     api = Api()
+    cutoff = (time.strftime("%Y-%m-%d", time.localtime(time.time() - a.days * 86400)))
     status = json.load(open(STATUS)) if os.path.exists(STATUS) else {}
     status.setdefault("interval", iv)
     t0 = time.time()
@@ -196,7 +206,7 @@ def main():
         for i, sym in enumerate(syms):
             path = os.path.join(d, f"{sym}.csv.gz")
             have = read_have(path)
-            new, pages = fetch(api, sym, iv, have, a.backfill)
+            new, pages = fetch(api, sym, iv, have, a.backfill, oldest_ok=cutoff)
             if new:
                 write_all(path, have)
             tot_new += new

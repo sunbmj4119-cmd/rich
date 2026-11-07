@@ -116,7 +116,8 @@ cd ~/rich && git pull && bash ~/rich/deploy/oracle/setup.sh --probe
 ```
 bash ~/rich/deploy/oracle/setup.sh --candles
 ```
-- 국내 101종목·미국 104종목의 분봉을 받을 수 있는 가장 옛날까지 받고(몇 시간, 뒤에서 돎), 끝나면 규칙 검증까지 해서 결과만 GitHub 에 올립니다.
+- 토스 분봉은 1분봉만 있어(11-07 점검) 국내 61·미국 61종목(기준 ETF 포함)의 1분봉을 최근 90일 받고(2~3시간, 뒤에서 돎),
+  정규장만 5분봉으로 묶어 규칙 검증까지 해서 결과만 GitHub 에 올립니다.
 - 원본 분봉은 서버(`~/.rich/candles/`)에만 남습니다. 진행 보기: `tail -n 5 ~/.rich/logs/candles.log`
 - 끝나면 채팅으로 **"분봉 끝"**.
 
