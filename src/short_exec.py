@@ -218,6 +218,15 @@ def diff_orders(target, broker_pos, est, collar, late=False):
     return sorted(out, key=lambda x: x[0]["side"] != "sell")
 
 
+def guard_geared(pairs, cfg):
+    """마지막 방어선: short.no_geared 면 레버리지·인버스 ETF 매수는 보내지 않는다 (이미 있던 것을 파는 것은 허용)."""
+    import allweather as AW
+    if not AW.no_geared(cfg):
+        return pairs
+    return [(({**o, "kind": "skip"}, "레버리지·인버스 매수 막음 (short.no_geared)")
+             if o["side"] == "buy" and o["code"] in AW.GEARED_CODES and o["kind"] != "skip" else (o, note)) for o, note in pairs]
+
+
 def last_prices():
     """어제 종가 (docs/short.json 의 보유·계획 + 전천후 목표) — 지정가 기준."""
     ui = RK.jload("docs/short.json", {}) or {}
@@ -277,7 +286,7 @@ def execute(cfg, dry=False, now=None, where=None):
     done = sent_before(plan.get("made", ""), tag)
     rows = []
     ts = now.strftime("%Y-%m-%d %H:%M:%S")
-    for o, note in diff_orders(tgt, bpos, est, collar, late):
+    for o, note in guard_geared(diff_orders(tgt, bpos, est, collar, late), cfg):
         o = {**o, "sleeve": ",".join(sl), "name": o["code"]}
         if o["kind"] == "skip" or (o["code"], o["side"]) in done:
             rows.append({**o, "ts": ts, "plan_date": plan.get("made", ""), "broker": tag, "ok": False, "msg": note if o["kind"] == "skip" else "이미 보냄"})
