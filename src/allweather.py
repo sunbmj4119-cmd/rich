@@ -12,6 +12,7 @@
 
 전략 카드 (모두 t-1일 저녁 판단 → t일 시가 체결)
   보유      지수·코스닥·미국 S&P·나스닥·금·달러·국고채10년·3년·단기채·인버스·레버리지 그대로 들고 있기
+            (레버리지·인버스를 쓰는 카드 5장은 short.no_geared 가 켜져 있으면 혼합에서 뺀다 — GEARED_RULES)
   추세      지수가 120일선 위면 지수, 아래면 인버스(T:ls) / 단기채(T:cash)
             200일선 아래면 방어 자산(달러·금·장기채·단기채 중 60일 수익 1등)으로 (T:def)
   모멘텀    매달, 지수·미국 S&P·나스닥·금·달러·장기채 중 120일 수익 1등(DM:1)·상위 2개(DM:2), 단기채보다 못하면 단기채
@@ -165,6 +166,28 @@ RULES.update({
     "BR:usd": "약세·급락이면 달러, 아니면 KODEX 200 (달러 피신)",
 })
 GROUP = {"H": "보유", "T": "추세", "DM": "모멘텀", "RP": "위험균형", "VT": "변동성", "CR": "급락반등", "BR": "하락대비"}
+
+# 레버리지·인버스 (2026-11-07 사용자 결정: 일단 하지 않는다) — 이 자산을 쓰는 카드는 혼합 후보에서 뺀다
+GEARED_KEYS = ("INV", "LEV", "INV2")
+GEARED_CODES = {KEYS[k] for k in GEARED_KEYS}
+GEARED_RULES = {"H:INV", "H:LEV", "T:ls", "CR:lev", "BR:inv"}
+
+
+def no_geared(cfg=None):
+    """설정 short.no_geared (없으면 True = 레버리지·인버스 안 함)."""
+    try:
+        if cfg is None:
+            import settings
+            cfg = settings.load()
+        return bool((cfg.get("short") or {}).get("no_geared", True))
+    except Exception:
+        return True
+
+
+def allowed_rules(geared_ok=None):
+    """혼합에 쓰는 카드. geared_ok=None 이면 설정을 따른다."""
+    ok = (not no_geared()) if geared_ok is None else geared_ok
+    return [k for k in RULES if ok or k not in GEARED_RULES]
 
 
 def _lag(x):
@@ -560,15 +583,16 @@ def excess_over_cash(R, rules):
     return R - rc[:, None]
 
 
-def live_mix(upto=None, stress=1.0, prices=None, start=None):
+def live_mix(upto=None, stress=1.0, prices=None, start=None, rules=None):
     """반환 dict: 날짜·가격·특징, 카드, 혼합 고르기(날짜별), 혼합 자산곡선, 내일 목표 비중, 오늘 국면.
-    prices=(dates, Op, Cp) 를 주면 그 자료로 (긴 역사 검증용 대용 자산), start 로 고르기 시작일."""
+    prices=(dates, Op, Cp) 를 주면 그 자료로 (긴 역사 검증용 대용 자산), start 로 고르기 시작일.
+    rules: 혼합 후보 카드 (기본: allowed_rules() — 설정이 레버리지·인버스를 막으면 그 카드 5장 제외)."""
     dates, Op, Cp = prices if prices is not None else load_prices()
     if upto is not None:
         keep = dates <= pd.Timestamp(upto)
         dates, Op, Cp = dates[keep], Op[keep], Cp[keep]
     F = features(Cp, dates)
-    rules, Ws, recs, R = card_returns(dates, Op, Cp, F, stress=stress)
+    rules, Ws, recs, R = card_returns(dates, Op, Cp, F, rules=list(rules or allowed_rules()), stress=stress)
     Rx = excess_over_cash(R, rules)
     cash = rules.index("H:CASH")
     s = int(np.searchsorted(dates, pd.Timestamp(start or MIX_START)))

@@ -348,7 +348,7 @@ def test_long_gate_removes_old_failures_from_pool():
             assert L.long_gate() == set()                      # 파일 없으면 빈 관문
             json.dump({"fail": ["E:oo_rev"]}, open(L.GATE_FILE, "w"))
             assert L.long_gate() == {"E:oo_rev"}
-            assert len(L.pool_index(ms, "SLOW")) == len(full) - 1
+            assert len(L.pool_index(ms, "SLOW")) == len(full) - len({"E:oo_rev"} | L.geared_gate())   # 기본 관문 = 긴 역사 + 레버리지·인버스
         finally:
             L.GATE_FILE = old
 
@@ -681,6 +681,37 @@ def test_krx_adjust_splits_and_rights():
     assert abs(A[4, 1] / A[3, 1] - (1 - 0.0526)) < 1e-3 and not b.any()             # 증자 권리락: 기준가 대비 -5.26%
     fac2, b2 = H.krx_adjust(C, None, d)
     assert abs((C * fac2)[2, 0] - 2.08) < 1e-6 and b2[3, 0] and b2.sum() == 1         # 1/50 로 추정, 분할 날만 끊김
+
+
+def test_no_geared_excludes_leverage_inverse():
+    """short.no_geared: 전천후 카드 5장·단기 인버스 모델을 후보에서 빼고, 증권사 매수도 막는다 (매도는 허용)."""
+    import allweather as AW
+    import short_exec as SX
+    on, off = AW.allowed_rules(False), AW.allowed_rules(True)
+    assert set(off) - set(on) == AW.GEARED_RULES and "H:CASH" in on and len(off) == len(AW.RULES)
+    assert AW.GEARED_CODES == {"114800", "122630", "252670"}
+    assert AW.no_geared({"short": {}}) and not AW.no_geared({"short": {"no_geared": False}})
+    rng = np.random.default_rng(1)
+    T = 400
+    dates = pd.bdate_range("2015-01-02", periods=T)
+    Cp = np.cumprod(1 + rng.normal(0, 0.01, (T, AW.A)), axis=0) * 1000
+    F = AW.features(Cp, dates)
+    gj = [AW.CODES.index(c) for c in AW.GEARED_CODES]
+    for k in on:                                                        # 남은 카드는 레버리지·인버스를 한 번도 들지 않는다
+        assert np.nan_to_num(AW.targets(F, Cp, k)[:, gj]).max() == 0, k
+    models = [{"id": "E:ls_rev", "kind": "etf"}, {"id": "E:hold", "kind": "etf"}]
+    old = L.long_gate
+    try:
+        L.long_gate = lambda: set()
+        assert [models[i]["id"] for i in L.pool_index(models, "SLOW")] == ["E:hold"]
+    finally:
+        L.long_gate = old
+    pairs = [({"side": "buy", "code": "122630", "qty": 1, "kind": "limit"}, "x"),
+             ({"side": "sell", "code": "114800", "qty": 3, "kind": "market"}, "y"),
+             ({"side": "buy", "code": "069500", "qty": 1, "kind": "limit"}, "z")]
+    g = SX.guard_geared(pairs, {"short": {"no_geared": True}})
+    assert g[0][0]["kind"] == "skip" and "레버리지" in g[0][1] and g[1] == pairs[1] and g[2] == pairs[2]
+    assert SX.guard_geared(pairs, {"short": {"no_geared": False}}) == pairs
 
 
 def glob_any(d, prefix):

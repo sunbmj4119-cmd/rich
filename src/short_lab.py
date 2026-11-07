@@ -529,9 +529,17 @@ def long_gate():
         return set()
 
 
+GEARED_MODELS = {"E:ls_rev"}                               # 인버스 ETF 를 쓰는 모델 (short.no_geared 면 후보에서 뺌)
+
+
+def geared_gate():
+    import allweather as AW
+    return set(GEARED_MODELS) if AW.no_geared() else set()
+
+
 def pool_index(models, pool, gate=None):
-    """후보군 번호. gate = 뺄 모델 id 집합 (기본: 긴 역사 관문). 관문 때문에 비면 관문 없이."""
-    gate = long_gate() if gate is None else gate
+    """후보군 번호. gate = 뺄 모델 id 집합 (기본: 긴 역사 관문 + 레버리지·인버스 모델). 관문 때문에 비면 관문 없이."""
+    gate = (long_gate() | geared_gate()) if gate is None else gate
     if pool == "ALL":
         idx = list(range(len(models)))
     else:
