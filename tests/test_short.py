@@ -800,6 +800,25 @@ def test_size_policy_rule_allocation_and_execution():
             SX.MIRROR, SX.MIRROR_STATUS = old
 
 
+def test_overnight_stream_timing_and_costs():
+    """밤사이 보유: t-2일 저녁 신호로 t-1일 종가에 사서 t일 시가에 판다 (미래 정보 없음) · 120일선 아래면 쉼 · 비용 차감."""
+    import optimize_lab as O
+    import allweather as AW
+    T, A = 200, AW.A
+    Cp = np.tile(np.linspace(100, 200, T)[:, None], (1, A))           # 꾸준히 오름 → 120일선 위
+    Op = np.r_[Cp[:1], Cp[:-1] * 1.001]                               # 시가 = 전날 종가 +0.1%
+    dates = pd.bdate_range("2020-01-02", periods=T)
+    r = O.overnight_stream(dates, Op, Cp, slip_fixed=0.0)
+    on = r[r != 0]
+    assert len(on) > 0 and np.allclose(on, 1.001 * (1 - AW.COMM) / (1 + AW.COMM) - 1)
+    assert (r[:97] == 0).all()                                       # 120일선이 생기기 전(80%=96일 + 2일 지연)엔 안 함
+    Cd = Cp[::-1].copy()                                             # 꾸준히 내림 → 120일선 아래 → 안 함
+    Od = np.r_[Cd[:1], Cd[:-1] * 1.001]
+    assert (O.overnight_stream(dates, Od, Cd, slip_fixed=0.0)[120:] == 0).all()
+    st = O.steadiness(r, dates)
+    assert st["day_win"] == 1.0 and 0 < st["days_in"] < 1
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 

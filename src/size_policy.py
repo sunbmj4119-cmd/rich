@@ -220,6 +220,31 @@ def forward(sp=None, prices=None):
             "cash": round(res["cash"])}
 
 
+def overnight_forward(sp=None, prices=None):
+    """그림자 기록 (실제 돈 아님): 매일 단기 매매 — 추세 위에서만 KODEX 200 밤사이 보유(D1)와 DM:2 반반 섞기(D2)를
+    paper_start 부터 앞으로 쌓는다. 4회차 시험에서 비용 3배에 무너져 실제 돈에는 안 넣었다 — 경매 체결(장 시작·마감 단일가)은
+    호가 차이가 없어 실제 비용이 가정보다 낮을 수 있으니, 앞으로의 기록으로 다시 본다."""
+    import optimize_lab as O
+    sp = {**DEFAULT, **(sp or {})}
+    dates, Op, Cp = prices or AW.load_prices()
+    st = pd.Timestamp(sp["paper_start"])
+    if dates[-1] < st:
+        return {"start": sp["paper_start"], "days": 0, "note": "아직 시작 전"}
+    on = pd.Series(O.overnight_stream(dates, Op, Cp), index=dates)
+    W_aw, W_ag, _ = weight_paths(dates, Op, Cp, sp)
+    s = int(np.searchsorted(dates, st))
+    dm = simulate(dates, Op, Cp, W_aw, W_ag, s, sp["paper_cash"], sp, fixed_a=1.0)["E"][s:]
+    r_on = on.to_numpy()[s:]
+    r_dm = np.r_[0.0, dm[1:] / dm[:-1] - 1]
+    E1 = sp["paper_cash"] * np.cumprod(1 + r_on)
+    E2 = sp["paper_cash"] * np.cumprod(1 + 0.5 * r_on + 0.5 * r_dm)
+    return {"start": str(dates[s].date()), "days": int(len(E1)), "what": "그림자 기록 — 실제 돈 아님",
+            "D1_overnight": {"equity": round(float(E1[-1])), "ret": round(float(E1[-1] / sp["paper_cash"] - 1), 4),
+                             "nights_in": int((r_on != 0).sum())},
+            "D2_mix": {"equity": round(float(E2[-1])), "ret": round(float(E2[-1] / sp["paper_cash"] - 1), 4)},
+            "DM2": {"equity": round(float(dm[-1])), "ret": round(float(dm[-1] / sp["paper_cash"] - 1), 4)}}
+
+
 # ══════════════════════════════════════════════════════════════
 # 보고서
 # ══════════════════════════════════════════════════════════════
