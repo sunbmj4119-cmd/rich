@@ -347,6 +347,7 @@ case "$MODE" in
   --unlive) unset_live ;;
   --smoke) run_smoke ;;
   --candles) run_candles ;;
+  --*)     echo "모르는 옵션: $MODE — 철자를 확인하세요 (예: --candles · --probe · --check · --link · --history)"; exit 1 ;;
   *)       install_packages; tune_system; get_code; deploy_key; secrets_file; check
            echo; echo "다음 단계: 위 ✗ 항목을 해결한 뒤 'bash ~/rich/deploy/oracle/setup.sh --check' 로 다시 확인하세요." ;;
 esac
