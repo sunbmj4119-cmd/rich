@@ -16,7 +16,7 @@
 #          bash setup.sh --link     토스 계좌를 거울 계좌로 연결 (config short.broker: toss 로 바꾼 뒤 · 빈 계좌만)
 #          bash setup.sh --live     실제 돈 주문 최종 확인값 저장 (준비도 점검표가 모두 통과한 뒤에만 의미 있음)
 #          bash setup.sh --smoke    1주 실주문 시험 (평일 정규장 · 실제 돈 1주 값 + 수수료 — 묻고 나서만)
-#          bash setup.sh --candles  토스 분봉 받기(국내 101·미국 104종목, 옛날까지) + 불장단타왕 규칙 검증 — 뒤에서 돌고 앱을 닫아도 계속
+#          bash setup.sh --candles [일수]  토스 분봉 받기 (기본 90일)(국내 101·미국 104종목, 옛날까지) + 불장단타왕 규칙 검증 — 뒤에서 돌고 앱을 닫아도 계속
 #
 #   이 스크립트는 비밀 값을 화면에 출력하지 않는다. 키는 ~/.rich/secrets.env 에만 저장한다.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -286,7 +286,8 @@ run_candles() {
     ok "이미 받는 중입니다 — 진행 보기: tail -n 5 $STATE/logs/candles.log"
     return 0
   fi
-  nohup bash "$DIR/deploy/oracle/candles.sh" > "$STATE/logs/candles.log" 2>&1 &
+  CANDLE_DAYS="${2:-90}" nohup bash "$DIR/deploy/oracle/candles.sh" > "$STATE/logs/candles.log" 2>&1 &
+  echo "  받는 기간: 최근 ${2:-90}일 (이미 받은 것은 건너뛰고 더 옛날만)"
   sleep 20
   echo "  ── 처음 몇 줄 ──"; tail -n 6 "$STATE/logs/candles.log" | sed 's/^/  /'
   ok "뒤에서 받는 중입니다. 진행 보기: tail -n 5 $STATE/logs/candles.log"
@@ -346,7 +347,7 @@ case "$MODE" in
   --live)  set_live ;;
   --unlive) unset_live ;;
   --smoke) run_smoke ;;
-  --candles) run_candles ;;
+  --candles) run_candles "$@" ;;
   --*)     echo "모르는 옵션: $MODE — 철자를 확인하세요 (예: --candles · --probe · --check · --link · --history)"; exit 1 ;;
   *)       install_packages; tune_system; get_code; deploy_key; secrets_file; check
            echo; echo "다음 단계: 위 ✗ 항목을 해결한 뒤 'bash ~/rich/deploy/oracle/setup.sh --check' 로 다시 확인하세요." ;;

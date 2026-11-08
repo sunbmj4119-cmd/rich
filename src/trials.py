@@ -38,6 +38,7 @@ def count():
     opt = jload("data/optimize/lab.json", {}) or {}
     setup = jload("data/setup_lab.json", {}) or {}
     bdw = jload("data/bdw_lab.json", {}) or {}
+    intra = jload("data/intraday_lab.json", {}) or {}
     rows = {
         "kr_short_models": {"n": kr_models, "what": "국내 단기 고정 후보 (종목 모델 + 지수 ETF 규칙)"},
         "kr_rule_grid": {"n": grid, "what": "고르는 방식 격자 (얼마나 자주·몇 일 성적·무엇으로·몇 개·끈기)"},
@@ -52,6 +53,7 @@ def count():
         "optimize": {"n": int(opt.get("n_trials") or 0), "what": "최적화 실험실 (앙상블·덮개·ETF 위성·손절익절, 회차 합계)"},
         "setups": {"n": int(setup.get("n_trials") or 0), "what": "조건 매매 (사전 등록 조건 8개 — 급락·RSI2·볼린저·신고가·외국인·투매·공포·골든크로스)"},
         "bdw": {"n": int(bdw.get("n_trials") or 0), "what": "불장단타왕 규칙 (VWMA100 되밟기·50선 눌림·돌파·투매 꼬리·시간 손절·개인 투매·25선 저항·6월·DM:2 100일선 손절)"},
+        "intraday": {"n": int(intra.get("n_trials") or 0), "what": "불장단타왕 분봉 규칙 엔진 (토스 1분봉 → 5분봉, 시장별)"},
     }
     kr_n = kr_models * grid + genomes
     return {"generated": time.strftime("%Y-%m-%d %H:%M"), "rows": rows, "kr_short_effective": kr_n,
