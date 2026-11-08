@@ -1,0 +1,267 @@
+{
+ "kr": {
+  "generated": "2026-11-08 07:47",
+  "venue": "kr",
+  "rules": {
+   "top_n": 20,
+   "line": 100,
+   "hi_rule": "1h",
+   "brk_lookback": 12,
+   "vol_mult": 2.0,
+   "touch": 0.002,
+   "chase": 0.01,
+   "stop": 0.01,
+   "tp1": 0.02,
+   "tp1_frac": 0.5,
+   "tp2": 0.06,
+   "time_bars": 6,
+   "risk": 0.005,
+   "max_pos": 2,
+   "day_limit": 0.025,
+   "month_limit": 0.075,
+   "per_day_symbol": 2,
+   "entry_window_min": 120,
+   "crypto_max_hold_h": 24
+  },
+  "costs": {
+   "fee": 0.00015,
+   "slip": 0.0005,
+   "tax": 0.002,
+   "session": [
+    "09:00",
+    "15:30"
+   ]
+  },
+  "symbols": 61,
+  "bench": "069500",
+  "criteria": {
+   "min_trades": 100,
+   "t_day": 3.0,
+   "random_pct": 0.95,
+   "n_random": 30
+  },
+  "eras": {
+   "A": [
+    "2026-08-07 12:10:00",
+    "2026-09-22 01:47:30"
+   ],
+   "B": [
+    "2026-09-22 01:47:30",
+    "2026-11-06 15:25:00"
+   ]
+  },
+  "rows": {
+   "A": {
+    "strategy": {
+     "trades": 17,
+     "per_month": 64.7,
+     "win": 0.059,
+     "avg_win": 0.0072,
+     "avg_loss": -0.0087,
+     "payoff": 0.82,
+     "mean": -0.00778,
+     "t_day": -6.16,
+     "total": -0.0642,
+     "cagr": -0.9517,
+     "mdd": -0.0593,
+     "sharpe": -16.06,
+     "why": {
+      "선 이탈": 9,
+      "손절": 4,
+      "시간 손절": 3,
+      "본전 손절": 1
+     }
+    },
+    "random_totals": {
+     "median": -0.0393,
+     "p95": -0.0191
+    },
+    "beats_random_pct": 0.03333333333333333,
+    "hold": {
+     "total": 0.1364,
+     "mdd": -0.1201
+    },
+    "cost_x2": {
+     "trades": 16,
+     "mean": -0.00918,
+     "total": -0.0711,
+     "mdd": -0.0656
+    },
+    "pass": false
+   },
+   "B": {
+    "strategy": {
+     "trades": 39,
+     "per_month": 27.0,
+     "win": 0.103,
+     "avg_win": 0.0075,
+     "avg_loss": -0.0075,
+     "payoff": 1.0,
+     "mean": -0.00594,
+     "t_day": -3.97,
+     "total": -0.1098,
+     "cagr": -0.6193,
+     "mdd": -0.1103,
+     "sharpe": -8.15,
+     "why": {
+      "선 이탈": 23,
+      "시간 손절": 7,
+      "손절": 6,
+      "본전 손절": 2,
+      "장 마감 정리": 1
+     }
+    },
+    "random_totals": {
+     "median": -0.1298,
+     "p95": -0.1019
+    },
+    "beats_random_pct": 0.8333333333333334,
+    "hold": {
+     "total": -0.3092,
+     "mdd": -0.3275
+    },
+    "cost_x2": {
+     "trades": 37,
+     "mean": -0.00723,
+     "total": -0.1256,
+     "mdd": -0.1251
+    },
+    "pass": false
+   }
+  },
+  "pass": false,
+  "secs": 285
+ },
+ "n_trials": 2,
+ "us": {
+  "generated": "2026-11-08 07:52",
+  "venue": "us",
+  "rules": {
+   "top_n": 20,
+   "line": 100,
+   "hi_rule": "1h",
+   "brk_lookback": 12,
+   "vol_mult": 2.0,
+   "touch": 0.002,
+   "chase": 0.01,
+   "stop": 0.01,
+   "tp1": 0.02,
+   "tp1_frac": 0.5,
+   "tp2": 0.06,
+   "time_bars": 6,
+   "risk": 0.005,
+   "max_pos": 2,
+   "day_limit": 0.025,
+   "month_limit": 0.075,
+   "per_day_symbol": 2,
+   "entry_window_min": 120,
+   "crypto_max_hold_h": 24
+  },
+  "costs": {
+   "fee": 0.001,
+   "slip": 0.0002,
+   "tax": 0.0,
+   "session": [
+    "09:30",
+    "16:00"
+   ]
+  },
+  "symbols": 60,
+  "bench": "SPY",
+  "criteria": {
+   "min_trades": 100,
+   "t_day": 3.0,
+   "random_pct": 0.95,
+   "n_random": 30
+  },
+  "eras": {
+   "A": [
+    "2026-08-07 13:20:00",
+    "2026-09-22 02:37:30"
+   ],
+   "B": [
+    "2026-09-22 02:37:30",
+    "2026-11-06 15:55:00"
+   ]
+  },
+  "rows": {
+   "A": {
+    "strategy": {
+     "trades": 8,
+     "per_month": 48.7,
+     "win": 0.0,
+     "avg_win": 0,
+     "avg_loss": -0.0056,
+     "payoff": null,
+     "mean": -0.00561,
+     "t_day": -15.14,
+     "total": -0.0222,
+     "cagr": -0.8065,
+     "mdd": -0.0195,
+     "sharpe": null,
+     "why": {
+      "선 이탈": 6,
+      "손절": 1,
+      "시간 손절": 1
+     }
+    },
+    "random_totals": {
+     "median": -0.0106,
+     "p95": 0.0149
+    },
+    "beats_random_pct": 0.0,
+    "hold": {
+     "total": 0.0006,
+     "mdd": -0.0373
+    },
+    "cost_x2": {
+     "trades": 8,
+     "mean": -0.00797,
+     "total": -0.0315,
+     "mdd": -0.0276
+    },
+    "pass": false
+   },
+   "B": {
+    "strategy": {
+     "trades": 53,
+     "per_month": 40.3,
+     "win": 0.151,
+     "avg_win": 0.0162,
+     "avg_loss": -0.0051,
+     "payoff": 3.19,
+     "mean": -0.00187,
+     "t_day": -0.28,
+     "total": -0.0487,
+     "cagr": -0.3664,
+     "mdd": -0.0724,
+     "sharpe": -4.79,
+     "why": {
+      "선 이탈": 28,
+      "시간 손절": 16,
+      "장 마감 정리": 6,
+      "손절": 3
+     }
+    },
+    "random_totals": {
+     "median": -0.1142,
+     "p95": -0.1006
+    },
+    "beats_random_pct": 1.0,
+    "hold": {
+     "total": -0.0509,
+     "mdd": -0.0618
+    },
+    "cost_x2": {
+     "trades": 41,
+     "mean": -0.00398,
+     "total": -0.0789,
+     "mdd": -0.0976
+    },
+    "pass": false
+   }
+  },
+  "pass": false,
+  "secs": 383
+ }
+}
