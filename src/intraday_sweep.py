@@ -15,7 +15,10 @@
   참고   손잡이별 중앙값(대체로 어느 손절·익절 폭이 나은가) · A 성적과 B 성적의 순위 상관(좋은 설정이 계속 좋은가) ·
          그냥 1등(봉우리)을 골랐다면 확인 시대에서 어땠나
 
-  python src/intraday_sweep.py --venue kr --dir ~/.rich/candles/1m/kr --bench 069500
+  2차 (--round 2, 기본): 1차에서 덜 잃는 곳이 격자 끝이었으므로 그 바깥 — 넉넉한 매수 자리 · 손절 −2~−10% · 익절 +3~+20% ·
+       최대 5거래일 보유(밤사이 갭 반영) · 1시간봉 추세 이탈 청산 · 손절 폭과 상관없이 같은 돈(종목당 20%, 최대 5종목). 고르기·확인·합격은 같음.
+
+  python src/intraday_sweep.py --venue kr --dir ~/.rich/candles/1m/kr --bench 069500 [--round 1|2]
   python src/intraday_sweep.py --venue us --dir ~/.rich/candles/1m/us --bench SPY
 """
 import argparse
@@ -50,27 +53,53 @@ EXIT = {"stop": [0.005, 0.0075, 0.01, 0.015, 0.02, 0.03],   # 손절선
         "time_bars": [6, 12, 0],                           # 몇 봉(5분) 지나도 매입가 아래면 정리 (0 = 안 함)
         "line_exit": [1, 0]}                               # 5분봉 종가가 선(VWMA100) 아래면 정리 (1 = 함)
 DEFAULT = {"touch": 0.002, "chase": 0.01, "vol_mult": 2.0, "window": 120, "top_n": 20,
-           "stop": 0.01, "tp1": 0.02, "frac": 0.5, "tp2": 0.06, "time_bars": 6, "line_exit": 1}
+           "stop": 0.01, "tp1": 0.02, "frac": 0.5, "tp2": 0.06, "time_bars": 6, "line_exit": 1, "max_days": 0}
+
+# 2차 (2026-11-09 사전 등록, 1차 결과를 본 뒤): 1차에서 덜 잃는 곳이 격자 끝(손절 −3%·익절 +5%)이었으므로 그 바깥으로 —
+# 매수 자리 넉넉하게(선에서 더 멀리까지) · 손절·익절 넓게 · 며칠 들고 가기(스윙) · 큰 추세가 꺾이면 정리.
+# 손절 폭과 상관없이 같은 돈을 넣는다(종목당 20%·최대 5종목): 1차는 손절이 넓을수록 비중이 작아져 '덜 잃은' 것처럼 보였다.
+ENTRY2 = {"touch": [0.002, 0.005, 0.01],         # 되밟기 (저가가 선 위 몇 % 안)
+          "chase": [0.01, 0.02, 0.04],           # 추격 금지 (종가가 선 위 몇 % 안)
+          "vol_mult": [1.5, 2.0, 3.0],
+          "window": [120, 390],                  # 390 = 장중 아무 때나
+          "top_n": [20, 0]}
+EXIT2 = {"stop": [0.02, 0.03, 0.05, 0.07, 0.10],
+         "tp1": [0.03, 0.05, 0.08, 0.12],
+         "frac": [0.33, 0.5, 1.0],
+         "tp2": [0.08, 0.12, 0.20],
+         "time_bars": [0],
+         "line_exit": [0, 1, 2],                 # 0 없음 · 1 5분봉 종가 < VWMA100 · 2 1시간봉 추세 이탈(종가 < 1시간 VWMA100 또는 50선 < 200선)
+         "max_days": [0, 1, 3, 5]}               # 최대 보유: 0 = 그날 장 마감 · n = n 거래일 뒤 장 마감
+ROUNDS = {1: {"entry": ENTRY, "exit": {**EXIT, "max_days": [0]}, "sizing": "risk", "max_pos": 2},
+          2: {"entry": ENTRY2, "exit": EXIT2, "sizing": "equal", "max_pos": 5}}
 CRIT = {"min_trades": 100, "t_day": 2.0, "random_pct": 0.95, "n_random": 30}
-WHY = ["손절", "본전 손절", "1차 목표(전부)", "2차 목표", "선 이탈", "시간 손절", "장 마감 정리", "선 이탈(1차 뒤)"]
+CFG = {"sizing": "risk", "max_pos": 2}           # 비중: risk = 위험 0.5% ÷ 손절 폭(최대 1/max_pos) · equal = 1/max_pos
+WHY = ["손절", "본전 손절", "1차 목표(전부)", "2차 목표", "선 이탈", "시간 손절", "장 마감 정리", "선 이탈(1차 뒤)",
+       "추세 이탈", "추세 이탈(1차 뒤)", "보유 기한 정리"]
+XKEYS = ("stop", "tp1", "frac", "tp2", "time_bars", "line_exit", "max_days")
 G = {}                                          # 작업자들이 나눠 쓰는 큰 배열 (fork 로 물려받음)
 
 
 def grid(entry=None, exit_=None):
-    E, X = entry or ENTRY, exit_ or EXIT
+    E, X = entry or ENTRY, dict(exit_ or EXIT)
+    X.setdefault("time_bars", [0])
+    X.setdefault("max_days", [0])
+    X = {k: X[k] for k in XKEYS}                # 청산 손잡이 순서를 고정
     return E, X, list(itertools.product(*E.values())), list(itertools.product(*X.values()))
 
 
+def exit_key(p):
+    """같은 규칙이면 같은 열쇠 (1차에서 전부 팔면 2차는 뜻이 없음) · 2차 ≤ 1차면 None (없는 칸)."""
+    s, a, f, b, tb, ln, md = p
+    if f >= 1:
+        return (s, a, f, tb, ln, md)
+    return p if b > a else None
+
+
 def n_unique(entry=None, exit_=None):
-    """실제로 다른 규칙인 칸 수 (1차에서 전부 팔면 2차는 뜻이 없고, 2차 ≤ 1차인 칸은 없음) — 시도 장부에 이 수를 센다."""
+    """실제로 다른 규칙인 칸 수 — 시도 장부에 이 수를 센다."""
     E, X, el, xl = grid(entry, exit_)
-    keys = set()
-    for s, a, f, b, tb, ln in xl:
-        if f >= 1:
-            keys.add((s, a, f, tb, ln))
-        elif b > a:
-            keys.add((s, a, f, b, tb, ln))
-    return len(el) * len(keys)
+    return len(el) * len({k for k in map(exit_key, xl) if k is not None})
 
 
 # ── 자료 ─────────────────────────────────────────────────────────────────────
@@ -126,7 +155,8 @@ def build(data, venue, bench=None, entry=None):
             "v20": d["volume"].rolling(20, min_periods=15).mean().shift(1).to_numpy(),
             "xup": ((d["close"] > d["vw"]) & (d["close"].shift(1) <= d["vw"].shift(1))).to_numpy(),
             "val_day": d["value"].rolling(bpd, min_periods=max(1, bpd // 2)).sum().to_numpy(),
-            "base": base, "mins": d["mins_open"].to_numpy(float) if session else np.zeros(len(d)), "sym": si}))
+            "base": base, "mins": d["mins_open"].to_numpy(float) if session else np.zeros(len(d)), "sym": si,
+            "trend": d["trend_ok"].fillna(False).astype(bool).to_numpy()}))
     X = pd.concat(parts, ignore_index=True)
     piv = X.pivot_table(index="ts", columns="sym", values="val_day", aggfunc="last").sort_index().ffill()
     rk = piv.rank(axis=1, ascending=False, method="first").stack().rename("rank").reset_index()
@@ -137,7 +167,10 @@ def build(data, venue, bench=None, entry=None):
     dt = pd.DatetimeIndex(X["ts"])
     g = {"venue": venue, "session": session, "syms": syms, "ts": ts, "sym": sym, "day": day,
          "mon": (dt.year * 12 + dt.month).to_numpy(np.int32),
-         "rank": X["rank"].fillna(1e9).to_numpy(float), "base": X["base"].to_numpy(bool), "mins": X["mins"].to_numpy(float)}
+         "rank": X["rank"].fillna(1e9).to_numpy(float), "base": X["base"].to_numpy(bool), "mins": X["mins"].to_numpy(float),
+         "trend": X["trend"].to_numpy(bool)}
+    newday = np.r_[True, (np.diff(day) != 0) | (np.diff(sym) != 0)]
+    g["dayseq"] = (np.cumsum(newday) - 1).astype(np.int32)                       # 거래일 번호 (종목마다 이어서 — 주말·휴일 건너뜀)
     for k in ("o", "h", "l", "c", "vw", "val_day"):
         g[k] = X[k].to_numpy(float)
     if session:
@@ -202,71 +235,91 @@ def _next(mask, inf):
 
 
 class Paths:
-    """신호마다 진입 봉부터 그날 마지막 봉까지의 가격을 '매입가 대비 비율'로 — 청산 숫자만 바꿔 가며 빠르게 다시 계산.
-    bdw_intraday.simulate_trade 와 같은 순서: 한 봉 안에서 손절 → 1차 익절(→ 손절을 본전으로) → 2차 익절 → 종가 규칙(마지막 봉 정리 · 선 이탈 · 시간 손절)."""
+    """신호마다 진입 봉부터 (최대 보유 기한의) 마지막 봉까지 가격을 '매입가 대비 비율'로 — 청산 숫자만 바꿔 가며 빠르게 다시 계산.
+    bdw_intraday.simulate_trade 와 같은 순서: 한 봉 안에서 손절 → 1차 익절(→ 손절을 본전으로) → 2차 익절 →
+    종가 규칙(보유 기한의 마지막 봉 정리 · 선/추세 이탈 · 시간 손절 → 다음 봉 시가). 밤사이 갭: 시가가 손절선 아래면 시가에 팖."""
 
     def __init__(self, sig, cost_mult=1.0, exit_=None):
-        g, X = G, exit_ or EXIT
+        g = G
+        X = grid(None, exit_ or EXIT)[1]
         V = BI.VENUES[g["venue"]]
         self.fee, self.slip, self.tax = V["fee"] * cost_mult, V["slip"] * cost_mult, V["tax"]
-        H = g["H"]
+        dmax = max(X["max_days"])
+        H = g["H"] * (dmax + 1)
         self.H, self.inf = H, H + 2
+        ft = np.float64 if H <= 120 else np.float32                                  # 여러 날 보유는 배열이 커서 4바이트로
         sig = np.asarray(sig, np.int64)
         self.n = len(sig)
         e = self.e = sig + 1
         J = np.arange(H)
         N = len(g["o"])
-        pos = np.minimum(e[:, None] + J[None, :], N - 1)
-        valid = (e[:, None] + J[None, :] < N) & (g["sym"][pos] == g["sym"][e][:, None])
+        raw = e[:, None] + J[None, :]
+        pos = np.minimum(raw, N - 1)
+        valid = (raw < N) & (g["sym"][pos] == g["sym"][e][:, None])
+        del raw
         if g["session"]:
-            valid &= g["day"][pos] == g["day"][e][:, None]
+            off = (g["dayseq"][pos] - g["dayseq"][e][:, None]).astype(np.int16)    # 진입일로부터 몇 거래일째
+            valid &= off <= dmax
         valid = np.logical_and.accumulate(valid, axis=1)
-        self.lastj = valid.sum(1) - 1
-        E = g["o"][e] * (1 + self.slip)
-        Ec = E[:, None]
-        self.o = np.where(valid, g["o"][pos] / Ec, np.nan)
-        self.c = np.where(valid, g["c"][pos] / Ec, np.nan)
-        h = np.where(valid, g["h"][pos] / Ec, 0.0)
-        lo = np.where(valid, g["l"][pos] / Ec, np.inf)
-        vw = np.where(valid, g["vw"][pos] / Ec, np.nan)
+        if g["session"]:
+            self.lastD = {md: (valid & (off <= md)).sum(1) - 1 for md in X["max_days"]}
+            del off
+        else:
+            lv = valid.sum(1) - 1
+            self.lastD = {md: np.minimum(lv, g["H"] * (md + 1) - 1) for md in X["max_days"]}
+        E = (g["o"][e] * (1 + self.slip))[:, None]
+        self.o = np.where(valid, g["o"][pos] / E, np.nan).astype(ft)
+        self.c = np.where(valid, g["c"][pos] / E, np.nan).astype(ft)
+        h = np.where(valid, g["h"][pos] / E, 0.0).astype(ft)
+        lo = np.where(valid, g["l"][pos] / E, np.inf).astype(ft)
+        line = valid & (self.c < (g["vw"][pos] / E))
+        trendbrk = valid & ~g["trend"][pos]
+        below = valid & (self.c < 1.0)
         del pos
-        self.line = valid & (self.c < vw)
-        self.below = valid & (self.c < 1.0)
-        last = J[None, :] == self.lastj[:, None]
         inf = self.inf
+        self.lines = {1: line, 2: trendbrk}
         self.S1 = {s: _first(lo <= 1 - s, inf) for s in X["stop"]}
         self.T1 = {a: _first(h >= 1 + a, inf) for a in X["tp1"]}
         self.C1 = {}
         for tb in X["time_bars"]:
-            tm = (self.below & (J[None, :] + 1 >= tb)) if tb else np.zeros_like(last)
+            tm = (below & (J[None, :] + 1 >= tb)) if tb else None
             for ln in X["line_exit"]:
-                self.C1[(tb, ln)] = _first((self.line if ln else False) | tm | last, inf)
+                m = self.lines[ln] if ln else None
+                m = tm if m is None else (m if tm is None else (m | tm))
+                self.C1[(tb, ln)] = _first(m, inf) if m is not None else np.full(self.n, inf)
         self.NT2 = {b: _next(h >= 1 + b, inf) for b in X["tp2"]}
         self.NBE = _next(lo <= 1.0, inf)
-        self.NC2 = {ln: _next((self.line if ln else False) | last, inf) for ln in X["line_exit"]}
+        self.NL = {ln: _next(self.lines[ln], inf) for ln in X["line_exit"] if ln}
+        del h, lo, below
+        self.lines = {k: v for k, v in self.lines.items() if k in X["line_exit"]}
 
-    def exit(self, s, a, f, b, tb, ln, why=False):
+    def exit(self, s, a, f, b, tb, ln, md=0, why=False):
         """반환: 순수익률(들어간 돈 기준, 비용 뺀 뒤) · 청산 봉 번호(전체 배열) [· 이유 번호]."""
         n, H = self.n, self.H
         r = np.arange(n)
-        s1, t1, c1 = self.S1[s], self.T1[a], self.C1[(tb, ln)]
+        LD = self.lastD[md]
+        s1, t1 = self.S1[s], self.T1[a]
+        c1 = np.minimum(self.C1[(tb, ln)], LD)                 # 종가 규칙 또는 보유 기한의 마지막 봉
         stopF = s1 <= np.minimum(t1, c1)                       # 같은 봉이면 손절이 먼저 (보수적)
         tpF = ~stopF & (t1 <= c1)
         clF = ~stopF & ~tpF
         px = np.empty(n)
         xb = np.empty(n, np.int64)
         wy = np.empty(n, np.int8) if why else None
+        end = 6 if md == 0 else 10
         j = s1[stopF]
         px[stopF] = np.where(j == 0, 1 - s, np.minimum(1 - s, self.o[r[stopF], np.minimum(j, H - 1)]))
         xb[stopF] = j
         if why:
             wy[stopF] = 0
-        j, rr, L = c1[clF], r[clF], self.lastj[clF]
+        j, rr, L = c1[clF], r[clF], LD[clF]
         at = j >= L
         px[clF] = np.where(at, self.c[rr, np.minimum(j, H - 1)], self.o[rr, np.minimum(j + 1, H - 1)])
         xb[clF] = np.where(at, j, j + 1)
         if why:
-            wy[clF] = np.where(at, 6, np.where(self.line[rr, np.minimum(j, H - 1)], 4, 5))
+            lab = 4 if ln == 1 else 8
+            hit = self.lines[ln][rr, np.minimum(j, H - 1)] if ln else np.zeros(len(j), bool)
+            wy[clF] = np.where(at, end, np.where(hit, lab, 5))
         rr, bb = r[tpF], t1[tpF]
         if f >= 1:
             px[tpF] = 1 + a
@@ -274,17 +327,19 @@ class Paths:
             if why:
                 wy[tpF] = 2
         else:
-            s2, t2, c2 = self.NBE[rr, bb + 1], self.NT2[b][rr, bb], self.NC2[ln][rr, bb]
+            L = LD[tpF]
+            c2 = np.minimum(self.NL[ln][rr, bb], L) if ln else L
+            s2, t2 = self.NBE[rr, bb + 1], self.NT2[b][rr, bb]
             w = np.stack([s2.astype(np.int64) * 3, t2.astype(np.int64) * 3 + 1, c2.astype(np.int64) * 3 + 2]).argmin(0)
-            jj = np.choose(w, [s2, t2, c2]).astype(np.int64)
+            jj = np.choose(w, [s2.astype(np.int64), t2.astype(np.int64), c2.astype(np.int64)])
             jc = np.minimum(jj, H - 1)
-            at = jj >= self.lastj[tpF]
+            at = jj >= L
             p2 = np.where(w == 0, np.minimum(1.0, self.o[rr, jc]),
                           np.where(w == 1, 1 + b, np.where(at, self.c[rr, jc], self.o[rr, np.minimum(jc + 1, H - 1)])))
             px[tpF] = f * (1 + a) + (1 - f) * p2
             xb[tpF] = np.where((w == 2) & ~at, jj + 1, jj)
             if why:
-                wy[tpF] = np.where(w == 0, 1, np.where(w == 1, 3, np.where(at, 6, 7)))
+                wy[tpF] = np.where(w == 0, 1, np.where(w == 1, 3, np.where(at, end, 7 if ln == 1 else 9)))
         net = px * (1 - (self.fee + self.slip + self.tax)) / (1 + self.fee) - 1
         out = (net, self.e + xb)
         return out + (wy,) if why else out
@@ -296,7 +351,7 @@ def book(t_in, t_out, sym, day, mon, net, w, i0=0, i1=None, keep=False):
     """시간 순 후보 → 동시 max_pos · 같은 종목 동시 1번 · 같은 종목 하루 per_day_symbol 번 · 하루·한 달 손실 한도.
     반환: 거래 수 · 건당 평균 · 총수익 · 최대낙폭 · (keep) 받아들인 번호 · 자산곡선 [(청산 시각, 자산)]."""
     R = BI.RULES
-    mx, per_day, dl, ml = R["max_pos"], R["per_day_symbol"], R["day_limit"], R["month_limit"]
+    mx, per_day, dl, ml = CFG["max_pos"], R["per_day_symbol"], R["day_limit"], R["month_limit"]
     eq = peak = 1.0
     mdd = s = 0.0
     n = 0
@@ -348,7 +403,9 @@ def book(t_in, t_out, sym, day, mon, net, w, i0=0, i1=None, keep=False):
 
 
 def weight(stop):
-    return min(1.0 / BI.RULES["max_pos"], BI.RULES["risk"] / stop)
+    if CFG["sizing"] == "equal":
+        return 1.0 / CFG["max_pos"]
+    return min(1.0 / CFG["max_pos"], BI.RULES["risk"] / stop)
 
 
 def _lists(sig):
@@ -371,18 +428,16 @@ def eval_entry(ei):
     m2 = int(np.searchsorted(tin, g["hi"]))
     P = Paths(sig, exit_=g["exit_grid"])
     done = {}
-    for xi, (s, a, f, b, tb, ln) in enumerate(g["exit_list"]):
-        if f >= 1:
-            key = (s, a, f, tb, ln)
-        elif b > a:
-            key = (s, a, f, b, tb, ln)
-        else:
+    for xi, xc in enumerate(g["exit_list"]):
+        key = exit_key(xc)
+        if key is None:
             continue
         if key in done:
             out[xi] = out[done[key]]
             continue
         done[key] = xi
-        net, xo = P.exit(s, a, f, b, tb, ln)
+        s = xc[0]
+        net, xo = P.exit(*xc)
         netL, toutL = net.tolist(), g["ts"][xo].tolist()
         w = weight(s)
         for era, (i0, i1) in enumerate(((0, m), (m, m2))):
@@ -423,7 +478,7 @@ def detail(c, t0, t1, cost_mult=1.0, sig=None):
     tin, (tinL, symL, dayL, monL) = _lists(sig)
     i0, i1 = int(np.searchsorted(tin, t0)), int(np.searchsorted(tin, t1))
     P = Paths(sig, cost_mult, exit_=G.get("exit_grid"))
-    net, xo, wy = P.exit(c["stop"], c["tp1"], c["frac"], c["tp2"], c["time_bars"], c["line_exit"], why=True)
+    net, xo, wy = P.exit(c["stop"], c["tp1"], c["frac"], c["tp2"], c.get("time_bars", 0), c["line_exit"], c.get("max_days", 0), why=True)
     n, mean, tot, mdd, taken, curve = book(tinL, G["ts"][xo].tolist(), symL, dayL, monL, net.tolist(), weight(c["stop"]), i0, i1, keep=True)
     if not taken:
         return {"trades": 0}, sig
@@ -527,23 +582,25 @@ def analyze(R, E, X, eras_ns, hold):
     try:
         dix = tuple((list(E.values()) + list(X.values()))[i].index(DEFAULT[k]) for i, k in enumerate(keys))
         out["default"] = _row(R, dix, E, X)
-    except ValueError:
+    except (ValueError, KeyError):
         out["default"] = None
     return out
 
 
-def auto_workers():
+def auto_workers(mb=700):
     cpu = os.cpu_count() or 1
     try:
         avail = int([x for x in open("/proc/meminfo") if x.startswith("MemAvailable")][0].split()[1]) / 1024
     except (OSError, IndexError, ValueError):
         avail = 2048
-    return max(1, min(cpu, 4, int(avail // 700)))
+    return max(1, min(cpu, 4, int(avail // mb)))
 
 
-def run(venue, path, bench=None, workers=0, cache="~/.rich/cache", entry=None, exit_=None, data=None, log=print):
+def run(venue, path, bench=None, workers=0, cache="~/.rich/cache", entry=None, exit_=None, data=None, log=print, round_=1):
     t_start = time.time()
-    E, X, el, xl = grid(entry, exit_)
+    rd = ROUNDS[round_]
+    CFG.update({"sizing": rd["sizing"], "max_pos": rd["max_pos"]})
+    E, X, el, xl = grid(entry or rd["entry"], exit_ or rd["exit"])
     data = data if data is not None else load(venue, path, cache)
     if not data:
         raise SystemExit(f"분봉 자료가 없습니다: {path}")
@@ -555,7 +612,7 @@ def run(venue, path, bench=None, workers=0, cache="~/.rich/cache", entry=None, e
     lo, mid, hi = (pd.Timestamp(x).value for x in (eras["A"][0], eras["A"][1], eras["B"][1]))
     G.update({"entry_list": el, "exit_list": xl, "exit_grid": X, "mid": mid, "hi": hi})
     eras_ns = {"A": (lo, mid), "B": (mid, hi)}
-    nw = workers or auto_workers()
+    nw = workers or auto_workers(700 if max(X["max_days"]) == 0 else 1500)
     log(f"  배열 {len(G['o']):,}봉 · 진입 {len(el)}칸 × 청산 {len(xl)}칸 (서로 다른 규칙 {n_unique(E, X):,}칸) · 작업자 {nw}")
     res = np.full((len(el), len(xl), 2, 4), np.nan, np.float32)
     nsig = {}
@@ -578,10 +635,20 @@ def run(venue, path, bench=None, workers=0, cache="~/.rich/cache", entry=None, e
     return {"generated": time.strftime("%Y-%m-%d %H:%M"), "venue": venue, "bench": bench, "symbols": len(G["syms"]),
             "eras": {k: [str(a), str(b)] for k, (a, b) in eras.items()}, "grid": {"entry": E, "exit": X},
             "cells": len(el) * len(xl), "cells_unique": n_unique(E, X), "criteria": CRIT, "costs": BI.VENUES[venue],
-            "fixed": {k: BI.RULES[k] for k in ("line", "hi_rule", "brk_lookback", "risk", "max_pos", "per_day_symbol", "day_limit", "month_limit")},
+            "round": round_, "sizing": dict(CFG),
+            "fixed": {k: BI.RULES[k] for k in ("line", "hi_rule", "brk_lookback", "risk", "per_day_symbol", "day_limit", "month_limit")},
             "signals_median": int(np.median(list(nsig.values()))) if nsig else 0, "hold": hold, **an,
             "pass": all((p.get("confirm") or {}).get("pass", False) for p in an["picks"].values()) and len(an["picks"]) == 2,
             "secs": round(time.time() - t_start)}
+
+
+def n_trials(allres):
+    """1차(맨 위 시장별) + 2차 이후(round2·round3 … 아래 시장별) 서로 다른 칸 수 합."""
+    n = sum(v.get("cells_unique", 0) for v in allres.values() if isinstance(v, dict) and v.get("venue"))
+    for k, v in allres.items():
+        if k.startswith("round") and isinstance(v, dict):
+            n += sum(x.get("cells_unique", 0) for x in v.values() if isinstance(x, dict))
+    return int(n)
 
 
 def _pct(x):
@@ -595,12 +662,16 @@ def main():
     ap.add_argument("--bench", default=None)
     ap.add_argument("--workers", type=int, default=0)
     ap.add_argument("--cache", default="~/.rich/cache")
+    ap.add_argument("--round", type=int, default=2, choices=list(ROUNDS))
     a = ap.parse_args()
-    print(f"■ {a.venue} 격자 탐색 시작 {time.strftime('%H:%M')}", flush=True)
-    res = run(a.venue, a.dir, a.bench, a.workers, a.cache, log=lambda m: print(m, flush=True))
+    print(f"■ {a.venue} 격자 탐색 {a.round}차 시작 {time.strftime('%H:%M')}", flush=True)
+    res = run(a.venue, a.dir, a.bench, a.workers, a.cache, log=lambda m: print(m, flush=True), round_=a.round)
     allres = json.load(open(OUT, encoding="utf-8")) if os.path.exists(OUT) else {}
-    allres[a.venue] = res
-    allres["n_trials"] = int(sum(v.get("cells_unique", 0) for k, v in allres.items() if isinstance(v, dict) and v.get("venue")))
+    if a.round == 1:
+        allres[a.venue] = res                                    # 1차는 맨 위 (예전 형식 그대로)
+    else:
+        allres.setdefault(f"round{a.round}", {})[a.venue] = res
+    allres["n_trials"] = n_trials(allres)
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     json.dump(allres, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
     print(f"■ {a.venue} · {res['cells_unique']:,}칸 · {res['secs'] // 60}분")

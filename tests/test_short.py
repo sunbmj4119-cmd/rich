@@ -977,6 +977,73 @@ def test_intraday_sweep_matches_engine():
     assert set(res["marginals"]["stop"]) == {"0.005", "0.01", "0.03"} and "persistence" in res
 
 
+def test_intraday_sweep_round2_multiday_exits():
+    """2차 (며칠 보유·추세 이탈·같은 비중): 빠른 계산 = 한 건씩 따라가는 계산 (청산 봉·순수익) · 밤사이 갭은 시가에 손절."""
+    import itertools
+    import bdw_intraday as BI
+    import intraday_sweep as S
+    rng = np.random.default_rng(5)
+    bd = pd.bdate_range("2025-11-10", periods=80)
+    tod = pd.timedelta_range("09:00:00", "15:25:00", freq="5min")
+    ts = pd.DatetimeIndex((bd.values[:, None] + tod.values[None, :]).ravel())
+    data = {}
+    for k in range(6):
+        cl = 10000 * np.exp(np.cumsum(rng.normal(0.0001, 0.006, len(ts))))
+        gap = rng.normal(0, 0.003, len(ts)) * (np.arange(len(ts)) % 78 == 0)
+        op = np.r_[cl[0], cl[:-1]] * np.exp(gap + rng.normal(0, 0.0005, len(ts)))
+        data["069500" if k == 0 else f"S{k}"] = pd.DataFrame({
+            "ts": ts, "open": op, "high": np.maximum(op, cl) * np.exp(np.abs(rng.normal(0, 0.003, len(ts)))),
+            "low": np.minimum(op, cl) * np.exp(-np.abs(rng.normal(0, 0.003, len(ts)))), "close": cl,
+            "volume": rng.lognormal(10, 0.8, len(ts)) * (1 + 3 * (rng.random(len(ts)) < 0.05))})
+    g = S.build(data, "kr", "069500", S.ENTRY2)
+    sig = S.signals(0.01, 0.04, 1.5, 390, 0)
+    assert len(sig) > 20
+    V = BI.VENUES["kr"]
+
+    def ref(i, s, a, f, b, ln, md):
+        o, h, lo, c, vw, tr, sym, ds = g["o"], g["h"], g["l"], g["c"], g["vw"], g["trend"], g["sym"], g["dayseq"]
+        e = i + 1
+        E = o[e] * (1 + V["slip"])
+        cin, sell = E * (1 + V["fee"]), 1 - (V["fee"] + V["slip"] + V["tax"])
+        stop, half, left, got, k = E * (1 - s), False, 1.0, 0.0, e
+        while True:
+            last = k + 1 >= len(o) or sym[k + 1] != sym[e] or ds[k + 1] - ds[e] > md
+            if lo[k] <= stop:
+                return k, (got + left * (stop if k == e else min(stop, o[k])) * sell) / cin - 1
+            if not half and h[k] >= E * (1 + a):
+                got, left, half, stop = got + f * E * (1 + a) * sell, left - f, True, max(stop, E)
+                if f >= 1:
+                    return k, got / cin - 1
+            if half and h[k] >= E * (1 + b):
+                return k, (got + left * E * (1 + b) * sell) / cin - 1
+            if last:
+                return k, (got + left * c[k] * sell) / cin - 1
+            if (ln == 1 and c[k] < vw[k]) or (ln == 2 and not tr[k]):
+                return k + 1, (got + left * o[k + 1] * sell) / cin - 1
+            k += 1
+    X = {"stop": [0.02, 0.10], "tp1": [0.03, 0.08], "frac": [0.5, 1.0], "tp2": [0.12], "time_bars": [0], "line_exit": [0, 1, 2], "max_days": [0, 3]}
+    P = S.Paths(sig, exit_=X)
+    assert P.H == 4 * g["H"]
+    seen = set()
+    for s, a, f, ln, md in itertools.product(X["stop"], X["tp1"], X["frac"], X["line_exit"], X["max_days"]):
+        net, xo, wy = P.exit(s, a, f, 0.12, 0, ln, md, why=True)
+        seen |= {S.WHY[w] for w in wy}
+        for q, i in enumerate(sig):
+            k, nt = ref(int(i), s, a, f, 0.12, ln, md)
+            assert k == xo[q] and abs(nt - net[q]) < 2e-6
+    assert {"보유 기한 정리", "추세 이탈", "손절"} <= seen
+    old = dict(S.CFG)
+    try:
+        S.CFG.update({"sizing": "equal", "max_pos": 5})
+        assert S.weight(0.10) == S.weight(0.02) == 0.2                              # 손절 폭과 상관없이 같은 돈
+        S.CFG.update({"sizing": "risk", "max_pos": 2})
+        assert S.weight(0.02) == 0.25 and S.weight(0.005) == 0.5
+    finally:
+        S.CFG.update(old)
+    assert S.n_unique(S.ENTRY2, S.EXIT2) == 142_560
+    assert S.n_trials({"kr": {"venue": "kr", "cells_unique": 3}, "round2": {"kr": {"venue": "kr", "cells_unique": 4}}, "n_trials": 9}) == 7
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
