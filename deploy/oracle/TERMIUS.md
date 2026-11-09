@@ -121,6 +121,14 @@ bash ~/rich/deploy/oracle/setup.sh --candles
 - 원본 분봉은 서버(`~/.rich/candles/`)에만 남습니다. 진행 보기: `tail -n 5 ~/.rich/logs/candles.log`
 - 끝나면 채팅으로 **"분봉 끝"**.
 
+### ⑫ 손절·익절·매수 자리 격자 탐색 (받아 둔 분봉으로 — 조회도 주문도 없음)
+```
+cd ~/rich && git pull && bash ~/rich/deploy/oracle/setup.sh --sweep
+```
+- ⑪ 에서 받아 둔 1년치 분봉으로 국내·미국 각 15만여 가지 조합을 계산합니다 (서버 성능에 따라 수십 분~몇 시간, 뒤에서 돎).
+- 처음 몇 분은 1분봉을 5분봉으로 묶느라 조용합니다. 진행 보기: `tail -n 5 ~/.rich/logs/sweep.log`
+- 끝나면 결과 요약만 GitHub 에 올라갑니다. 채팅으로 **"탐색 끝"**.
+
 ### 그 뒤 (제가 "이제 하세요" 라고 알려 드릴 때)
 
 | 단계 | 명령 | 언제 |
