@@ -442,11 +442,136 @@ def round4():
     return port, verdict
 
 
+# ══════════════════════════════════════════════════════════════
+# 5회차 (2026-11-09 사전 등록) — 공격 엔진 DM:2 진화: 지금까지의 교훈에서 나온 후보 4개만
+#   다중 기간(전천후가 이긴 이유 = 숫자 하나를 고르지 않고 섞기) · 변동성 반비례(전천후의 원리) ·
+#   주간 추세 확인(분봉 탐색에서 가장 나은 청산 = 큰 시간대 추세 이탈) · 변동성 조절(모멘텀 급락 줄이기, VT 카드와 같은 15%)
+#   합격: 두 시대 × 비용 1·3배 모두 DM:2 단독보다 샤프 ↑ 이고 최대낙폭이 나쁘지 않음 (4회차와 같은 잣대) ·
+#         참고로 블록 부트스트랩 p(샤프 차이 ≤ 0, 두 시대 이어 붙임) Holm 보정
+#   비교용(시도 아님): 코스피200 · S&P500 보유 · 전천후 16장
+# ══════════════════════════════════════════════════════════════
+EVOLVE = ("DM:2m", "DM:2v", "DM:2w", "DM:2t")
+BENCH5 = ("H:IDX", "H:SPX")
+
+
+def evolve_streams(era, stress=1.0):
+    import history_lab as H
+    rules = ["DM:2", *EVOLVE, *BENCH5]
+    if era == "A":
+        dates, Op, Cp = H.proxy_prices(H.load_hist())
+        with H.flat_slip():
+            m = AW.live_mix(prices=(dates, Op, Cp), start="2005-01-03", stress=stress)
+            F = AW.features(Cp, dates)
+            rules, Ws, _, R = AW.card_returns(dates, Op, Cp, F, rules=rules, stress=stress)
+    else:
+        m = AW.live_mix(stress=stress)
+        dates, Op, Cp = m["dates"], m["Op"], m["Cp"]
+        rules, Ws, _, R = AW.card_returns(dates, Op, Cp, m["F"], rules=rules, stress=stress)
+    out = {"AW16": pd.Series(L.rets(m["E"]), index=m["dates"])}
+    for i, k in enumerate(rules):
+        out[k] = pd.Series(np.nan_to_num(R[:, i]), index=dates)
+    turns = {k: int((~np.isnan(W).all(1)).sum()) for k, W in zip(rules, Ws)}
+    return out, turns
+
+
+def rolling_view(r):
+    """냉정하게 보기: 12개월 굴린 수익의 분포 · 고점 회복에 걸린 가장 긴 날 · 해마다."""
+    r = r.fillna(0.0)
+    E = (1 + r).cumprod()
+    m = E.resample("ME").last()
+    r12 = (m / m.shift(12) - 1).dropna()
+    under = (E < E.cummax()).astype(int).to_numpy()
+    run = best = 0
+    for x in under:
+        run = run + 1 if x else 0
+        best = max(best, run)
+    y = E.groupby(E.index.year).last()
+    yr = (y / y.shift(1).fillna(1.0) - 1)
+    return {"r12_loss_share": round(float((r12 < 0).mean()), 3) if len(r12) else None,
+            "r12_p10": round(float(r12.quantile(0.10)), 4) if len(r12) else None,
+            "r12_median": round(float(r12.median()), 4) if len(r12) else None,
+            "r12_worst": round(float(r12.min()), 4) if len(r12) else None,
+            "longest_underwater_days": int(best), "years": {str(k): round(float(v), 4) for k, v in yr.items()}}
+
+
+def round5():
+    port, turns, raw = {}, {}, {}
+    for era in ("A", "B"):
+        a_, b_ = PORT_ERA[era]
+        for tag, k in (("x1", 1.0), ("x3", 3.0)):
+            cs, tn = evolve_streams(era, k)
+            if tag == "x1":
+                turns[era] = tn
+            for n, x in cs.items():
+                x = x[(x.index >= pd.Timestamp(a_)) & ((x.index <= pd.Timestamp(b_)) if b_ else True)]
+                st = sstats(x.to_numpy(), x.index)
+                if tag == "x1":
+                    st.update(steadiness(x.to_numpy(), x.index))
+                    st.update(rolling_view(x))
+                    raw.setdefault(n, {})[era] = x
+                port.setdefault(n, {}).setdefault(era, {})[tag] = st
+    base = "DM:2"
+    verdict, ps = {}, {}
+    for n in EVOLVE:
+        ok, why = True, []
+        for era in ("A", "B"):
+            for tag in ("x1", "x3"):
+                me, b = port[n][era][tag], port[base][era][tag]
+                if me["sharpe"] <= b["sharpe"]:
+                    ok = False
+                    why.append(f"{era}·{tag} 샤프 {me['sharpe']} ≤ {b['sharpe']}")
+                if me["mdd"] < b["mdd"]:
+                    ok = False
+                    why.append(f"{era}·{tag} 낙폭 {me['mdd']} < {b['mdd']}")
+        a = np.concatenate([raw[n]["A"].to_numpy(), raw[n]["B"].to_numpy()])
+        b = np.concatenate([raw[base]["A"].to_numpy(), raw[base]["B"].to_numpy()])
+        ps[n] = L.boot_p(a, b)
+        verdict[n] = {"pass": ok, "why": "통과" if ok else "; ".join(why[:4]), "p": ps[n]}
+    for n, adj in zip(EVOLVE, holm([ps[n] if ps[n] is not None else 1.0 for n in EVOLVE])):
+        verdict[n]["p_holm"] = adj
+    names = {"DM:2": "DM:2 (지금 공격 엔진)", **{k: AW.DM_EVOLVED[k].split(" — ")[0] for k in EVOLVE},
+             "AW16": "전천후 16장 (지금 안정 엔진)", "H:IDX": "코스피200 보유", "H:SPX": "S&P500 보유"}
+    for n, v in port.items():
+        print(f"  {names.get(n, n):20s} " + " | ".join(
+            f"{era} 연 {v[era]['x1']['cagr']:+.1%} 샤프 {v[era]['x1']['sharpe']:.2f} 낙폭 {v[era]['x1']['mdd']:.1%} (3배 {v[era]['x3']['sharpe']:.2f})"
+            for era in ("A", "B")) + (f"  {'✓' if verdict[n]['pass'] else '✗'} p {verdict[n]['p']}→{verdict[n]['p_holm']} {verdict[n]['why'][:70]}"
+                                      if n in verdict else "  (기준·비교)"))
+    return port, verdict, turns, names
+
+
+def integer_check(card, cash0=200_000):
+    """실제 ETF 2016~ · 20만 원 정수 주식으로 이 카드를 공격 엔진에 꽂으면 (자산 규모별 규칙 그대로)."""
+    import size_policy as SP
+    dates, Op, Cp = AW.load_prices()
+    W_aw, W_dm, s = SP.weight_paths(dates, Op, Cp)
+    F = AW.features(Cp, dates)
+    W_ag = W_dm if card == "DM:2" else AW.desired(AW.targets(F, Cp, card))
+    out = {}
+    for tag, st in (("x1", 1.0), ("x3", 3.0)):
+        r = SP.simulate(dates, Op, Cp, W_aw, W_ag, s, cash0, stress=st)
+        row = SP.stats_flow(r["E"], r["IN"], dates, s)
+        row["trades"] = r["trades"]
+        out[tag] = row
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--round", type=int, default=1)
     a = ap.parse_args()
     t0 = time.time()
+    if a.round == 5:
+        print("■ 5회차 — 공격 엔진 DM:2 진화 후보 4개 (기준 = DM:2 단독 · 비교: 전천후·지수 보유)")
+        port, verdict, turns, names = round5()
+        ints = {}
+        for card in ["DM:2", *EVOLVE]:
+            ints[card] = integer_check(card)
+            x = ints[card]["x1"]
+            print(f"  20만 원 정수 주식 {names[card]:20s} 연 {x['cagr']:+.1%} 샤프 {x['sharpe']:.2f} 낙폭 {x['mdd']:.1%} 최종 {x['final']:,}원 (3배 샤프 {ints[card]['x3']['sharpe']:.2f})")
+        save(a.round, t0, {"portfolio": port, "stage2": verdict, "turns": turns, "names": names, "integer_200k": ints,
+                           "desc": {k: AW.DM_EVOLVED[k] for k in EVOLVE}},
+             n_trials=len(verdict), passed=[n for n, v in verdict.items() if v["pass"]])
+        return
     if a.round == 4:
         print("■ 4회차 — 매일 단기 매매: 추세 위에서만 밤사이 보유 (기준 = DM:2 단독)")
         port, verdict = round4()

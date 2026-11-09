@@ -541,6 +541,8 @@ def run(cfg=None, now=None):
                     json.dump(fw, open(os.path.join(DIR, "size_forward.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
                     sh = SZ.overnight_forward(SZ.conf(cfg))      # 매일 단기 매매 그림자 (실제 돈 아님)
                     json.dump(sh, open(os.path.join(DIR, "overnight_shadow.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+                    ch = SZ.challenger_forward(SZ.conf(cfg))   # 공격 엔진 도전자 그림자 (실제 돈 아님)
+                    json.dump(ch, open(os.path.join(DIR, "challenger_forward.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
                 except Exception as ex:
                     print(f"  (규모별 모의 기록 실패: {type(ex).__name__} {ex})")
         except Exception as ex:                         # 전천후 계산이 실패해도 단기 몫은 그대로 돈다

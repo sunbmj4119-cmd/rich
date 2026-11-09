@@ -102,14 +102,18 @@ def weight_paths(dates, Op, Cp, sp=None, start=None, stress=1.0):
     ch = AW.choose_mix(Rx, F["reg"], s, cash=rules.index("H:CASH"), resched=AW.month_start(dates, pad=1), **AW.LIVE_MIX)
     P = [AW.desired(W) for W in Ws]
     wo, _ = AW.mix_weights(P, Ws, ch, s, len(dates))
-    return AW.desired(wo), P[rules.index(sp["aggr_card"])], s
+    card = sp["aggr_card"]
+    W_ag = P[rules.index(card)] if card in rules else AW.desired(AW.targets(F, Cp, card))    # 진화 카드(DM:2t 등)는 혼합 목록 밖
+    return AW.desired(wo), W_ag, s
 
 
 def tomorrow(m, sp=None):
     """allweather.live_mix 결과 → 내일 목표 {코드: 비중} 두 개 + 내일이 다시 맞추는 날인가."""
     sp = {**DEFAULT, **(sp or {})}
     aw = {AW.CODES[j]: round(float(x), 4) for j, x in enumerate(m["target"]) if x > 1e-4}
-    ag = {AW.CODES[j]: round(float(x), 4) for j, x in enumerate(m["card_now"][sp["aggr_card"]]) if x > 1e-4}
+    card = sp["aggr_card"]
+    now = m["card_now"][card] if card in m["card_now"] else AW.desired(AW.targets(m["F"], m["Cp"], card, pad=1))[-1]
+    ag = {AW.CODES[j]: round(float(x), 4) for j, x in enumerate(now) if x > 1e-4}
     turn = bool(AW.month_start(m["dates"], pad=1)[-1])
     px = AW.ffill(m["Cp"])[-1]
     return {"aw": aw, "aggr": ag, "rebalance": turn, "card": sp["aggr_card"],
@@ -218,6 +222,31 @@ def forward(sp=None, prices=None):
             "ret": round(float(E[-1] / sp["paper_cash"] - 1), 4), "mdd": round(float((E / np.maximum.accumulate(E) - 1).min()), 4),
             "aggr": float(res["a"][-1]), "holdings": {AW.CODES[j]: int(x) for j, x in enumerate(res["q"]) if x > 0},
             "cash": round(res["cash"])}
+
+
+CHALLENGERS = ("DM:2v", "DM:2t")                 # 5회차 도전자 (실제 돈 아님 — optimize_lab --round 5, STRATEGY 3-6-10-10)
+
+
+def challenger_forward(sp=None, prices=None, cards=CHALLENGERS):
+    """그림자 기록 (실제 돈 아님): 공격 엔진 자리에 도전자 카드를 꽂고, 같은 규모별 규칙·20만 원·정수 주식으로 paper_start 부터.
+    지금 엔진(DM:2) 기록과 나란히 — 상태 파일 없이 매번 처음부터 계산해 결과가 늘 같다."""
+    sp = {**DEFAULT, **(sp or {})}
+    dates, Op, Cp = prices or AW.load_prices()
+    st = pd.Timestamp(sp["paper_start"])
+    if dates[-1] < st:
+        return {"start": sp["paper_start"], "days": 0, "note": "아직 시작 전"}
+    W_aw, W_dm, _ = weight_paths(dates, Op, Cp, sp)
+    F = AW.features(Cp, dates)
+    s = int(np.searchsorted(dates, st))
+    out = {"start": str(dates[s].date()), "what": "그림자 기록 — 실제 돈 아님 (공격 엔진 자리만 바꿈)", "cards": {}}
+    for card, W_ag in [("DM:2", W_dm)] + [(c, AW.desired(AW.targets(F, Cp, c))) for c in cards]:
+        res = simulate(dates, Op, Cp, W_aw, W_ag, s, sp["paper_cash"], sp)
+        E = res["E"][s:]
+        out["cards"][card] = {"desc": AW.DM_EVOLVED.get(card, "지금 공격 엔진"), "days": int(len(E)), "equity": round(float(E[-1])),
+                              "ret": round(float(E[-1] / sp["paper_cash"] - 1), 4),
+                              "mdd": round(float((E / np.maximum.accumulate(E) - 1).min()), 4),
+                              "holdings": {AW.CODES[j]: int(x) for j, x in enumerate(res["q"]) if x > 0}}
+    return out
 
 
 def overnight_forward(sp=None, prices=None):
