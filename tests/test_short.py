@@ -1112,6 +1112,41 @@ def test_chart_lab_stop_target_order_and_baseline():
     assert set(sig) == set(CL.SETUPS) and all(v.shape == (T, N) for v in sig.values())
 
 
+def test_edge_lab_features_calendar_and_model():
+    """새 자리 실험실: 재료 36개 · 그날 순위 0~1 · 옵션 만기(둘째 목요일)·월말월초 · 달별 t · 로지스틱이 방향을 찾음 · 날마다 상위 k."""
+    import edge_lab as EL
+    rng = np.random.default_rng(4)
+    T, N = 320, 12
+    dates = pd.bdate_range("2021-01-04", periods=T)
+    C = 10000 * np.exp(np.cumsum(rng.normal(0, 0.02, (T, N)), axis=0))
+    O = C * np.exp(rng.normal(0, 0.005, (T, N)))
+    H, L = np.maximum(O, C) * 1.01, np.minimum(O, C) * 0.99
+    V = rng.lognormal(12, 0.5, (T, N))
+    P = {"U": np.ones((T, N), bool), "C": C, "Cf": C, "O": O, "H": H, "L": L, "V": V, "VAL": V * C, "MC": C * 1e7,
+         "FOR": rng.normal(0, 1e8, (T, N)), "INS": rng.normal(0, 1e8, (T, N)), "IND": rng.normal(0, 1e8, (T, N)), "dates": dates}
+    F = EL.features(P, C.mean(1))
+    assert set(F) == set(EL.FEAT)
+    for k in set(EL.FEAT) - set(EL.MARKET) - set(EL.BINARY):
+        x = F[k][~np.isnan(F[k])]
+        assert len(x) and x.min() > 0 and x.max() <= 1, k                           # 그날 순위
+    exp_days = dates[F["expiry"][:, 0] > 0.5]
+    assert len(exp_days) >= 12 and all(d.weekday() == 3 and 8 <= d.day <= 14 for d in exp_days)
+    assert all(d.weekday() == 4 for d in dates[F["friday"][:, 0] > 0.5])
+    tom = dates[F["tom"][:, 0] > 0.5]
+    assert pd.Timestamp("2021-01-04") in tom and pd.Timestamp("2021-01-29") in tom and pd.Timestamp("2021-01-15") not in tom
+    mo = np.repeat(np.arange(24), 10)
+    assert EL._tm(np.ones(240) + rng.normal(0, 0.1, 240), mo) > 10 and EL._tm(np.ones(30), np.repeat(np.arange(3), 10)) is None
+    X = rng.normal(size=(4000, 3))
+    y = (X[:, 0] * 2 - X[:, 2] + rng.normal(size=4000) > 0).astype(float)
+    m = EL.fit_logit(X, y)
+    assert m["w"][0] > 0.5 and m["w"][2] < -0.2 and abs(m["w"][1]) < 0.2
+    class E:                                                                        # noqa: E306
+        pass
+    E.P, E.rows = P, np.nonzero(np.ones((T, N), bool))
+    tm = EL.top_mask(E, rng.random(T * N), 3)
+    assert (tm.sum(1) == 3).all()
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
