@@ -1232,7 +1232,7 @@
   "pass": false,
   "secs": 911
  },
- "n_trials": 303264,
+ "n_trials": 588384,
  "us": {
   "generated": "2026-11-09 08:10",
   "venue": "us",
@@ -2463,5 +2463,2506 @@
   },
   "pass": false,
   "secs": 1035
+ },
+ "round2": {
+  "kr": {
+   "generated": "2026-11-09 09:04",
+   "venue": "kr",
+   "bench": "069500",
+   "symbols": 60,
+   "eras": {
+    "A": [
+     "2025-11-07 12:40:00",
+     "2026-05-08 14:02:30"
+    ],
+    "B": [
+     "2026-05-08 14:02:30",
+     "2026-11-06 15:25:00"
+    ]
+   },
+   "grid": {
+    "entry": {
+     "touch": [
+      0.002,
+      0.005,
+      0.01
+     ],
+     "chase": [
+      0.01,
+      0.02,
+      0.04
+     ],
+     "vol_mult": [
+      1.5,
+      2.0,
+      3.0
+     ],
+     "window": [
+      120,
+      390
+     ],
+     "top_n": [
+      20,
+      0
+     ]
+    },
+    "exit": {
+     "stop": [
+      0.02,
+      0.03,
+      0.05,
+      0.07,
+      0.1
+     ],
+     "tp1": [
+      0.03,
+      0.05,
+      0.08,
+      0.12
+     ],
+     "frac": [
+      0.33,
+      0.5,
+      1.0
+     ],
+     "tp2": [
+      0.08,
+      0.12,
+      0.2
+     ],
+     "time_bars": [
+      0
+     ],
+     "line_exit": [
+      0,
+      1,
+      2
+     ],
+     "max_days": [
+      0,
+      1,
+      3,
+      5
+     ]
+    }
+   },
+   "cells": 233280,
+   "cells_unique": 142560,
+   "criteria": {
+    "min_trades": 100,
+    "t_day": 2.0,
+    "random_pct": 0.95,
+    "n_random": 30
+   },
+   "costs": {
+    "fee": 0.00015,
+    "slip": 0.0005,
+    "tax": 0.002,
+    "session": [
+     "09:00",
+     "15:30"
+    ]
+   },
+   "round": 2,
+   "sizing": {
+    "sizing": "equal",
+    "max_pos": 5
+   },
+   "fixed": {
+    "line": 100,
+    "hi_rule": "1h",
+    "brk_lookback": 12,
+    "risk": 0.005,
+    "per_day_symbol": 2,
+    "day_limit": 0.025,
+    "month_limit": 0.075
+   },
+   "signals_median": 1046,
+   "hold": {
+    "A": {
+     "total": 1.0836,
+     "mdd": -0.2132
+    },
+    "B": {
+     "total": -0.3116,
+     "mdd": -0.4934
+    }
+   },
+   "picks": {
+    "A→B": {
+     "rule": {
+      "touch": 0.01,
+      "chase": 0.02,
+      "vol_mult": 1.5,
+      "window": 390,
+      "top_n": 0,
+      "stop": 0.07,
+      "tp1": 0.12,
+      "frac": 0.33,
+      "tp2": 0.2,
+      "time_bars": 0,
+      "line_exit": 2,
+      "max_days": 3
+     },
+     "select_era": {
+      "total": 0.7806,
+      "neighbor_median": 0.5656,
+      "trades": 120
+     },
+     "confirm": {
+      "strategy": {
+       "trades": 156,
+       "per_month": 26.7,
+       "win": 0.378,
+       "avg_win": 0.0479,
+       "avg_loss": -0.0454,
+       "payoff": 1.06,
+       "mean": -0.01008,
+       "t_day": -1.2,
+       "total": -0.2835,
+       "cagr": -0.4955,
+       "mdd": -0.3717,
+       "sharpe": -2.33,
+       "why": {
+        "추세 이탈": 60,
+        "보유 기한 정리": 53,
+        "손절": 31,
+        "2차 목표": 7,
+        "본전 손절": 4,
+        "추세 이탈(1차 뒤)": 1
+       }
+      },
+      "random_means": {
+       "median": -0.00902,
+       "p95": -0.00534
+      },
+      "beats_random_pct": 0.43333333333333335,
+      "cost_x2": {
+       "trades": 154,
+       "mean": -0.01116,
+       "total": -0.3042,
+       "mdd": -0.3838
+      },
+      "hold": {
+       "total": -0.3116,
+       "mdd": -0.4934
+      },
+      "pass": false
+     }
+    },
+    "B→A": {
+     "rule": {
+      "touch": 0.005,
+      "chase": 0.02,
+      "vol_mult": 3.0,
+      "window": 120,
+      "top_n": 0,
+      "stop": 0.05,
+      "tp1": 0.12,
+      "frac": 0.5,
+      "tp2": 0.2,
+      "time_bars": 0,
+      "line_exit": 1,
+      "max_days": 0
+     },
+     "select_era": {
+      "total": -0.0499,
+      "neighbor_median": -0.0524,
+      "trades": 111
+     },
+     "confirm": {
+      "strategy": {
+       "trades": 232,
+       "per_month": 47.1,
+       "win": 0.203,
+       "avg_win": 0.0282,
+       "avg_loss": -0.0106,
+       "payoff": 2.65,
+       "mean": -0.00277,
+       "t_day": -3.11,
+       "total": -0.1227,
+       "cagr": -0.2729,
+       "mdd": -0.157,
+       "sharpe": -2.61,
+       "why": {
+        "선 이탈": 195,
+        "장 마감 정리": 35,
+        "손절": 1,
+        "2차 목표": 1
+       }
+      },
+      "random_means": {
+       "median": -0.00153,
+       "p95": -0.00055
+      },
+      "beats_random_pct": 0.16666666666666666,
+      "cost_x2": {
+       "trades": 224,
+       "mean": -0.00386,
+       "total": -0.1608,
+       "mdd": -0.1918
+      },
+      "hold": {
+       "total": 1.0836,
+       "mdd": -0.2132
+      },
+      "pass": false
+     }
+    }
+   },
+   "peaks": {
+    "A→B": {
+     "rule": {
+      "touch": 0.01,
+      "chase": 0.02,
+      "vol_mult": 1.5,
+      "window": 390,
+      "top_n": 0,
+      "stop": 0.07,
+      "tp1": 0.12,
+      "frac": 0.33,
+      "tp2": 0.2,
+      "time_bars": 0,
+      "line_exit": 2,
+      "max_days": 3
+     },
+     "select_total": 0.7806,
+     "confirm_total": -0.2835,
+     "confirm_trades": 156
+    },
+    "B→A": {
+     "rule": {
+      "touch": 0.002,
+      "chase": 0.01,
+      "vol_mult": 2.0,
+      "window": 390,
+      "top_n": 0,
+      "stop": 0.1,
+      "tp1": 0.12,
+      "frac": 0.33,
+      "tp2": 0.2,
+      "time_bars": 0,
+      "line_exit": 0,
+      "max_days": 1
+     },
+     "select_total": -0.0315,
+     "confirm_total": -0.0317,
+     "confirm_trades": 161
+    }
+   },
+   "top": {
+    "A": [
+     {
+      "rule": {
+       "touch": 0.01,
+       "chase": 0.02,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.07,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 3
+      },
+      "A": {
+       "trades": 120,
+       "mean": 0.02594,
+       "total": 0.78065,
+       "mdd": -0.11539
+      },
+      "B": {
+       "trades": 156,
+       "mean": -0.01008,
+       "total": -0.28352,
+       "mdd": -0.3717
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.01,
+       "chase": 0.02,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.07,
+       "tp1": 0.12,
+       "frac": 0.5,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 3
+      },
+      "A": {
+       "trades": 122,
+       "mean": 0.02393,
+       "total": 0.71611,
+       "mdd": -0.12754
+      },
+      "B": {
+       "trades": 149,
+       "mean": -0.01011,
+       "total": -0.27306,
+       "mdd": -0.35976
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.01,
+       "chase": 0.02,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.05,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 111,
+       "mean": 0.02603,
+       "total": 0.69959,
+       "mdd": -0.13415
+      },
+      "B": {
+       "trades": 146,
+       "mean": -0.00776,
+       "total": -0.21947,
+       "mdd": -0.32987
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.01,
+       "chase": 0.02,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.07,
+       "tp1": 0.12,
+       "frac": 1.0,
+       "tp2": 0.12,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 3
+      },
+      "A": {
+       "trades": 136,
+       "mean": 0.02066,
+       "total": 0.69258,
+       "mdd": -0.11685
+      },
+      "B": {
+       "trades": 152,
+       "mean": -0.01168,
+       "total": -0.3138,
+       "mdd": -0.36937
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.01,
+       "chase": 0.02,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.07,
+       "tp1": 0.12,
+       "frac": 1.0,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 3
+      },
+      "A": {
+       "trades": 136,
+       "mean": 0.02066,
+       "total": 0.69258,
+       "mdd": -0.11685
+      },
+      "B": {
+       "trades": 152,
+       "mean": -0.01168,
+       "total": -0.3138,
+       "mdd": -0.36937
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.01,
+       "chase": 0.02,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.07,
+       "tp1": 0.12,
+       "frac": 1.0,
+       "tp2": 0.08,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 3
+      },
+      "A": {
+       "trades": 136,
+       "mean": 0.02066,
+       "total": 0.69258,
+       "mdd": -0.11685
+      },
+      "B": {
+       "trades": 152,
+       "mean": -0.01168,
+       "total": -0.3138,
+       "mdd": -0.36937
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.01,
+       "chase": 0.02,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.07,
+       "tp1": 0.05,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 113,
+       "mean": 0.02515,
+       "total": 0.68536,
+       "mdd": -0.11606
+      },
+      "B": {
+       "trades": 145,
+       "mean": -0.0139,
+       "total": -0.33915,
+       "mdd": -0.33956
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.01,
+       "chase": 0.04,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.07,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 3
+      },
+      "A": {
+       "trades": 133,
+       "mean": 0.02114,
+       "total": 0.68139,
+       "mdd": -0.12167
+      },
+      "B": {
+       "trades": 141,
+       "mean": -0.01632,
+       "total": -0.37666,
+       "mdd": -0.3837
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.01,
+       "chase": 0.02,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.07,
+       "tp1": 0.08,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 3
+      },
+      "A": {
+       "trades": 120,
+       "mean": 0.02305,
+       "total": 0.66996,
+       "mdd": -0.11774
+      },
+      "B": {
+       "trades": 166,
+       "mean": -0.01002,
+       "total": -0.29667,
+       "mdd": -0.36945
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.01,
+       "chase": 0.04,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.07,
+       "tp1": 0.12,
+       "frac": 0.5,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 3
+      },
+      "A": {
+       "trades": 133,
+       "mean": 0.02067,
+       "total": 0.66444,
+       "mdd": -0.11417
+      },
+      "B": {
+       "trades": 142,
+       "mean": -0.01583,
+       "total": -0.36989,
+       "mdd": -0.37953
+      }
+     }
+    ],
+    "B": [
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.01,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 1
+      },
+      "A": {
+       "trades": 161,
+       "mean": -0.00043,
+       "total": -0.03168,
+       "mdd": -0.16908
+      },
+      "B": {
+       "trades": 145,
+       "mean": -0.00052,
+       "total": -0.03151,
+       "mdd": -0.21925
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.01,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.12,
+       "frac": 0.5,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 1
+      },
+      "A": {
+       "trades": 161,
+       "mean": -0.0005,
+       "total": -0.03341,
+       "mdd": -0.16908
+      },
+      "B": {
+       "trades": 145,
+       "mean": -0.00064,
+       "total": -0.03422,
+       "mdd": -0.21919
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.005,
+       "chase": 0.04,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 1
+      },
+      "A": {
+       "trades": 171,
+       "mean": 0.00187,
+       "total": 0.04154,
+       "mdd": -0.17803
+      },
+      "B": {
+       "trades": 150,
+       "mean": -0.00074,
+       "total": -0.04156,
+       "mdd": -0.24303
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.01,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.12,
+       "frac": 1.0,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 1
+      },
+      "A": {
+       "trades": 164,
+       "mean": -0.00077,
+       "total": -0.04171,
+       "mdd": -0.16908
+      },
+      "B": {
+       "trades": 145,
+       "mean": -0.001,
+       "total": -0.04265,
+       "mdd": -0.21942
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.01,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.12,
+       "frac": 1.0,
+       "tp2": 0.08,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 1
+      },
+      "A": {
+       "trades": 164,
+       "mean": -0.00077,
+       "total": -0.04171,
+       "mdd": -0.16908
+      },
+      "B": {
+       "trades": 145,
+       "mean": -0.001,
+       "total": -0.04265,
+       "mdd": -0.21942
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.01,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.12,
+       "frac": 1.0,
+       "tp2": 0.12,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 1
+      },
+      "A": {
+       "trades": 164,
+       "mean": -0.00077,
+       "total": -0.04171,
+       "mdd": -0.16908
+      },
+      "B": {
+       "trades": 145,
+       "mean": -0.001,
+       "total": -0.04265,
+       "mdd": -0.21942
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.005,
+       "chase": 0.02,
+       "vol_mult": 3.0,
+       "window": 120,
+       "top_n": 0,
+       "stop": 0.07,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 1,
+       "max_days": 1
+      },
+      "A": {
+       "trades": 240,
+       "mean": -0.00164,
+       "total": -0.07896,
+       "mdd": -0.14642
+      },
+      "B": {
+       "trades": 111,
+       "mean": -0.00199,
+       "total": -0.04615,
+       "mdd": -0.10037
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.005,
+       "chase": 0.02,
+       "vol_mult": 3.0,
+       "window": 120,
+       "top_n": 0,
+       "stop": 0.03,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 1,
+       "max_days": 1
+      },
+      "A": {
+       "trades": 240,
+       "mean": -0.00147,
+       "total": -0.0712,
+       "mdd": -0.13923
+      },
+      "B": {
+       "trades": 111,
+       "mean": -0.00199,
+       "total": -0.04615,
+       "mdd": -0.10037
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.005,
+       "chase": 0.02,
+       "vol_mult": 3.0,
+       "window": 120,
+       "top_n": 0,
+       "stop": 0.05,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 1,
+       "max_days": 1
+      },
+      "A": {
+       "trades": 240,
+       "mean": -0.00156,
+       "total": -0.07523,
+       "mdd": -0.14297
+      },
+      "B": {
+       "trades": 111,
+       "mean": -0.00199,
+       "total": -0.04615,
+       "mdd": -0.10037
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.005,
+       "chase": 0.02,
+       "vol_mult": 3.0,
+       "window": 120,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 1,
+       "max_days": 1
+      },
+      "A": {
+       "trades": 240,
+       "mean": -0.00159,
+       "total": -0.07658,
+       "mdd": -0.14422
+      },
+      "B": {
+       "trades": 111,
+       "mean": -0.00199,
+       "total": -0.04615,
+       "mdd": -0.10037
+      }
+     }
+    ]
+   },
+   "marginals": {
+    "touch": {
+     "0.002": {
+      "A": {
+       "median_total": -0.0425,
+       "share_positive": 0.329
+      },
+      "B": {
+       "median_total": -0.1516,
+       "share_positive": 0.0
+      }
+     },
+     "0.005": {
+      "A": {
+       "median_total": -0.0542,
+       "share_positive": 0.282
+      },
+      "B": {
+       "median_total": -0.1561,
+       "share_positive": 0.0
+      }
+     },
+     "0.01": {
+      "A": {
+       "median_total": -0.0324,
+       "share_positive": 0.38
+      },
+      "B": {
+       "median_total": -0.1878,
+       "share_positive": 0.0
+      }
+     }
+    },
+    "chase": {
+     "0.01": {
+      "A": {
+       "median_total": -0.0395,
+       "share_positive": 0.335
+      },
+      "B": {
+       "median_total": -0.1467,
+       "share_positive": 0.0
+      }
+     },
+     "0.02": {
+      "A": {
+       "median_total": -0.0459,
+       "share_positive": 0.327
+      },
+      "B": {
+       "median_total": -0.1694,
+       "share_positive": 0.0
+      }
+     },
+     "0.04": {
+      "A": {
+       "median_total": -0.0462,
+       "share_positive": 0.329
+      },
+      "B": {
+       "median_total": -0.1759,
+       "share_positive": 0.0
+      }
+     }
+    },
+    "vol_mult": {
+     "1.5": {
+      "A": {
+       "median_total": -0.0485,
+       "share_positive": 0.369
+      },
+      "B": {
+       "median_total": -0.2241,
+       "share_positive": 0.0
+      }
+     },
+     "2.0": {
+      "A": {
+       "median_total": -0.0422,
+       "share_positive": 0.329
+      },
+      "B": {
+       "median_total": -0.1597,
+       "share_positive": 0.0
+      }
+     },
+     "3.0": {
+      "A": {
+       "median_total": -0.0431,
+       "share_positive": 0.293
+      },
+      "B": {
+       "median_total": -0.1125,
+       "share_positive": 0.0
+      }
+     }
+    },
+    "window": {
+     "120": {
+      "A": {
+       "median_total": -0.0387,
+       "share_positive": 0.323
+      },
+      "B": {
+       "median_total": -0.1492,
+       "share_positive": 0.0
+      }
+     },
+     "390": {
+      "A": {
+       "median_total": -0.0514,
+       "share_positive": 0.337
+      },
+      "B": {
+       "median_total": -0.1845,
+       "share_positive": 0.0
+      }
+     }
+    },
+    "top_n": {
+     "20": {
+      "A": {
+       "median_total": -0.035,
+       "share_positive": 0.324
+      },
+      "B": {
+       "median_total": -0.1326,
+       "share_positive": 0.0
+      }
+     },
+     "0": {
+      "A": {
+       "median_total": -0.0594,
+       "share_positive": 0.337
+      },
+      "B": {
+       "median_total": -0.2009,
+       "share_positive": 0.0
+      }
+     }
+    },
+    "stop": {
+     "0.02": {
+      "A": {
+       "median_total": -0.0558,
+       "share_positive": 0.27
+      },
+      "B": {
+       "median_total": -0.1598,
+       "share_positive": 0.0
+      }
+     },
+     "0.03": {
+      "A": {
+       "median_total": -0.0388,
+       "share_positive": 0.337
+      },
+      "B": {
+       "median_total": -0.1723,
+       "share_positive": 0.0
+      }
+     },
+     "0.05": {
+      "A": {
+       "median_total": -0.035,
+       "share_positive": 0.375
+      },
+      "B": {
+       "median_total": -0.1632,
+       "share_positive": 0.0
+      }
+     },
+     "0.07": {
+      "A": {
+       "median_total": -0.0427,
+       "share_positive": 0.341
+      },
+      "B": {
+       "median_total": -0.1699,
+       "share_positive": 0.0
+      }
+     },
+     "0.1": {
+      "A": {
+       "median_total": -0.0456,
+       "share_positive": 0.329
+      },
+      "B": {
+       "median_total": -0.1618,
+       "share_positive": 0.0
+      }
+     }
+    },
+    "tp1": {
+     "0.03": {
+      "A": {
+       "median_total": -0.0506,
+       "share_positive": 0.271
+      },
+      "B": {
+       "median_total": -0.1685,
+       "share_positive": 0.0
+      }
+     },
+     "0.05": {
+      "A": {
+       "median_total": -0.0354,
+       "share_positive": 0.373
+      },
+      "B": {
+       "median_total": -0.1613,
+       "share_positive": 0.0
+      }
+     },
+     "0.08": {
+      "A": {
+       "median_total": -0.0475,
+       "share_positive": 0.33
+      },
+      "B": {
+       "median_total": -0.1637,
+       "share_positive": 0.0
+      }
+     },
+     "0.12": {
+      "A": {
+       "median_total": -0.0372,
+       "share_positive": 0.362
+      },
+      "B": {
+       "median_total": -0.1656,
+       "share_positive": 0.0
+      }
+     }
+    },
+    "frac": {
+     "0.33": {
+      "A": {
+       "median_total": -0.0384,
+       "share_positive": 0.358
+      },
+      "B": {
+       "median_total": -0.1617,
+       "share_positive": 0.0
+      }
+     },
+     "0.5": {
+      "A": {
+       "median_total": -0.0421,
+       "share_positive": 0.34
+      },
+      "B": {
+       "median_total": -0.1635,
+       "share_positive": 0.0
+      }
+     },
+     "1.0": {
+      "A": {
+       "median_total": -0.0497,
+       "share_positive": 0.302
+      },
+      "B": {
+       "median_total": -0.168,
+       "share_positive": 0.0
+      }
+     }
+    },
+    "tp2": {
+     "0.08": {
+      "A": {
+       "median_total": -0.048,
+       "share_positive": 0.309
+      },
+      "B": {
+       "median_total": -0.1654,
+       "share_positive": 0.0
+      }
+     },
+     "0.12": {
+      "A": {
+       "median_total": -0.0458,
+       "share_positive": 0.325
+      },
+      "B": {
+       "median_total": -0.1646,
+       "share_positive": 0.0
+      }
+     },
+     "0.2": {
+      "A": {
+       "median_total": -0.0399,
+       "share_positive": 0.35
+      },
+      "B": {
+       "median_total": -0.1646,
+       "share_positive": 0.0
+      }
+     }
+    },
+    "time_bars": {
+     "0": {
+      "A": {
+       "median_total": -0.044,
+       "share_positive": 0.33
+      },
+      "B": {
+       "median_total": -0.1649,
+       "share_positive": 0.0
+      }
+     }
+    },
+    "line_exit": {
+     "0": {
+      "A": {
+       "median_total": -0.0041,
+       "share_positive": 0.482
+      },
+      "B": {
+       "median_total": -0.17,
+       "share_positive": 0.0
+      }
+     },
+     "1": {
+      "A": {
+       "median_total": -0.0997,
+       "share_positive": 0.005
+      },
+      "B": {
+       "median_total": -0.1405,
+       "share_positive": 0.0
+      }
+     },
+     "2": {
+      "A": {
+       "median_total": 0.0009,
+       "share_positive": 0.504
+      },
+      "B": {
+       "median_total": -0.1831,
+       "share_positive": 0.0
+      }
+     }
+    },
+    "max_days": {
+     "0": {
+      "A": {
+       "median_total": -0.0677,
+       "share_positive": 0.11
+      },
+      "B": {
+       "median_total": -0.13,
+       "share_positive": 0.0
+      }
+     },
+     "1": {
+      "A": {
+       "median_total": -0.0659,
+       "share_positive": 0.133
+      },
+      "B": {
+       "median_total": -0.1654,
+       "share_positive": 0.0
+      }
+     },
+     "3": {
+      "A": {
+       "median_total": 0.0007,
+       "share_positive": 0.502
+      },
+      "B": {
+       "median_total": -0.1822,
+       "share_positive": 0.0
+      }
+     },
+     "5": {
+      "A": {
+       "median_total": 0.0349,
+       "share_positive": 0.577
+      },
+      "B": {
+       "median_total": -0.1838,
+       "share_positive": 0.0
+      }
+     }
+    }
+   },
+   "persistence": {
+    "cells": 193677,
+    "rank_corr_A_B": -0.096,
+    "B_median_all": -0.1649,
+    "B_median_of_A_top1pct": -0.2667,
+    "share_positive_both": 0.0,
+    "share_positive_A": 0.329,
+    "share_positive_B": 0.0
+   },
+   "default": null,
+   "pass": false,
+   "secs": 847
+  },
+  "us": {
+   "generated": "2026-11-09 09:19",
+   "venue": "us",
+   "bench": "SPY",
+   "symbols": 59,
+   "eras": {
+    "A": [
+     "2025-11-06 15:20:00",
+     "2026-05-08 03:37:30"
+    ],
+    "B": [
+     "2026-05-08 03:37:30",
+     "2026-11-06 15:55:00"
+    ]
+   },
+   "grid": {
+    "entry": {
+     "touch": [
+      0.002,
+      0.005,
+      0.01
+     ],
+     "chase": [
+      0.01,
+      0.02,
+      0.04
+     ],
+     "vol_mult": [
+      1.5,
+      2.0,
+      3.0
+     ],
+     "window": [
+      120,
+      390
+     ],
+     "top_n": [
+      20,
+      0
+     ]
+    },
+    "exit": {
+     "stop": [
+      0.02,
+      0.03,
+      0.05,
+      0.07,
+      0.1
+     ],
+     "tp1": [
+      0.03,
+      0.05,
+      0.08,
+      0.12
+     ],
+     "frac": [
+      0.33,
+      0.5,
+      1.0
+     ],
+     "tp2": [
+      0.08,
+      0.12,
+      0.2
+     ],
+     "time_bars": [
+      0
+     ],
+     "line_exit": [
+      0,
+      1,
+      2
+     ],
+     "max_days": [
+      0,
+      1,
+      3,
+      5
+     ]
+    }
+   },
+   "cells": 233280,
+   "cells_unique": 142560,
+   "criteria": {
+    "min_trades": 100,
+    "t_day": 2.0,
+    "random_pct": 0.95,
+    "n_random": 30
+   },
+   "costs": {
+    "fee": 0.001,
+    "slip": 0.0002,
+    "tax": 0.0,
+    "session": [
+     "09:30",
+     "16:00"
+    ]
+   },
+   "round": 2,
+   "sizing": {
+    "sizing": "equal",
+    "max_pos": 5
+   },
+   "fixed": {
+    "line": 100,
+    "hi_rule": "1h",
+    "brk_lookback": 12,
+    "risk": 0.005,
+    "per_day_symbol": 2,
+    "day_limit": 0.025,
+    "month_limit": 0.075
+   },
+   "signals_median": 1232,
+   "hold": {
+    "A": {
+     "total": 0.0977,
+     "mdd": -0.0975
+    },
+    "B": {
+     "total": 0.0003,
+     "mdd": -0.0618
+    }
+   },
+   "picks": {
+    "A→B": {
+     "rule": {
+      "touch": 0.005,
+      "chase": 0.04,
+      "vol_mult": 1.5,
+      "window": 390,
+      "top_n": 0,
+      "stop": 0.05,
+      "tp1": 0.12,
+      "frac": 0.33,
+      "tp2": 0.2,
+      "time_bars": 0,
+      "line_exit": 2,
+      "max_days": 5
+     },
+     "select_era": {
+      "total": 0.2611,
+      "neighbor_median": 0.1902,
+      "trades": 106
+     },
+     "confirm": {
+      "strategy": {
+       "trades": 150,
+       "per_month": 25.5,
+       "win": 0.34,
+       "avg_win": 0.0436,
+       "avg_loss": -0.0263,
+       "payoff": 1.66,
+       "mean": -0.00253,
+       "t_day": -0.86,
+       "total": -0.0791,
+       "cagr": -0.1548,
+       "mdd": -0.1482,
+       "sharpe": -0.84,
+       "why": {
+        "보유 기한 정리": 67,
+        "추세 이탈": 65,
+        "손절": 17,
+        "2차 목표": 1
+       }
+      },
+      "random_means": {
+       "median": -0.0034,
+       "p95": -4e-05
+      },
+      "beats_random_pct": 0.7333333333333333,
+      "cost_x2": {
+       "trades": 150,
+       "mean": -0.00491,
+       "total": -0.1423,
+       "mdd": -0.1815
+      },
+      "hold": {
+       "total": 0.0003,
+       "mdd": -0.0618
+      },
+      "pass": false
+     }
+    },
+    "B→A": {
+     "rule": {
+      "touch": 0.002,
+      "chase": 0.01,
+      "vol_mult": 2.0,
+      "window": 390,
+      "top_n": 0,
+      "stop": 0.07,
+      "tp1": 0.08,
+      "frac": 0.5,
+      "tp2": 0.12,
+      "time_bars": 0,
+      "line_exit": 2,
+      "max_days": 5
+     },
+     "select_era": {
+      "total": 0.0892,
+      "neighbor_median": 0.0633,
+      "trades": 126
+     },
+     "confirm": {
+      "strategy": {
+       "trades": 90,
+       "per_month": 18.0,
+       "win": 0.511,
+       "avg_win": 0.0392,
+       "avg_loss": -0.0289,
+       "payoff": 1.35,
+       "mean": 0.00588,
+       "t_day": 1.32,
+       "total": 0.1064,
+       "cagr": 0.275,
+       "mdd": -0.0861,
+       "sharpe": 1.76,
+       "why": {
+        "보유 기한 정리": 41,
+        "추세 이탈": 37,
+        "2차 목표": 7,
+        "손절": 4,
+        "추세 이탈(1차 뒤)": 1
+       }
+      },
+      "random_means": {
+       "median": 0.00266,
+       "p95": 0.00567
+      },
+      "beats_random_pct": 0.9666666666666667,
+      "cost_x2": {
+       "trades": 90,
+       "mean": 0.00349,
+       "total": 0.0603,
+       "mdd": -0.0983
+      },
+      "hold": {
+       "total": 0.0977,
+       "mdd": -0.0975
+      },
+      "pass": false
+     }
+    }
+   },
+   "peaks": {
+    "A→B": {
+     "rule": {
+      "touch": 0.005,
+      "chase": 0.02,
+      "vol_mult": 1.5,
+      "window": 390,
+      "top_n": 0,
+      "stop": 0.05,
+      "tp1": 0.12,
+      "frac": 0.33,
+      "tp2": 0.2,
+      "time_bars": 0,
+      "line_exit": 2,
+      "max_days": 5
+     },
+     "select_total": 0.2611,
+     "confirm_total": -0.0791,
+     "confirm_trades": 150
+    },
+    "B→A": {
+     "rule": {
+      "touch": 0.002,
+      "chase": 0.02,
+      "vol_mult": 2.0,
+      "window": 390,
+      "top_n": 0,
+      "stop": 0.1,
+      "tp1": 0.12,
+      "frac": 0.33,
+      "tp2": 0.2,
+      "time_bars": 0,
+      "line_exit": 0,
+      "max_days": 5
+     },
+     "select_total": 0.1511,
+     "confirm_total": 0.0793,
+     "confirm_trades": 74
+    }
+   },
+   "top": {
+    "A": [
+     {
+      "rule": {
+       "touch": 0.005,
+       "chase": 0.02,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.05,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 106,
+       "mean": 0.01172,
+       "total": 0.26107,
+       "mdd": -0.09227
+      },
+      "B": {
+       "trades": 150,
+       "mean": -0.00253,
+       "total": -0.07913,
+       "mdd": -0.1482
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.005,
+       "chase": 0.04,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.05,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 106,
+       "mean": 0.01172,
+       "total": 0.26107,
+       "mdd": -0.09227
+      },
+      "B": {
+       "trades": 150,
+       "mean": -0.00253,
+       "total": -0.07913,
+       "mdd": -0.1482
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.005,
+       "chase": 0.02,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.05,
+       "tp1": 0.12,
+       "frac": 0.5,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 106,
+       "mean": 0.01132,
+       "total": 0.25153,
+       "mdd": -0.09227
+      },
+      "B": {
+       "trades": 150,
+       "mean": -0.00262,
+       "total": -0.08138,
+       "mdd": -0.1482
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.005,
+       "chase": 0.04,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.05,
+       "tp1": 0.12,
+       "frac": 0.5,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 106,
+       "mean": 0.01132,
+       "total": 0.25153,
+       "mdd": -0.09227
+      },
+      "B": {
+       "trades": 150,
+       "mean": -0.00262,
+       "total": -0.08138,
+       "mdd": -0.1482
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.01,
+       "chase": 0.04,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.03,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 114,
+       "mean": 0.01046,
+       "total": 0.24964,
+       "mdd": -0.09929
+      },
+      "B": {
+       "trades": 169,
+       "mean": -0.003,
+       "total": -0.10055,
+       "mdd": -0.18331
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.01,
+       "chase": 0.02,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.03,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 114,
+       "mean": 0.01046,
+       "total": 0.24964,
+       "mdd": -0.09929
+      },
+      "B": {
+       "trades": 169,
+       "mean": -0.003,
+       "total": -0.10055,
+       "mdd": -0.18331
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.005,
+       "chase": 0.04,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.03,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 121,
+       "mean": 0.00977,
+       "total": 0.24519,
+       "mdd": -0.10113
+      },
+      "B": {
+       "trades": 168,
+       "mean": -0.00516,
+       "total": -0.16118,
+       "mdd": -0.20261
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.005,
+       "chase": 0.02,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.03,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 121,
+       "mean": 0.00977,
+       "total": 0.24519,
+       "mdd": -0.10113
+      },
+      "B": {
+       "trades": 168,
+       "mean": -0.00516,
+       "total": -0.16118,
+       "mdd": -0.20261
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.005,
+       "chase": 0.02,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.03,
+       "tp1": 0.12,
+       "frac": 0.5,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 121,
+       "mean": 0.00945,
+       "total": 0.23697,
+       "mdd": -0.10113
+      },
+      "B": {
+       "trades": 168,
+       "mean": -0.00518,
+       "total": -0.16154,
+       "mdd": -0.20261
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.005,
+       "chase": 0.04,
+       "vol_mult": 1.5,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.03,
+       "tp1": 0.12,
+       "frac": 0.5,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 2,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 121,
+       "mean": 0.00945,
+       "total": 0.23697,
+       "mdd": -0.10113
+      },
+      "B": {
+       "trades": 168,
+       "mean": -0.00518,
+       "total": -0.16154,
+       "mdd": -0.20261
+      }
+     }
+    ],
+    "B": [
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.02,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 74,
+       "mean": 0.00558,
+       "total": 0.07931,
+       "mdd": -0.11201
+      },
+      "B": {
+       "trades": 102,
+       "mean": 0.00744,
+       "total": 0.15114,
+       "mdd": -0.06591
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.04,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 74,
+       "mean": 0.00558,
+       "total": 0.07931,
+       "mdd": -0.11201
+      },
+      "B": {
+       "trades": 102,
+       "mean": 0.00744,
+       "total": 0.15114,
+       "mdd": -0.06591
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.01,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.12,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 74,
+       "mean": 0.00673,
+       "total": 0.09731,
+       "mdd": -0.10244
+      },
+      "B": {
+       "trades": 100,
+       "mean": 0.00737,
+       "total": 0.14692,
+       "mdd": -0.06665
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.02,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.12,
+       "frac": 0.5,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 74,
+       "mean": 0.00535,
+       "total": 0.07637,
+       "mdd": -0.10493
+      },
+      "B": {
+       "trades": 102,
+       "mean": 0.00701,
+       "total": 0.14182,
+       "mdd": -0.06592
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.04,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.12,
+       "frac": 0.5,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 74,
+       "mean": 0.00535,
+       "total": 0.07637,
+       "mdd": -0.10493
+      },
+      "B": {
+       "trades": 102,
+       "mean": 0.00701,
+       "total": 0.14182,
+       "mdd": -0.06592
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.01,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.12,
+       "frac": 0.5,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 74,
+       "mean": 0.00649,
+       "total": 0.09395,
+       "mdd": -0.09961
+      },
+      "B": {
+       "trades": 100,
+       "mean": 0.00694,
+       "total": 0.13763,
+       "mdd": -0.06665
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.02,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.08,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 74,
+       "mean": 0.00423,
+       "total": 0.05853,
+       "mdd": -0.11914
+      },
+      "B": {
+       "trades": 102,
+       "mean": 0.00682,
+       "total": 0.13762,
+       "mdd": -0.07083
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.04,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.08,
+       "frac": 0.33,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 74,
+       "mean": 0.00423,
+       "total": 0.05853,
+       "mdd": -0.11914
+      },
+      "B": {
+       "trades": 102,
+       "mean": 0.00682,
+       "total": 0.13762,
+       "mdd": -0.07083
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.04,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.08,
+       "frac": 1.0,
+       "tp2": 0.08,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 78,
+       "mean": 0.00462,
+       "total": 0.07092,
+       "mdd": -0.0866
+      },
+      "B": {
+       "trades": 107,
+       "mean": 0.00615,
+       "total": 0.13493,
+       "mdd": -0.05579
+      }
+     },
+     {
+      "rule": {
+       "touch": 0.002,
+       "chase": 0.04,
+       "vol_mult": 2.0,
+       "window": 390,
+       "top_n": 0,
+       "stop": 0.1,
+       "tp1": 0.08,
+       "frac": 1.0,
+       "tp2": 0.2,
+       "time_bars": 0,
+       "line_exit": 0,
+       "max_days": 5
+      },
+      "A": {
+       "trades": 78,
+       "mean": 0.00462,
+       "total": 0.07092,
+       "mdd": -0.0866
+      },
+      "B": {
+       "trades": 107,
+       "mean": 0.00615,
+       "total": 0.13493,
+       "mdd": -0.05579
+      }
+     }
+    ]
+   },
+   "marginals": {
+    "touch": {
+     "0.002": {
+      "A": {
+       "median_total": -0.0279,
+       "share_positive": 0.311
+      },
+      "B": {
+       "median_total": -0.0654,
+       "share_positive": 0.027
+      }
+     },
+     "0.005": {
+      "A": {
+       "median_total": -0.0211,
+       "share_positive": 0.352
+      },
+      "B": {
+       "median_total": -0.0819,
+       "share_positive": 0.008
+      }
+     },
+     "0.01": {
+      "A": {
+       "median_total": -0.0238,
+       "share_positive": 0.344
+      },
+      "B": {
+       "median_total": -0.1133,
+       "share_positive": 0.009
+      }
+     }
+    },
+    "chase": {
+     "0.01": {
+      "A": {
+       "median_total": -0.024,
+       "share_positive": 0.348
+      },
+      "B": {
+       "median_total": -0.078,
+       "share_positive": 0.02
+      }
+     },
+     "0.02": {
+      "A": {
+       "median_total": -0.0246,
+       "share_positive": 0.331
+      },
+      "B": {
+       "median_total": -0.0917,
+       "share_positive": 0.012
+      }
+     },
+     "0.04": {
+      "A": {
+       "median_total": -0.0242,
+       "share_positive": 0.333
+      },
+      "B": {
+       "median_total": -0.0914,
+       "share_positive": 0.012
+      }
+     }
+    },
+    "vol_mult": {
+     "1.5": {
+      "A": {
+       "median_total": -0.0383,
+       "share_positive": 0.311
+      },
+      "B": {
+       "median_total": -0.1071,
+       "share_positive": 0.012
+      }
+     },
+     "2.0": {
+      "A": {
+       "median_total": -0.0299,
+       "share_positive": 0.283
+      },
+      "B": {
+       "median_total": -0.0863,
+       "share_positive": 0.013
+      }
+     },
+     "3.0": {
+      "A": {
+       "median_total": -0.0071,
+       "share_positive": 0.433
+      },
+      "B": {
+       "median_total": -0.0678,
+       "share_positive": 0.019
+      }
+     }
+    },
+    "window": {
+     "120": {
+      "A": {
+       "median_total": -0.0263,
+       "share_positive": 0.315
+      },
+      "B": {
+       "median_total": -0.0784,
+       "share_positive": 0.01
+      }
+     },
+     "390": {
+      "A": {
+       "median_total": -0.0217,
+       "share_positive": 0.359
+      },
+      "B": {
+       "median_total": -0.0937,
+       "share_positive": 0.019
+      }
+     }
+    },
+    "top_n": {
+     "20": {
+      "A": {
+       "median_total": -0.0095,
+       "share_positive": 0.399
+      },
+      "B": {
+       "median_total": -0.0629,
+       "share_positive": 0.015
+      }
+     },
+     "0": {
+      "A": {
+       "median_total": -0.057,
+       "share_positive": 0.282
+      },
+      "B": {
+       "median_total": -0.1179,
+       "share_positive": 0.014
+      }
+     }
+    },
+    "stop": {
+     "0.02": {
+      "A": {
+       "median_total": -0.0248,
+       "share_positive": 0.337
+      },
+      "B": {
+       "median_total": -0.0943,
+       "share_positive": 0.006
+      }
+     },
+     "0.03": {
+      "A": {
+       "median_total": -0.0269,
+       "share_positive": 0.341
+      },
+      "B": {
+       "median_total": -0.092,
+       "share_positive": 0.006
+      }
+     },
+     "0.05": {
+      "A": {
+       "median_total": -0.0224,
+       "share_positive": 0.356
+      },
+      "B": {
+       "median_total": -0.087,
+       "share_positive": 0.011
+      }
+     },
+     "0.07": {
+      "A": {
+       "median_total": -0.0233,
+       "share_positive": 0.335
+      },
+      "B": {
+       "median_total": -0.0845,
+       "share_positive": 0.017
+      }
+     },
+     "0.1": {
+      "A": {
+       "median_total": -0.0247,
+       "share_positive": 0.317
+      },
+      "B": {
+       "median_total": -0.0752,
+       "share_positive": 0.033
+      }
+     }
+    },
+    "tp1": {
+     "0.03": {
+      "A": {
+       "median_total": -0.0355,
+       "share_positive": 0.214
+      },
+      "B": {
+       "median_total": -0.0857,
+       "share_positive": 0.007
+      }
+     },
+     "0.05": {
+      "A": {
+       "median_total": -0.0234,
+       "share_positive": 0.337
+      },
+      "B": {
+       "median_total": -0.0878,
+       "share_positive": 0.014
+      }
+     },
+     "0.08": {
+      "A": {
+       "median_total": -0.0151,
+       "share_positive": 0.408
+      },
+      "B": {
+       "median_total": -0.0849,
+       "share_positive": 0.021
+      }
+     },
+     "0.12": {
+      "A": {
+       "median_total": -0.0078,
+       "share_positive": 0.458
+      },
+      "B": {
+       "median_total": -0.0887,
+       "share_positive": 0.022
+      }
+     }
+    },
+    "frac": {
+     "0.33": {
+      "A": {
+       "median_total": -0.0182,
+       "share_positive": 0.376
+      },
+      "B": {
+       "median_total": -0.0878,
+       "share_positive": 0.014
+      }
+     },
+     "0.5": {
+      "A": {
+       "median_total": -0.0219,
+       "share_positive": 0.346
+      },
+      "B": {
+       "median_total": -0.0863,
+       "share_positive": 0.013
+      }
+     },
+     "1.0": {
+      "A": {
+       "median_total": -0.03,
+       "share_positive": 0.301
+      },
+      "B": {
+       "median_total": -0.0863,
+       "share_positive": 0.017
+      }
+     }
+    },
+    "tp2": {
+     "0.08": {
+      "A": {
+       "median_total": -0.0296,
+       "share_positive": 0.288
+      },
+      "B": {
+       "median_total": -0.0859,
+       "share_positive": 0.013
+      }
+     },
+     "0.12": {
+      "A": {
+       "median_total": -0.0247,
+       "share_positive": 0.33
+      },
+      "B": {
+       "median_total": -0.0885,
+       "share_positive": 0.013
+      }
+     },
+     "0.2": {
+      "A": {
+       "median_total": -0.0197,
+       "share_positive": 0.376
+      },
+      "B": {
+       "median_total": -0.0858,
+       "share_positive": 0.018
+      }
+     }
+    },
+    "time_bars": {
+     "0": {
+      "A": {
+       "median_total": -0.0243,
+       "share_positive": 0.337
+      },
+      "B": {
+       "median_total": -0.0867,
+       "share_positive": 0.015
+      }
+     }
+    },
+    "line_exit": {
+     "0": {
+      "A": {
+       "median_total": -0.0008,
+       "share_positive": 0.495
+      },
+      "B": {
+       "median_total": -0.074,
+       "share_positive": 0.016
+      }
+     },
+     "1": {
+      "A": {
+       "median_total": -0.0607,
+       "share_positive": 0.036
+      },
+      "B": {
+       "median_total": -0.1094,
+       "share_positive": 0.0
+      }
+     },
+     "2": {
+      "A": {
+       "median_total": -0.0027,
+       "share_positive": 0.481
+      },
+      "B": {
+       "median_total": -0.0692,
+       "share_positive": 0.028
+      }
+     }
+    },
+    "max_days": {
+     "0": {
+      "A": {
+       "median_total": -0.0752,
+       "share_positive": 0.0
+      },
+      "B": {
+       "median_total": -0.08,
+       "share_positive": 0.0
+      }
+     },
+     "1": {
+      "A": {
+       "median_total": -0.0028,
+       "share_positive": 0.476
+      },
+      "B": {
+       "median_total": -0.084,
+       "share_positive": 0.016
+      }
+     },
+     "3": {
+      "A": {
+       "median_total": -0.0146,
+       "share_positive": 0.362
+      },
+      "B": {
+       "median_total": -0.088,
+       "share_positive": 0.01
+      }
+     },
+     "5": {
+      "A": {
+       "median_total": 0.0014,
+       "share_positive": 0.511
+      },
+      "B": {
+       "median_total": -0.0955,
+       "share_positive": 0.032
+      }
+     }
+    }
+   },
+   "persistence": {
+    "cells": 183546,
+    "rank_corr_A_B": 0.37,
+    "B_median_all": -0.0909,
+    "B_median_of_A_top1pct": -0.0733,
+    "share_positive_both": 0.0103,
+    "share_positive_A": 0.3372,
+    "share_positive_B": 0.013
+   },
+   "default": null,
+   "pass": false,
+   "secs": 889
+  }
  }
 }
