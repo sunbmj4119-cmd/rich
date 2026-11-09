@@ -120,13 +120,13 @@ def simulate_trade(A, i, venue, R):
             got += left * tp2 * sell
             return k, got / cost_in - 1, entry, "목표 +6%"
         reason = None
-        if c[k] < vw[k]:
-            reason = "선 이탈"
-        elif k - e + 1 >= R["time_bars"] and c[k] < entry and not half:
-            reason = "시간 손절"
-        elif V["session"] and last[k]:
+        if V["session"] and last[k]:                                   # 장 마지막 봉: 무슨 이유든 그 봉 종가에 정리 (밤을 넘기지 않음)
             got += left * c[k] * sell
             return k, got / cost_in - 1, entry, "장 마감 정리"
+        if c[k] < vw[k]:
+            reason = "선 이탈"
+        elif R["time_bars"] and k - e + 1 >= R["time_bars"] and c[k] < entry and not half:
+            reason = "시간 손절"
         elif k >= max_k:
             reason = "최대 보유"
         if reason and k + 1 < n:

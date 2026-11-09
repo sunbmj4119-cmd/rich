@@ -920,6 +920,63 @@ def test_intraday_regular_session_5m():
     assert str(u["ts"].iloc[0]) == "2026-11-06 09:30:00" and u["ts"].dt.strftime("%H:%M").max() == "15:55"
 
 
+def test_intraday_sweep_matches_engine():
+    """격자 탐색의 빠른 계산 = bdw_intraday 한 건씩 계산 (청산 봉·순수익) · 장부 = portfolio (거래 수·총수익) · 끝까지 돌아감."""
+    import itertools
+    import bdw_intraday as BI
+    import intraday_sweep as S
+    rng = np.random.default_rng(3)
+    bd = pd.bdate_range("2025-11-10", periods=100)
+    tod = pd.timedelta_range("09:00:00", "15:25:00", freq="5min")
+    ts = pd.DatetimeIndex((bd.values[:, None] + tod.values[None, :]).ravel())
+    data = {}
+    for k in range(7):
+        r = rng.normal(0, 0.003, len(ts))
+        cl = 10000 * np.exp(np.cumsum(r))
+        op = np.r_[cl[0], cl[:-1]] * np.exp(rng.normal(0, 0.0005, len(ts)))
+        data["069500" if k == 0 else f"S{k}"] = pd.DataFrame({
+            "ts": ts, "open": op, "high": np.maximum(op, cl) * np.exp(np.abs(rng.normal(0, 0.002, len(ts)))),
+            "low": np.minimum(op, cl) * np.exp(-np.abs(rng.normal(0, 0.002, len(ts)))), "close": cl,
+            "volume": rng.lognormal(10, 0.8, len(ts)) * (1 + 3 * (rng.random(len(ts)) < 0.05))})
+    E = {"touch": [0.005], "chase": [0.02], "vol_mult": [1.5], "window": [300], "top_n": [0, 3]}
+    X = {"stop": [0.005, 0.01, 0.03], "tp1": [0.01, 0.02], "frac": [0.5, 1.0], "tp2": [0.04], "time_bars": [6, 0], "line_exit": [1, 0]}
+    g = S.build(data, "kr", "069500", E)
+    assert g["H"] == 78 and S.n_unique(E, X) == 2 * 3 * 2 * 2 * 2 * 2
+    sig = S.signals(0.005, 0.02, 1.5, 300, 0)
+    assert len(sig) > 20 and (np.diff(g["ts"][sig + 1]) >= 0).all()
+    start = {si: int(np.flatnonzero(g["sym"] == si)[0]) for si in range(len(g["syms"]))}
+    A = {si: BI.arrays(BI.prepare(data[s], "kr")) for si, s in enumerate(g["syms"])}
+    P = S.Paths(sig, exit_=X)
+    for s, a, tb in itertools.product(X["stop"], X["tp1"], X["time_bars"]):
+        net, xo, wy = P.exit(s, a, 0.5, 0.04, tb, 1, why=True)
+        R = {**BI.RULES, "stop": s, "tp1": a, "tp1_frac": 0.5, "tp2": 0.04, "time_bars": tb}
+        for q, i in enumerate(sig):
+            si = int(g["sym"][i])
+            k, nt, _, _ = BI.simulate_trade(A[si], int(i - start[si]), "kr", R)
+            assert abs(nt - net[q]) < 1e-9 and k == xo[q] - start[si]
+    net1, xo1, wy1 = P.exit(0.01, 0.02, 1.0, 0.04, 0, 0, why=True)                # 1차에서 전부 · 선 이탈 끔 · 시간 손절 끔
+    assert set(np.unique(wy1)) <= {0, 2, 6}
+    net, xo = P.exit(0.01, 0.02, 0.5, 0.04, 6, 1)
+    c = pd.DataFrame({"sym": [g["syms"][k] for k in g["sym"][sig]], "t_sig": pd.to_datetime(g["ts"][sig]), "t_in": pd.to_datetime(g["ts"][sig + 1]),
+                      "t_out": pd.to_datetime(g["ts"][xo]), "net": net, "why": "x", "value_day": g["val_day"][sig], "ret_day": 0.0})
+    tk, curve = BI.portfolio(c, {"top_n": 10 ** 9})
+    _, L = S._lists(sig)
+    n, mean, tot, mdd, _, _ = S.book(L[0], g["ts"][xo].tolist(), L[1], L[2], L[3], net.tolist(), S.weight(0.01))
+    assert n == len(tk) and abs(tot - (curve.iloc[-1] - 1)) < 1e-9
+    assert len(S.signals(0.005, 0.02, 1.5, 300, 3)) < len(sig)                     # 거래대금 상위 3종목만
+    T = np.arange(12, dtype=float).reshape(3, 4)
+    assert S.neighbor_median(T)[1, 1] == 5.0 and S.neighbor_median(T)[0, 0] == 1.0  # 자기+이웃 (격자 밖 제외)
+    old = dict(S.CRIT)
+    S.CRIT.update({"min_trades": 5, "n_random": 3})
+    try:
+        res = S.run("kr", None, "069500", workers=1, entry=E, exit_=X, data=data, log=lambda m: None)
+    finally:
+        S.CRIT.clear()
+        S.CRIT.update(old)
+    assert set(res["picks"]) == {"A→B", "B→A"} and isinstance(res["pass"], bool) and res["cells_unique"] == S.n_unique(E, X)
+    assert set(res["marginals"]["stop"]) == {"0.005", "0.01", "0.03"} and "persistence" in res
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
