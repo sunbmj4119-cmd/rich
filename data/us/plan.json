@@ -1,12 +1,27 @@
 {
- "made": "2026-11-06",
+ "made": "2026-11-09",
  "model": "S:MOM:10:BAND:none",
- "orders": [],
- "equity_usd": 7323.16,
+ "orders": [
+  {
+   "side": "sell",
+   "code": "GILD",
+   "qty": 4.5218,
+   "est_price": 169.36,
+   "sleeve": "us"
+  },
+  {
+   "side": "buy",
+   "code": "JNJ",
+   "usd": 741.98,
+   "est_price": 281.91,
+   "sleeve": "us"
+  }
+ ],
+ "equity_usd": 7419.81,
  "target": [
   "ABBV",
   "AMGN",
-  "GILD",
+  "JNJ",
   "KO",
   "LLY",
   "MA",
@@ -22,40 +37,40 @@
   ],
   "sleeves": {
    "us": {
-    "days": 7,
-    "sr_star": 0.528,
-    "vol_star": 0.1848,
+    "days": 8,
+    "sr_star": 0.524,
+    "vol_star": 0.1849,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 8% (100% 면 경보) · 낙폭 -3.0% (경고선 -5.6%)"
+     "정상 — 감쇠 누적 5% (100% 면 경보) · 낙폭 -3.0% (경고선 -6.0%)"
     ],
     "cusum": {
-     "S": 0.0895,
-     "h": 1.096,
-     "level": 0.082,
+     "S": 0.0519,
+     "h": 1.0893,
+     "level": 0.048,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 824,
+     "detect_days_if_zero": 828,
      "false_alarm_years": 7.0
     },
     "dd": {
      "now": -0.0299,
-     "p95": -0.056,
-     "p99": -0.0823
+     "p95": -0.0605,
+     "p99": -0.0887
     },
     "expect": {
-     "sr_bt": 1.056,
-     "vol": 0.1848,
+     "sr_bt": 1.049,
+     "vol": 0.1849,
      "src": "미국 추세 상위 10 2016~",
-     "sr_star": 0.528
+     "sr_star": 0.524
     }
    }
   },
   "log": [],
-  "orders_before": 0,
-  "orders_after": 0,
+  "orders_before": 2,
+  "orders_after": 2,
   "limits": {
    "decay_action": "alert",
    "drawdown_action": "alert",

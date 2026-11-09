@@ -3,7 +3,10 @@
   "034730": "2026-11-06",
   "000990": "2026-11-06",
   "009155": "2026-11-06",
-  "357780": "2026-11-06"
+  "357780": "2026-11-06",
+  "028050": "2026-11-09",
+  "006800": "2026-11-09",
+  "161890": "2026-11-09"
  },
  "078930": {
   "entry_date": "2026-10-30",
@@ -15,29 +18,34 @@
   "partial_done": false,
   "last_shares": 22
  },
- "028050": {
-  "entry_date": "2026-10-30",
-  "partial_done": false,
-  "last_shares": 15
- },
- "006800": {
-  "entry_date": "2026-10-30",
-  "partial_done": false,
-  "last_shares": 37
- },
  "089860": {
   "entry_date": "2026-11-02",
   "partial_done": false,
   "last_shares": 18
  },
- "161890": {
-  "entry_date": "2026-11-04",
-  "partial_done": false,
-  "last_shares": 8
- },
  "017670": {
   "entry_date": "2026-11-06",
   "partial_done": false,
   "last_shares": 12
+ },
+ "034730": {
+  "entry_date": "2026-11-09",
+  "partial_done": false,
+  "last_shares": 2
+ },
+ "000990": {
+  "entry_date": "2026-11-09",
+  "partial_done": false,
+  "last_shares": 11
+ },
+ "357780": {
+  "entry_date": "2026-11-09",
+  "partial_done": false,
+  "last_shares": 3
+ },
+ "006360": {
+  "entry_date": "2026-11-09",
+  "partial_done": false,
+  "last_shares": 31
  }
 }

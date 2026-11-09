@@ -3,7 +3,9 @@
   "034730": "2026-11-06",
   "000990": "2026-11-06",
   "009155": "2026-11-06",
-  "267250": "2026-11-06"
+  "267250": "2026-11-06",
+  "028050": "2026-11-09",
+  "006800": "2026-11-09"
  },
  "078930": {
   "entry_date": "2026-10-30",
@@ -14,16 +16,6 @@
   "entry_date": "2026-10-30",
   "partial_done": false,
   "last_shares": 22
- },
- "028050": {
-  "entry_date": "2026-10-30",
-  "partial_done": false,
-  "last_shares": 15
- },
- "006800": {
-  "entry_date": "2026-10-30",
-  "partial_done": false,
-  "last_shares": 37
  },
  "316140": {
   "entry_date": "2026-11-02",
@@ -44,5 +36,25 @@
   "entry_date": "2026-11-06",
   "partial_done": false,
   "last_shares": 24
+ },
+ "034730": {
+  "entry_date": "2026-11-09",
+  "partial_done": false,
+  "last_shares": 2
+ },
+ "000990": {
+  "entry_date": "2026-11-09",
+  "partial_done": false,
+  "last_shares": 11
+ },
+ "006360": {
+  "entry_date": "2026-11-09",
+  "partial_done": false,
+  "last_shares": 32
+ },
+ "475150": {
+  "entry_date": "2026-11-09",
+  "partial_done": false,
+  "last_shares": 25
  }
 }
