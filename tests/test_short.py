@@ -1082,6 +1082,36 @@ def test_dm2_evolved_cards_and_challenger_shadow():
     assert set(ch["cards"]) == {"DM:2", *SP.CHALLENGERS} and all(v["days"] == T - 600 for v in ch["cards"].values())
 
 
+def test_chart_lab_stop_target_order_and_baseline():
+    """차트 자리 실험실: 같은 날 손절·익절이면 손절 · 갭 하락은 시가에 손절 · 익절 · 기한 종가 · 겹침 없음 · 같은 날 다른 종목 기준."""
+    import chart_lab as CL
+    T, N = 40, 3
+    O = np.full((T, N), 100.0)
+    H, L, C = O * 1.01, O * 0.99, O.copy()
+    # 종목 0: 진입(1일) 다음 날 고가 +6%·저가 −6% 같은 날 → 손절이 먼저
+    H[2, 0], L[2, 0] = 106.0, 94.0
+    # 종목 1: 2일째 시가가 −12% 로 갭 하락 → 그 시가에 손절
+    O[2, 1], L[2, 1], H[2, 1], C[2, 1] = 88.0, 87.0, 89.0, 88.0
+    # 종목 2: 3일째 고가 +6% → 익절
+    H[3, 2] = 106.0
+    P = {"O": O, "H": H, "L": L, "C": C, "Cf": C, "U": np.ones((T, N), bool), "dates": pd.bdate_range("2020-01-01", periods=T), "breaks": None}
+    PA = CL.Paths(P, [0, 0, 0], [0, 1, 2])
+    net, kind, days = PA.exit(0.05, 0.05, 5, detail=True)
+    cb, cs = CL.COMM + CL.SLIP, CL.COMM + CL.SLIP + CL.TAX
+    f = lambda px: px * (1 - cs) / (1 + cb) - 1                                    # noqa: E731
+    assert list(kind) == [0, 0, 1] and abs(net[0] - f(0.95)) < 1e-12 and abs(net[1] - f(0.88)) < 1e-12 and abs(net[2] - f(1.05)) < 1e-12
+    n2, k2, d2 = PA.exit(0.30, 0.30, 5, detail=True)
+    assert list(k2) == [2, 2, 2] and list(d2) == [5, 5, 5]                         # 안 닿으면 5일째 종가
+    S = np.zeros((T, N), bool)
+    S[[3, 5, 12], 0] = True
+    ts, js = CL.entries(P, S, "2020-01-01", None, 5)
+    assert list(ts) == [3, 12]                                                     # 5일 동안 다시 안 삼
+    rt, rj, src = CL.random_entries(P, ts, js, 4, seed=1)
+    assert (rt == np.repeat(ts, 4)).all() and (rj != 0).all() and list(np.bincount(src)) == [4, 4]
+    sig = CL.setup_signals({**P, "V": np.ones((T, N)), "MC": np.ones((T, N))})
+    assert set(sig) == set(CL.SETUPS) and all(v.shape == (T, N) for v in sig.values())
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
