@@ -17,7 +17,7 @@
 #          bash setup.sh --live     실제 돈 주문 최종 확인값 저장 (준비도 점검표가 모두 통과한 뒤에만 의미 있음)
 #          bash setup.sh --smoke    1주 실주문 시험 (평일 정규장 · 실제 돈 1주 값 + 수수료 — 묻고 나서만)
 #          bash setup.sh --candles [일수]  토스 분봉 받기 (기본 90일)(국내 101·미국 104종목, 옛날까지) + 불장단타왕 규칙 검증 — 뒤에서 돌고 앱을 닫아도 계속
-#          bash setup.sh --sweep    받아 둔 분봉으로 손절·익절·나눠 파는 비율·매수 자리 격자 탐색 (국내·미국, 수십 분~몇 시간) — 뒤에서 돌고 앱을 닫아도 계속
+#          bash setup.sh --sweep [차수]  받아 둔 분봉으로 손절·익절·나눠 파는 비율·매수 자리 격자 탐색 (기본 2차 · 국내·미국, 수십 분~몇 시간) — 뒤에서 돌고 앱을 닫아도 계속
 #
 #   이 스크립트는 비밀 값을 화면에 출력하지 않는다. 키는 ~/.rich/secrets.env 에만 저장한다.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -307,7 +307,8 @@ run_sweep() {
     no "분봉을 아직 받는 중입니다 — 끝난 뒤(GitHub 에 올림이 보인 뒤) 다시 실행하세요"
     return 0
   fi
-  nohup bash "$DIR/deploy/oracle/sweep.sh" > "$STATE/logs/sweep.log" 2>&1 &
+  SWEEP_ROUND="${2:-2}" nohup bash "$DIR/deploy/oracle/sweep.sh" > "$STATE/logs/sweep.log" 2>&1 &
+  echo "  ${2:-2}차 탐색을 시작합니다"
   sleep 30
   echo "  ── 처음 몇 줄 ──"; tail -n 6 "$STATE/logs/sweep.log" | sed 's/^/  /'
   ok "뒤에서 탐색 중입니다. 진행 보기: tail -n 5 $STATE/logs/sweep.log   (처음엔 1분봉을 5분봉으로 묶느라 몇 분 조용합니다)"
@@ -369,7 +370,7 @@ case "$MODE" in
   --unlive) unset_live ;;
   --smoke) run_smoke ;;
   --candles) run_candles "$@" ;;
-  --sweep) run_sweep ;;
+  --sweep) run_sweep "$@" ;;
   --*)     echo "모르는 옵션: $MODE — 철자를 확인하세요 (예: --candles · --sweep · --probe · --check · --link · --history)"; exit 1 ;;
   *)       install_packages; tune_system; get_code; deploy_key; secrets_file; check
            echo; echo "다음 단계: 위 ✗ 항목을 해결한 뒤 'bash ~/rich/deploy/oracle/setup.sh --check' 로 다시 확인하세요." ;;
