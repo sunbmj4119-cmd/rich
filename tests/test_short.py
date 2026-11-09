@@ -1044,6 +1044,44 @@ def test_intraday_sweep_round2_multiday_exits():
     assert S.n_trials({"kr": {"venue": "kr", "cells_unique": 3}, "round2": {"kr": {"venue": "kr", "cells_unique": 4}}, "n_trials": 9}) == 7
 
 
+def test_dm2_evolved_cards_and_challenger_shadow():
+    """5회차 진화 카드: 비중 합 1 · 레버리지·인버스 없음 · 변동성 반비례/조절/주간 확인의 성질 · 전천후 카드 목록은 그대로 · 공격 자리에 꽂아도 돈다."""
+    import allweather as AW
+    import size_policy as SP
+    rng = np.random.default_rng(9)
+    T = 700
+    dates = pd.bdate_range("2023-01-02", periods=T)
+    vol = np.linspace(0.004, 0.03, AW.A)                                        # 자산마다 변동성이 다름
+    Cp = 10000 * np.exp(np.cumsum(rng.normal(0.0004, vol, (T, AW.A)), axis=0))
+    Op = Cp * np.exp(rng.normal(0, 0.001, (T, AW.A)))
+    F = AW.features(Cp, dates)
+    geared = [AW.IX[k] for k in AW.GEARED_KEYS]
+    W2 = AW.targets(F, Cp, "DM:2")
+    for k in AW.DM_EVOLVED:
+        W = AW.targets(F, Cp, k)
+        rows = np.flatnonzero(~np.isnan(W).all(1))
+        assert len(rows) > 5 and np.allclose(W[rows].sum(1), 1) and (W[rows] >= -1e-12).all(), k
+        assert np.nansum(W[rows][:, geared]) == 0, k
+        assert k not in AW.RULES and k not in AW.allowed_rules()                 # 전천후 16장 혼합은 바뀌지 않음
+    Wv, Wt, Ww = AW.targets(F, Cp, "DM:2v"), AW.targets(F, Cp, "DM:2t"), AW.targets(F, Cp, "DM:2w")
+    r2 = np.flatnonzero(~np.isnan(W2).all(1))
+    risky = [j for j in range(AW.A) if j != AW.IX["CASH"]]
+    assert any(not np.allclose(Wv[t], W2[t]) for t in r2)                          # 반반이 아닌 날이 있다
+    assert all(set(np.flatnonzero(Wv[t] > 0)) <= set(np.flatnonzero(W2[t] > 0)) for t in r2)   # 같은 자산만
+    assert all(Wt[t][risky].sum() <= W2[t][risky].sum() + 1e-9 for t in r2)      # 변동성 조절은 줄이기만
+    cash = AW.IX["CASH"]
+    rw = np.flatnonzero(~np.isnan(Ww).all(1))
+    assert set(r2) <= set(rw)
+    for t in sorted(set(rw) - set(r2)):                                           # 주간 확인으로 바뀐 날 = 단기채로만 옮김
+        prev = Ww[[x for x in rw if x < t][-1]]
+        assert Ww[t][cash] > prev[cash] and (Ww[t][risky] <= prev[risky] + 1e-12).all()
+    sp = {**SP.DEFAULT, "aggr_card": "DM:2t", "paper_start": str(dates[600].date())}
+    W_aw, W_ag, s = SP.weight_paths(dates, Op, Cp, sp, start=str(dates[300].date()))
+    assert np.allclose(W_ag, AW.desired(Wt))
+    ch = SP.challenger_forward(sp, (dates, Op, Cp))
+    assert set(ch["cards"]) == {"DM:2", *SP.CHALLENGERS} and all(v["days"] == T - 600 for v in ch["cards"].values())
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 

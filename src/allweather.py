@@ -132,6 +132,7 @@ def features(Cp, dates=None):
     df = pd.DataFrame(C)
     F["am60"] = (df / df.shift(60) - 1).to_numpy()
     F["am120"] = (df / df.shift(120) - 1).to_numpy()
+    F["am250"] = (df / df.shift(250) - 1).to_numpy()
     F["avol60"] = (df.pct_change().rolling(60, min_periods=40).std() * np.sqrt(252)).to_numpy()
     F["reg"] = regimes(F)
     return F
@@ -260,6 +261,9 @@ def targets(F, Cp, rule, pad=0):
                 put(t, w)
         return W
     newm = month_start(F["dates"], pad) if F.get("dates") is not None else (np.arange(T) % 21 == 1)
+    if kind in DM_EVOLVED:
+        _dm_evolved(kind, F, LL, put, newm, T, av, pad)
+        return W
     if kind in ("DM:1", "DM:2"):
         am = LL(F["am120"])
         cand = [IX[k] for k in ("IDX", "SPX", "NDX", "GOLD", "USD", "B10")]
@@ -330,6 +334,88 @@ def targets(F, Cp, rule, pad=0):
             put(t, _onehot("USD" if rg[t] >= 2 else "IDX"))
         return W
     raise KeyError(rule)
+
+
+# DM:2 진화 후보 (2026-11-09 사전 등록, optimize_lab --round 5) — 혼합(전천후) 카드 목록 RULES 에는 넣지 않는다
+DM_EVOLVED = {
+    "DM:2m": "DM:2 다중 기간 — 60·120·250일 (단기채 대비) 수익 순위의 평균으로 상위 2개, 세 기간 평균이 단기채보다 못한 자리는 단기채",
+    "DM:2v": "DM:2 변동성 반비례 — 같은 2개를 반반 대신 최근 60일 변동성 반비례 비중으로",
+    "DM:2w": "DM:2 주간 확인 — 매달 고르고, 매주 첫 거래일에 들고 있는 자산의 120일 수익이 단기채보다 못하면 그 자리만 단기채 (다음 달까지)",
+    "DM:2t": "DM:2 변동성 조절 — 고른 2개의 (비중 가중) 60일 변동성이 15% 를 넘으면 15% ÷ 변동성 만큼만, 나머지 단기채",
+}
+DM_CAND = ("IDX", "SPX", "NDX", "GOLD", "USD", "B10")
+
+
+def _dm_evolved(kind, F, LL, put, newm, T, av, pad):
+    cand = [IX[k] for k in DM_CAND]
+    ci = IX["CASH"]
+    am = {L: LL(F[f"am{L}"]) for L in (60, 120, 250)}
+    vol = LL(F["avol60"])
+    d = F.get("dates")
+    if d is not None:
+        wk = pd.DatetimeIndex(d).isocalendar().week.to_numpy()
+        neww = np.r_[False, wk[1:] != wk[:-1]]
+        if pad:
+            nxt = d[-1] + pd.offsets.BDay(1)
+            neww = np.r_[neww, nxt.isocalendar()[1] != d[-1].isocalendar()[1]]
+    else:
+        neww = np.arange(T) % 5 == 1
+    start = 251 if kind == "DM:2m" else 121
+    first = True
+    cur = None
+
+    def ok(x):
+        return np.isfinite(x)
+
+    for t in range(start, T):
+        monthly = newm[t] or first
+        if monthly and np.isfinite(am[120][t]).any():
+            first = False
+            if kind == "DM:2m":
+                ex = []
+                for L in (60, 120, 250):
+                    cm = am[L][t, ci] if ok(am[L][t, ci]) else 0.0
+                    ex.append([(am[L][t, j] - cm) if av[t, j] and ok(am[L][t, j]) else np.nan for j in cand])
+                ex = np.array(ex)                                         # 3 × 6
+                rk = np.array([pd.Series(row).rank(ascending=False, na_option="bottom").to_numpy() for row in ex])
+                score = rk.mean(0)
+                with np.errstate(all="ignore"):
+                    mean_ex = np.where(np.isfinite(ex).all(0), np.nanmean(ex, 0), -9)
+                order = np.argsort(score)[:2]
+                w = np.zeros(A)
+                for o in order:
+                    w[cand[o] if mean_ex[o] > 0 else ci] += 0.5
+            else:
+                cash_m = am[120][t, ci] if ok(am[120][t, ci]) else 0.0
+                sc = [(am[120][t, j] if av[t, j] and ok(am[120][t, j]) else -9) for j in cand]
+                order = np.argsort(sc)[::-1][:2]
+                w = np.zeros(A)
+                if kind == "DM:2v":
+                    iv = np.array([1 / vol[t, cand[o]] if ok(vol[t, cand[o]]) and vol[t, cand[o]] > 0 else np.nan for o in order])
+                    iv = np.where(np.isfinite(iv), iv, np.nanmean(iv) if np.isfinite(iv).any() else 1.0)
+                    sh = iv / iv.sum()
+                else:
+                    sh = np.array([0.5, 0.5])
+                for o, x in zip(order, sh):
+                    w[cand[o] if sc[o] > cash_m else ci] += x
+                if kind == "DM:2t":
+                    ev = sum(w[j] * vol[t, j] for j in cand if w[j] > 0 and ok(vol[t, j]))
+                    if ev > 0.15:
+                        k = 0.15 / ev
+                        w = w * k
+                        w[ci] += 1 - k
+            cur = w
+            put(t, w)
+        elif kind == "DM:2w" and cur is not None and neww[t]:
+            cash_m = am[120][t, ci] if ok(am[120][t, ci]) else 0.0
+            w = cur.copy()
+            for j in cand:
+                if w[j] > 0 and not (ok(am[120][t, j]) and am[120][t, j] > cash_m):
+                    w[ci] += w[j]
+                    w[j] = 0
+            if not np.allclose(w, cur):
+                cur = w
+                put(t, w)
 
 
 # ══════════════════════════════════════════════════════════════
