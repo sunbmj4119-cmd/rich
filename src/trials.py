@@ -40,6 +40,7 @@ def count():
     bdw = jload("data/bdw_lab.json", {}) or {}
     intra = jload("data/intraday_lab.json", {}) or {}
     sweep = jload("data/intraday_sweep.json", {}) or {}
+    chart = jload("data/chart_lab.json", {}) or {}
     rows = {
         "kr_short_models": {"n": kr_models, "what": "국내 단기 고정 후보 (종목 모델 + 지수 ETF 규칙)"},
         "kr_rule_grid": {"n": grid, "what": "고르는 방식 격자 (얼마나 자주·몇 일 성적·무엇으로·몇 개·끈기)"},
@@ -56,6 +57,7 @@ def count():
         "bdw": {"n": int(bdw.get("n_trials") or 0), "what": "불장단타왕 규칙 (VWMA100 되밟기·50선 눌림·돌파·투매 꼬리·시간 손절·개인 투매·25선 저항·6월·DM:2 100일선 손절)"},
         "intraday": {"n": int(intra.get("n_trials") or 0), "what": "불장단타왕 분봉 규칙 엔진 (토스 1분봉 → 5분봉, 시장별)"},
         "intraday_sweep": {"n": int(sweep.get("n_trials") or 0), "what": "분봉 규칙 격자 탐색 (손절·익절·나눠 파는 비율·매수 자리 × 시장별, 서로 다른 칸 수)"},
+        "chart_setups": {"n": int(chart.get("n_trials") or 0), "what": "차트 자리 20개 × 손절 4 × 익절 5 × 보유 3 (일봉, 그때의 대형주 100)"},
     }
     kr_n = kr_models * grid + genomes
     return {"generated": time.strftime("%Y-%m-%d %H:%M"), "rows": rows, "kr_short_effective": kr_n,
