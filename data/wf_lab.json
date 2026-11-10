@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-10 05:06",
+ "generated": "2026-11-10 05:57",
  "rounds": {
   "0_라벨오류": {
    "generated": "2026-11-10 05:06",
@@ -480,12 +480,1944 @@
    },
    "secs": 689,
    "note": "정답 열 이름(r5·r20)이 재료 이름과 겹쳐 재료 값으로 덮어써진 오류 — 5·20일 칸은 무효. 10일 칸만 유효. 이때 연 최종 확인 3번도 기록에 남김"
+  },
+  "1": {
+   "generated": "2026-11-10 05:19",
+   "why": "모든 재료를 한꺼번에 · 선형과 나무 모델 · 보유 5·10·20일 · 3·10종목 + 시장 타이밍",
+   "dev": [
+    "2008-01-01",
+    "2018-12-31"
+   ],
+   "holdout": [
+    "2019-01-01",
+    null
+   ],
+   "criteria": {
+    "t_excess": 2.0
+   },
+   "candidates": {
+    "ridge·5일·3종목": {
+     "spec": {
+      "model": "ridge",
+      "h": 5,
+      "k": 3
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.25,
+       "sharpe": 0.813,
+       "mdd": -0.5115
+      },
+      "ew": {
+       "cagr": 0.017,
+       "sharpe": 0.189,
+       "mdd": -0.5219
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.155,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.244,
+      "t_excess": 3.75,
+      "excess_x2_ann": 0.1933,
+      "periods": 543,
+      "hit": 0.53
+     },
+     "dev_pass": false
+    },
+    "ridge·5일·10종목": {
+     "spec": {
+      "model": "ridge",
+      "h": 5,
+      "k": 10
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.0881,
+       "sharpe": 0.43,
+       "mdd": -0.5247
+      },
+      "ew": {
+       "cagr": 0.017,
+       "sharpe": 0.189,
+       "mdd": -0.5219
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.155,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.0908,
+      "t_excess": 2.39,
+      "excess_x2_ann": 0.0402,
+      "periods": 543,
+      "hit": 0.538
+     },
+     "dev_pass": false
+    },
+    "ridge·10일·3종목": {
+     "spec": {
+      "model": "ridge",
+      "h": 10,
+      "k": 3
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.1014,
+       "sharpe": 0.452,
+       "mdd": -0.4851
+      },
+      "ew": {
+       "cagr": 0.0135,
+       "sharpe": 0.171,
+       "mdd": -0.5286
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.156,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.111,
+      "t_excess": 1.83,
+      "excess_x2_ann": 0.0856,
+      "periods": 271,
+      "hit": 0.539
+     },
+     "dev_pass": false
+    },
+    "ridge·10일·10종목": {
+     "spec": {
+      "model": "ridge",
+      "h": 10,
+      "k": 10
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.0873,
+       "sharpe": 0.43,
+       "mdd": -0.4849
+      },
+      "ew": {
+       "cagr": 0.0135,
+       "sharpe": 0.171,
+       "mdd": -0.5286
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.156,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.0877,
+      "t_excess": 2.12,
+      "excess_x2_ann": 0.0624,
+      "periods": 271,
+      "hit": 0.52
+     },
+     "dev_pass": true,
+     "holdout": {
+      "strategy": {
+       "cagr": 0.2026,
+       "sharpe": 0.714,
+       "mdd": -0.4378
+      },
+      "ew": {
+       "cagr": 0.1384,
+       "sharpe": 0.634,
+       "mdd": -0.4282
+      },
+      "kospi": {
+       "cagr": 0.1776,
+       "sharpe": 0.747,
+       "mdd": -0.3923
+      },
+      "excess_ann": 0.0799,
+      "t_excess": 1.56,
+      "excess_x2_ann": 0.0545,
+      "periods": 192,
+      "hit": 0.521
+     },
+     "holdout_pass": false
+    },
+    "ridge·20일·3종목": {
+     "spec": {
+      "model": "ridge",
+      "h": 20,
+      "k": 3
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.0806,
+       "sharpe": 0.379,
+       "mdd": -0.4683
+      },
+      "ew": {
+       "cagr": 0.0096,
+       "sharpe": 0.16,
+       "mdd": -0.5189
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.161,
+       "mdd": -0.4845
+      },
+      "excess_ann": 0.0984,
+      "t_excess": 1.5,
+      "excess_x2_ann": 0.0857,
+      "periods": 135,
+      "hit": 0.496
+     },
+     "dev_pass": false
+    },
+    "ridge·20일·10종목": {
+     "spec": {
+      "model": "ridge",
+      "h": 20,
+      "k": 10
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.0688,
+       "sharpe": 0.358,
+       "mdd": -0.3891
+      },
+      "ew": {
+       "cagr": 0.0096,
+       "sharpe": 0.16,
+       "mdd": -0.5189
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.161,
+       "mdd": -0.4845
+      },
+      "excess_ann": 0.0711,
+      "t_excess": 1.76,
+      "excess_x2_ann": 0.0584,
+      "periods": 135,
+      "hit": 0.519
+     },
+     "dev_pass": false
+    },
+    "gbm·5일·3종목": {
+     "spec": {
+      "model": "gbm",
+      "h": 5,
+      "k": 3
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.3131,
+       "sharpe": 0.96,
+       "mdd": -0.4107
+      },
+      "ew": {
+       "cagr": 0.017,
+       "sharpe": 0.189,
+       "mdd": -0.5219
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.155,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.2907,
+      "t_excess": 4.63,
+      "excess_x2_ann": 0.2399,
+      "periods": 543,
+      "hit": 0.586
+     },
+     "dev_pass": true,
+     "holdout": {
+      "strategy": {
+       "cagr": 0.2786,
+       "sharpe": 0.81,
+       "mdd": -0.5009
+      },
+      "ew": {
+       "cagr": 0.1376,
+       "sharpe": 0.674,
+       "mdd": -0.4301
+      },
+      "kospi": {
+       "cagr": 0.1622,
+       "sharpe": 0.695,
+       "mdd": -0.4478
+      },
+      "excess_ann": 0.1672,
+      "t_excess": 2.01,
+      "excess_x2_ann": 0.1164,
+      "periods": 385,
+      "hit": 0.465
+     },
+     "holdout_pass": false
+    },
+    "gbm·5일·10종목": {
+     "spec": {
+      "model": "gbm",
+      "h": 5,
+      "k": 10
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.1406,
+       "sharpe": 0.592,
+       "mdd": -0.5023
+      },
+      "ew": {
+       "cagr": 0.017,
+       "sharpe": 0.189,
+       "mdd": -0.5219
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.155,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.1349,
+      "t_excess": 3.25,
+      "excess_x2_ann": 0.0843,
+      "periods": 543,
+      "hit": 0.558
+     },
+     "dev_pass": false
+    },
+    "gbm·10일·3종목": {
+     "spec": {
+      "model": "gbm",
+      "h": 10,
+      "k": 3
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.1576,
+       "sharpe": 0.585,
+       "mdd": -0.5358
+      },
+      "ew": {
+       "cagr": 0.0135,
+       "sharpe": 0.171,
+       "mdd": -0.5286
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.156,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.169,
+      "t_excess": 2.3,
+      "excess_x2_ann": 0.1436,
+      "periods": 271,
+      "hit": 0.568
+     },
+     "dev_pass": false
+    },
+    "gbm·10일·10종목": {
+     "spec": {
+      "model": "gbm",
+      "h": 10,
+      "k": 10
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.1331,
+       "sharpe": 0.565,
+       "mdd": -0.5278
+      },
+      "ew": {
+       "cagr": 0.0135,
+       "sharpe": 0.171,
+       "mdd": -0.5286
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.156,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.132,
+      "t_excess": 3.48,
+      "excess_x2_ann": 0.1066,
+      "periods": 271,
+      "hit": 0.568
+     },
+     "dev_pass": false
+    },
+    "gbm·20일·3종목": {
+     "spec": {
+      "model": "gbm",
+      "h": 20,
+      "k": 3
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.0382,
+       "sharpe": 0.284,
+       "mdd": -0.5335
+      },
+      "ew": {
+       "cagr": 0.0096,
+       "sharpe": 0.16,
+       "mdd": -0.5189
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.161,
+       "mdd": -0.4845
+      },
+      "excess_ann": 0.0709,
+      "t_excess": 1.03,
+      "excess_x2_ann": 0.0582,
+      "periods": 135,
+      "hit": 0.489
+     },
+     "dev_pass": false
+    },
+    "gbm·20일·10종목": {
+     "spec": {
+      "model": "gbm",
+      "h": 20,
+      "k": 10
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.0747,
+       "sharpe": 0.376,
+       "mdd": -0.4926
+      },
+      "ew": {
+       "cagr": 0.0096,
+       "sharpe": 0.16,
+       "mdd": -0.5189
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.161,
+       "mdd": -0.4845
+      },
+      "excess_ann": 0.0834,
+      "t_excess": 1.99,
+      "excess_x2_ann": 0.0707,
+      "periods": 135,
+      "hit": 0.578
+     },
+     "dev_pass": false
+    },
+    "시장 타이밍·5일": {
+     "dev": {
+      "strategy": {
+       "cagr": 0.007,
+       "sharpe": 0.128,
+       "mdd": -0.4365
+      },
+      "strategy_x2": {
+       "cagr": -0.0024,
+       "sharpe": 0.076,
+       "mdd": -0.4396
+      },
+      "kospi": {
+       "cagr": 0.0125,
+       "sharpe": 0.165,
+       "mdd": -0.5041
+      },
+      "ew": {
+       "cagr": 0.0125,
+       "sharpe": 0.165,
+       "mdd": -0.5041
+      },
+      "in_market": 0.756,
+      "excess_ann": -0.0117,
+      "t_excess": -0.32,
+      "excess_x2_ann": -0.021,
+      "periods": 543,
+      "hit": 0.103
+     },
+     "dev_pass": false
+    },
+    "시장 타이밍·10일": {
+     "dev": {
+      "strategy": {
+       "cagr": 0.005,
+       "sharpe": 0.126,
+       "mdd": -0.3693
+      },
+      "strategy_x2": {
+       "cagr": 0.0011,
+       "sharpe": 0.107,
+       "mdd": -0.371
+      },
+      "kospi": {
+       "cagr": 0.013,
+       "sharpe": 0.171,
+       "mdd": -0.5041
+      },
+      "ew": {
+       "cagr": 0.013,
+       "sharpe": 0.171,
+       "mdd": -0.5041
+      },
+      "in_market": 0.824,
+      "excess_ann": -0.012,
+      "t_excess": -0.28,
+      "excess_x2_ann": -0.0159,
+      "periods": 271,
+      "hit": 0.077
+     },
+     "dev_pass": false
+    },
+    "시장 타이밍·20일": {
+     "dev": {
+      "strategy": {
+       "cagr": 0.0054,
+       "sharpe": 0.136,
+       "mdd": -0.4932
+      },
+      "strategy_x2": {
+       "cagr": 0.0038,
+       "sharpe": 0.128,
+       "mdd": -0.4932
+      },
+      "kospi": {
+       "cagr": 0.0143,
+       "sharpe": 0.182,
+       "mdd": -0.4932
+      },
+      "ew": {
+       "cagr": 0.0143,
+       "sharpe": 0.182,
+       "mdd": -0.4932
+      },
+      "in_market": 0.854,
+      "excess_ann": -0.0112,
+      "t_excess": -0.52,
+      "excess_x2_ann": -0.0128,
+      "periods": 135,
+      "hit": 0.081
+     },
+     "dev_pass": false
+    }
+   },
+   "secs": 702
+  },
+  "2": {
+   "generated": "2026-11-10 05:31",
+   "why": "1회차(10일 칸 유효)에서 나무 모델이 대형주보다 연 +13~17% 앞섰지만 낙폭이 코스피보다 3~4%p 나빴다 → 업종 재료 더하기 · 두 모델 합치기 · 코스피 200일선 아래면 현금 · 40일 보유(비용 줄이기)",
+   "dev": [
+    "2008-01-01",
+    "2018-12-31"
+   ],
+   "holdout": [
+    "2019-01-01",
+    null
+   ],
+   "criteria": {
+    "t_excess": 2.0
+   },
+   "candidates": {
+    "gbm·10일·3종목·업종": {
+     "spec": {
+      "model": "gbm",
+      "h": 10,
+      "k": 3,
+      "feat": "sec"
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.2784,
+       "sharpe": 0.884,
+       "mdd": -0.4017
+      },
+      "ew": {
+       "cagr": 0.0135,
+       "sharpe": 0.171,
+       "mdd": -0.5286
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.156,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.2662,
+      "t_excess": 4.04,
+      "excess_x2_ann": 0.2407,
+      "periods": 271,
+      "hit": 0.613
+     },
+     "dev_pass": true,
+     "holdout": {
+      "strategy": {
+       "cagr": 0.1784,
+       "sharpe": 0.592,
+       "mdd": -0.5205
+      },
+      "ew": {
+       "cagr": 0.1384,
+       "sharpe": 0.634,
+       "mdd": -0.4282
+      },
+      "kospi": {
+       "cagr": 0.1776,
+       "sharpe": 0.747,
+       "mdd": -0.3923
+      },
+      "excess_ann": 0.0892,
+      "t_excess": 0.78,
+      "excess_x2_ann": 0.0637,
+      "periods": 192,
+      "hit": 0.484
+     },
+     "holdout_pass": false
+    },
+    "gbm·10일·10종목·업종": {
+     "spec": {
+      "model": "gbm",
+      "h": 10,
+      "k": 10,
+      "feat": "sec"
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.1314,
+       "sharpe": 0.578,
+       "mdd": -0.4997
+      },
+      "ew": {
+       "cagr": 0.0135,
+       "sharpe": 0.171,
+       "mdd": -0.5286
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.156,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.125,
+      "t_excess": 3.04,
+      "excess_x2_ann": 0.0996,
+      "periods": 271,
+      "hit": 0.565
+     },
+     "dev_pass": false
+    },
+    "ens·10일·3종목": {
+     "spec": {
+      "model": "ens",
+      "h": 10,
+      "k": 3
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.1244,
+       "sharpe": 0.495,
+       "mdd": -0.4457
+      },
+      "ew": {
+       "cagr": 0.0135,
+       "sharpe": 0.171,
+       "mdd": -0.5286
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.156,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.1401,
+      "t_excess": 2.18,
+      "excess_x2_ann": 0.1147,
+      "periods": 271,
+      "hit": 0.535
+     },
+     "dev_pass": true,
+     "holdout": {
+      "strategy": {
+       "cagr": 0.2503,
+       "sharpe": 0.734,
+       "mdd": -0.4585
+      },
+      "ew": {
+       "cagr": 0.1384,
+       "sharpe": 0.634,
+       "mdd": -0.4282
+      },
+      "kospi": {
+       "cagr": 0.1776,
+       "sharpe": 0.747,
+       "mdd": -0.3923
+      },
+      "excess_ann": 0.1411,
+      "t_excess": 1.35,
+      "excess_x2_ann": 0.1156,
+      "periods": 192,
+      "hit": 0.49
+     },
+     "holdout_pass": false
+    },
+    "ens·10일·10종목": {
+     "spec": {
+      "model": "ens",
+      "h": 10,
+      "k": 10
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.1285,
+       "sharpe": 0.56,
+       "mdd": -0.4623
+      },
+      "ew": {
+       "cagr": 0.0135,
+       "sharpe": 0.171,
+       "mdd": -0.5286
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.156,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.1241,
+      "t_excess": 2.89,
+      "excess_x2_ann": 0.0987,
+      "periods": 271,
+      "hit": 0.576
+     },
+     "dev_pass": true,
+     "holdout": {
+      "strategy": {
+       "cagr": 0.1604,
+       "sharpe": 0.611,
+       "mdd": -0.4523
+      },
+      "ew": {
+       "cagr": 0.1384,
+       "sharpe": 0.634,
+       "mdd": -0.4282
+      },
+      "kospi": {
+       "cagr": 0.1776,
+       "sharpe": 0.747,
+       "mdd": -0.3923
+      },
+      "excess_ann": 0.0408,
+      "t_excess": 0.75,
+      "excess_x2_ann": 0.0153,
+      "periods": 192,
+      "hit": 0.51
+     },
+     "holdout_pass": false
+    },
+    "gbm·10일·3종목·200일선": {
+     "spec": {
+      "model": "gbm",
+      "h": 10,
+      "k": 3,
+      "overlay": "ma200"
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.0548,
+       "sharpe": 0.392,
+       "mdd": -0.4707
+      },
+      "ew": {
+       "cagr": 0.0135,
+       "sharpe": 0.171,
+       "mdd": -0.5286
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.156,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.0322,
+      "t_excess": 0.55,
+      "excess_x2_ann": 0.0174,
+      "periods": 271,
+      "hit": 0.513
+     },
+     "dev_pass": false
+    },
+    "gbm·10일·10종목·200일선": {
+     "spec": {
+      "model": "gbm",
+      "h": 10,
+      "k": 10,
+      "overlay": "ma200"
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.0488,
+       "sharpe": 0.418,
+       "mdd": -0.374
+      },
+      "ew": {
+       "cagr": 0.0135,
+       "sharpe": 0.171,
+       "mdd": -0.5286
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.156,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.0202,
+      "t_excess": 0.42,
+      "excess_x2_ann": 0.0054,
+      "periods": 271,
+      "hit": 0.498
+     },
+     "dev_pass": false
+    },
+    "gbm·40일·3종목": {
+     "spec": {
+      "model": "gbm",
+      "h": 40,
+      "k": 3
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.0931,
+       "sharpe": 0.434,
+       "mdd": -0.3981
+      },
+      "ew": {
+       "cagr": 0.0014,
+       "sharpe": 0.111,
+       "mdd": -0.4387
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.159,
+       "mdd": -0.4206
+      },
+      "excess_ann": 0.1098,
+      "t_excess": 1.62,
+      "excess_x2_ann": 0.1034,
+      "periods": 67,
+      "hit": 0.567
+     },
+     "dev_pass": false
+    },
+    "gbm·40일·10종목": {
+     "spec": {
+      "model": "gbm",
+      "h": 40,
+      "k": 10
+     },
+     "dev": {
+      "strategy": {
+       "cagr": 0.0583,
+       "sharpe": 0.351,
+       "mdd": -0.488
+      },
+      "ew": {
+       "cagr": 0.0014,
+       "sharpe": 0.111,
+       "mdd": -0.4387
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.159,
+       "mdd": -0.4206
+      },
+      "excess_ann": 0.0674,
+      "t_excess": 1.76,
+      "excess_x2_ann": 0.061,
+      "periods": 67,
+      "hit": 0.627
+     },
+     "dev_pass": false
+    }
+   },
+   "secs": 550
+  },
+  "3": {
+   "generated": "2026-11-10 05:42",
+   "why": "나무·5일·3종목이 개발·최종 모두 대형주를 크게 이겼지만(초과 t 4.6 · 2.0) 최종 낙폭 −50% 로 코스피(−45%)보다 나빠 탈락 → 검증된 안정 엔진(전천후 16장)과 30:70 · 50:50 으로 섞기, 또는 종목 몫 변동성 목표 20% (예측은 1회차 그대로 — 새로 고치지 않음)",
+   "criteria": {
+    "mdd_floor": -0.25
+   },
+   "candidates": {
+    "종목 30% + 전천후 70% (나무·5일·3종목)": {
+     "dev": {
+      "strategy": {
+       "cagr": 0.1318,
+       "sharpe": 1.053,
+       "mdd": -0.1366
+      },
+      "strategy_x2": {
+       "cagr": 0.1148,
+       "sharpe": 0.932,
+       "mdd": -0.1386
+      },
+      "aw16": {
+       "cagr": 0.0445,
+       "sharpe": 0.695,
+       "mdd": -0.0829
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.155,
+       "mdd": -0.4952
+      }
+     },
+     "dev_pass": true,
+     "holdout": {
+      "strategy": {
+       "cagr": 0.15,
+       "sharpe": 1.047,
+       "mdd": -0.2012
+      },
+      "strategy_x2": {
+       "cagr": 0.1326,
+       "sharpe": 0.942,
+       "mdd": -0.2137
+      },
+      "aw16": {
+       "cagr": 0.0766,
+       "sharpe": 1.249,
+       "mdd": -0.0811
+      },
+      "kospi": {
+       "cagr": 0.1622,
+       "sharpe": 0.695,
+       "mdd": -0.4478
+      }
+     },
+     "holdout_pass": false
+    },
+    "종목 50% + 전천후 50% (나무·5일·3종목)": {
+     "dev": {
+      "strategy": {
+       "cagr": 0.1875,
+       "sharpe": 1.021,
+       "mdd": -0.2139
+      },
+      "strategy_x2": {
+       "cagr": 0.1579,
+       "sharpe": 0.885,
+       "mdd": -0.2169
+      },
+      "aw16": {
+       "cagr": 0.0445,
+       "sharpe": 0.695,
+       "mdd": -0.0829
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.155,
+       "mdd": -0.4952
+      }
+     },
+     "dev_pass": true,
+     "holdout": {
+      "strategy": {
+       "cagr": 0.1933,
+       "sharpe": 0.93,
+       "mdd": -0.2975
+      },
+      "strategy_x2": {
+       "cagr": 0.1636,
+       "sharpe": 0.813,
+       "mdd": -0.3157
+      },
+      "aw16": {
+       "cagr": 0.0766,
+       "sharpe": 1.249,
+       "mdd": -0.0811
+      },
+      "kospi": {
+       "cagr": 0.1622,
+       "sharpe": 0.695,
+       "mdd": -0.4478
+      }
+     },
+     "holdout_pass": false
+    },
+    "종목 단독 + 변동성 목표 20% (나무·5일·3종목)": {
+     "dev": {
+      "strategy": {
+       "cagr": 0.1983,
+       "sharpe": 0.929,
+       "mdd": -0.192
+      },
+      "strategy_x2": {
+       "cagr": 0.1522,
+       "sharpe": 0.751,
+       "mdd": -0.1986
+      },
+      "aw16": {
+       "cagr": 0.0445,
+       "sharpe": 0.695,
+       "mdd": -0.0829
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.155,
+       "mdd": -0.4952
+      }
+     },
+     "dev_pass": true,
+     "holdout": {
+      "strategy": {
+       "cagr": 0.1454,
+       "sharpe": 0.697,
+       "mdd": -0.4077
+      },
+      "strategy_x2": {
+       "cagr": 0.1115,
+       "sharpe": 0.568,
+       "mdd": -0.4338
+      },
+      "aw16": {
+       "cagr": 0.0766,
+       "sharpe": 1.249,
+       "mdd": -0.0811
+      },
+      "kospi": {
+       "cagr": 0.1622,
+       "sharpe": 0.695,
+       "mdd": -0.4478
+      }
+     },
+     "holdout_pass": false
+    },
+    "종목 30% + 전천후 70% (나무·5일·10종목)": {
+     "dev": {
+      "strategy": {
+       "cagr": 0.0819,
+       "sharpe": 0.759,
+       "mdd": -0.1876
+      },
+      "strategy_x2": {
+       "cagr": 0.0656,
+       "sharpe": 0.624,
+       "mdd": -0.1939
+      },
+      "aw16": {
+       "cagr": 0.0445,
+       "sharpe": 0.695,
+       "mdd": -0.0829
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.155,
+       "mdd": -0.4952
+      }
+     },
+     "dev_pass": false
+    },
+    "종목 50% + 전천후 50% (나무·5일·10종목)": {
+     "dev": {
+      "strategy": {
+       "cagr": 0.103,
+       "sharpe": 0.687,
+       "mdd": -0.2722
+      },
+      "strategy_x2": {
+       "cagr": 0.0755,
+       "sharpe": 0.531,
+       "mdd": -0.2803
+      },
+      "aw16": {
+       "cagr": 0.0445,
+       "sharpe": 0.695,
+       "mdd": -0.0829
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.155,
+       "mdd": -0.4952
+      }
+     },
+     "dev_pass": false
+    },
+    "종목 단독 + 변동성 목표 20% (나무·5일·10종목)": {
+     "dev": {
+      "strategy": {
+       "cagr": 0.0989,
+       "sharpe": 0.565,
+       "mdd": -0.2879
+      },
+      "strategy_x2": {
+       "cagr": 0.0522,
+       "sharpe": 0.352,
+       "mdd": -0.3049
+      },
+      "aw16": {
+       "cagr": 0.0445,
+       "sharpe": 0.695,
+       "mdd": -0.0829
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.155,
+       "mdd": -0.4952
+      }
+     },
+     "dev_pass": true,
+     "holdout": {
+      "strategy": {
+       "cagr": 0.0809,
+       "sharpe": 0.463,
+       "mdd": -0.4078
+      },
+      "strategy_x2": {
+       "cagr": 0.0401,
+       "sharpe": 0.289,
+       "mdd": -0.4372
+      },
+      "aw16": {
+       "cagr": 0.0766,
+       "sharpe": 1.249,
+       "mdd": -0.0811
+      },
+      "kospi": {
+       "cagr": 0.1622,
+       "sharpe": 0.695,
+       "mdd": -0.4478
+      }
+     },
+     "holdout_pass": false
+    }
+   },
+   "secs": 20
+  },
+  "5": {
+   "generated": "2026-11-10 05:48",
+   "why": "4회차: 섞기(30:70)가 DM:2 를 비용 1배에선 두 시기 모두 이겼지만 최종 기간 비용 3배에서 졌다 (5일마다 3종목을 다 갈아타 비용에 약함) → 신호는 그대로 두고 '들고 있는 종목이 아직 상위 6·10 안이면 팔지 않음'으로 거래 줄이기 · 종목 기준 / 공격 엔진 교체 기준 그대로",
+   "candidates": {
+    "나무·5일·3종목 · 상위 6 안이면 계속 보유": {
+     "dev": {
+      "strategy": {
+       "cagr": 0.3591,
+       "sharpe": 1.056,
+       "mdd": -0.4244
+      },
+      "ew": {
+       "cagr": 0.017,
+       "sharpe": 0.189,
+       "mdd": -0.5219
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.155,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.326,
+      "t_excess": 5.13,
+      "excess_x2_ann": 0.2819,
+      "periods": 543,
+      "turnover": 0.874
+     },
+     "dev_pass": true,
+     "holdout": {
+      "strategy": {
+       "cagr": 0.3445,
+       "sharpe": 0.932,
+       "mdd": -0.4895
+      },
+      "ew": {
+       "cagr": 0.1376,
+       "sharpe": 0.674,
+       "mdd": -0.4301
+      },
+      "kospi": {
+       "cagr": 0.1622,
+       "sharpe": 0.695,
+       "mdd": -0.4478
+      },
+      "excess_ann": 0.2189,
+      "t_excess": 2.55,
+      "excess_x2_ann": 0.1757,
+      "periods": 385,
+      "turnover": 0.856
+     },
+     "holdout_pass": false
+    },
+    "나무·5일·3종목 · 상위 10 안이면 계속 보유": {
+     "dev": {
+      "strategy": {
+       "cagr": 0.3788,
+       "sharpe": 1.091,
+       "mdd": -0.4244
+      },
+      "ew": {
+       "cagr": 0.017,
+       "sharpe": 0.189,
+       "mdd": -0.5219
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.155,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.341,
+      "t_excess": 5.48,
+      "excess_x2_ann": 0.2991,
+      "periods": 543,
+      "turnover": 0.833
+     },
+     "dev_pass": true,
+     "holdout": {
+      "strategy": {
+       "cagr": 0.3493,
+       "sharpe": 0.938,
+       "mdd": -0.4817
+      },
+      "ew": {
+       "cagr": 0.1376,
+       "sharpe": 0.674,
+       "mdd": -0.4301
+      },
+      "kospi": {
+       "cagr": 0.1622,
+       "sharpe": 0.695,
+       "mdd": -0.4478
+      },
+      "excess_ann": 0.2234,
+      "t_excess": 2.7,
+      "excess_x2_ann": 0.1831,
+      "periods": 385,
+      "turnover": 0.799
+     },
+     "holdout_pass": false
+    },
+    "종목 30% (상위 10 안 계속 보유) + 전천후 70% — DM:2 대비": {
+     "rows": {
+      "dev": {
+       "x1": {
+        "blend": {
+         "cagr": 0.1489,
+         "sharpe": 1.167,
+         "mdd": -0.1418
+        },
+        "dm2": {
+         "cagr": 0.0734,
+         "sharpe": 0.575,
+         "mdd": -0.158
+        },
+        "aw16": {
+         "cagr": 0.0444,
+         "sharpe": 0.695,
+         "mdd": -0.0829
+        }
+       },
+       "x3": {
+        "blend": {
+         "cagr": 0.1192,
+         "sharpe": 0.958,
+         "mdd": -0.1456
+        },
+        "dm2": {
+         "cagr": 0.0714,
+         "sharpe": 0.561,
+         "mdd": -0.1594
+        },
+        "aw16": {
+         "cagr": 0.0428,
+         "sharpe": 0.671,
+         "mdd": -0.0834
+        }
+       }
+      },
+      "holdout": {
+       "x1": {
+        "blend": {
+         "cagr": 0.169,
+         "sharpe": 1.146,
+         "mdd": -0.177
+        },
+        "dm2": {
+         "cagr": 0.159,
+         "sharpe": 0.915,
+         "mdd": -0.2771
+        },
+        "aw16": {
+         "cagr": 0.0766,
+         "sharpe": 1.249,
+         "mdd": -0.0811
+        }
+       },
+       "x3": {
+        "blend": {
+         "cagr": 0.1414,
+         "sharpe": 0.983,
+         "mdd": -0.1951
+        },
+        "dm2": {
+         "cagr": 0.1571,
+         "sharpe": 0.905,
+         "mdd": -0.2773
+        },
+        "aw16": {
+         "cagr": 0.0768,
+         "sharpe": 1.265,
+         "mdd": -0.0756
+        }
+       }
+      }
+     },
+     "dev_pass": true,
+     "holdout_pass": true,
+     "holdout_rows_shown": true
+    },
+    "종목 50% (상위 10 안 계속 보유) + 전천후 50% — DM:2 대비": {
+     "rows": {
+      "dev": {
+       "x1": {
+        "blend": {
+         "cagr": 0.2173,
+         "sharpe": 1.145,
+         "mdd": -0.2221
+        },
+        "dm2": {
+         "cagr": 0.0734,
+         "sharpe": 0.575,
+         "mdd": -0.158
+        },
+        "aw16": {
+         "cagr": 0.0444,
+         "sharpe": 0.695,
+         "mdd": -0.0829
+        }
+       },
+       "x3": {
+        "blend": {
+         "cagr": 0.1665,
+         "sharpe": 0.916,
+         "mdd": -0.2278
+        },
+        "dm2": {
+         "cagr": 0.0714,
+         "sharpe": 0.561,
+         "mdd": -0.1594
+        },
+        "aw16": {
+         "cagr": 0.0428,
+         "sharpe": 0.671,
+         "mdd": -0.0834
+        }
+       }
+      }
+     },
+     "dev_pass": false,
+     "holdout_pass": null,
+     "holdout_rows_shown": false
+    }
+   },
+   "secs": 74
+  },
+  "4": {
+   "generated": "2026-11-10 05:53",
+   "why": "3회차의 종목 30% + 전천후 70% 가 최종 기간에 연 +15% · 샤프 1.05 · 낙폭 −20% (코스피 +16% · 0.69 · −45%) — 전천후 단독 샤프(1.25)를 못 넘어 탈락했지만 지금 공격 엔진 DM:2 보다 나아 보임 → 공격 엔진 교체 기준(optimize_lab 4·5회차와 같은 잣대: 두 시기 × 비용 1·3배 모두 DM:2 보다 샤프 ↑·낙폭 나쁘지 않음)으로 정식 비교 · 나무 모델 씨앗 2개 더 · 계좌 크기별 실제 주식 수",
+   "candidates": {
+    "섞기 30:70 vs DM:2": {
+     "rows": {
+      "dev": {
+       "x1": {
+        "blend": {
+         "cagr": 0.1318,
+         "sharpe": 1.053,
+         "mdd": -0.1366
+        },
+        "dm2": {
+         "cagr": 0.0734,
+         "sharpe": 0.575,
+         "mdd": -0.158
+        },
+        "aw16": {
+         "cagr": 0.0444,
+         "sharpe": 0.695,
+         "mdd": -0.0829
+        }
+       },
+       "x3": {
+        "blend": {
+         "cagr": 0.0968,
+         "sharpe": 0.802,
+         "mdd": -0.1407
+        },
+        "dm2": {
+         "cagr": 0.0714,
+         "sharpe": 0.561,
+         "mdd": -0.1594
+        },
+        "aw16": {
+         "cagr": 0.0428,
+         "sharpe": 0.671,
+         "mdd": -0.0834
+        }
+       }
+      },
+      "holdout": {
+       "x1": {
+        "blend": {
+         "cagr": 0.15,
+         "sharpe": 1.047,
+         "mdd": -0.2012
+        },
+        "dm2": {
+         "cagr": 0.159,
+         "sharpe": 0.915,
+         "mdd": -0.2771
+        },
+        "aw16": {
+         "cagr": 0.0766,
+         "sharpe": 1.249,
+         "mdd": -0.0811
+        }
+       },
+       "x3": {
+        "blend": {
+         "cagr": 0.1158,
+         "sharpe": 0.839,
+         "mdd": -0.2262
+        },
+        "dm2": {
+         "cagr": 0.1571,
+         "sharpe": 0.905,
+         "mdd": -0.2773
+        },
+        "aw16": {
+         "cagr": 0.0768,
+         "sharpe": 1.265,
+         "mdd": -0.0756
+        }
+       }
+      }
+     },
+     "pass": false
+    }
+   },
+   "seeds": {
+    "1000": {
+     "dev": {
+      "strategy": {
+       "cagr": 0.2889,
+       "sharpe": 0.892,
+       "mdd": -0.4082
+      },
+      "ew": {
+       "cagr": 0.017,
+       "sharpe": 0.189,
+       "mdd": -0.5219
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.155,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.2752,
+      "t_excess": 4.28,
+      "excess_x2_ann": 0.2244,
+      "periods": 543,
+      "hit": 0.549
+     },
+     "holdout": {
+      "strategy": {
+       "cagr": 0.2507,
+       "sharpe": 0.761,
+       "mdd": -0.4789
+      },
+      "ew": {
+       "cagr": 0.1376,
+       "sharpe": 0.674,
+       "mdd": -0.4301
+      },
+      "kospi": {
+       "cagr": 0.1622,
+       "sharpe": 0.695,
+       "mdd": -0.4478
+      },
+      "excess_ann": 0.1433,
+      "t_excess": 1.45,
+      "excess_x2_ann": 0.0926,
+      "periods": 385,
+      "hit": 0.491
+     }
+    },
+    "2000": {
+     "dev": {
+      "strategy": {
+       "cagr": 0.3375,
+       "sharpe": 1.009,
+       "mdd": -0.4667
+      },
+      "ew": {
+       "cagr": 0.017,
+       "sharpe": 0.189,
+       "mdd": -0.5219
+      },
+      "kospi": {
+       "cagr": 0.0113,
+       "sharpe": 0.155,
+       "mdd": -0.4952
+      },
+      "excess_ann": 0.31,
+      "t_excess": 4.74,
+      "excess_x2_ann": 0.2592,
+      "periods": 543,
+      "hit": 0.578
+     },
+     "holdout": {
+      "strategy": {
+       "cagr": 0.2318,
+       "sharpe": 0.728,
+       "mdd": -0.5153
+      },
+      "ew": {
+       "cagr": 0.1376,
+       "sharpe": 0.674,
+       "mdd": -0.4301
+      },
+      "kospi": {
+       "cagr": 0.1622,
+       "sharpe": 0.695,
+       "mdd": -0.4478
+      },
+      "excess_ann": 0.1256,
+      "t_excess": 1.43,
+      "excess_x2_ann": 0.0749,
+      "periods": 385,
+      "hit": 0.494
+     }
+    }
+   },
+   "integer": {
+    "30:200000": {
+     "cash0": 200000,
+     "cagr": 0.0745,
+     "sharpe": 1.109,
+     "mdd": -0.1013,
+     "final": 346222,
+     "invested_share": 0.117
+    },
+    "30:1000000": {
+     "cash0": 1000000,
+     "cagr": 0.1126,
+     "sharpe": 1.042,
+     "mdd": -0.1751,
+     "final": 2259702,
+     "invested_share": 0.602
+    },
+    "30:3000000": {
+     "cash0": 3000000,
+     "cagr": 0.132,
+     "sharpe": 1.028,
+     "mdd": -0.185,
+     "final": 7732741,
+     "invested_share": 0.83
+    },
+    "30:10000000": {
+     "cash0": 10000000,
+     "cagr": 0.1466,
+     "sharpe": 1.051,
+     "mdd": -0.1976,
+     "final": 28427755,
+     "invested_share": 0.956
+    },
+    "50:200000": {
+     "cash0": 200000,
+     "cagr": 0.0791,
+     "sharpe": 0.814,
+     "mdd": -0.1555,
+     "final": 357809,
+     "invested_share": 0.243
+    },
+    "50:1000000": {
+     "cash0": 1000000,
+     "cagr": 0.1661,
+     "sharpe": 0.934,
+     "mdd": -0.2629,
+     "final": 3233517,
+     "invested_share": 0.762
+    },
+    "50:3000000": {
+     "cash0": 3000000,
+     "cagr": 0.1834,
+     "sharpe": 0.929,
+     "mdd": -0.2931,
+     "final": 10859155,
+     "invested_share": 0.915
+    },
+    "50:10000000": {
+     "cash0": 10000000,
+     "cagr": 0.1905,
+     "sharpe": 0.933,
+     "mdd": -0.294,
+     "final": 37884949,
+     "invested_share": 0.974
+    }
+   },
+   "secs": 557
+  },
+  "6": {
+   "generated": "2026-11-10 05:57",
+   "why": "5회차 섞기(종목 30% · 상위 10 안 계속 보유 + 전천후 70%)가 공격 엔진 교체 기준을 두 시기 × 비용 1·3배 모두 통과 — 4회차에서 씨앗에 따라 최종 성적이 흔들렸으므로, 씨앗 2개 더와 세 씨앗 평균(예측 순위 평균)으로도 통과하는지 · DM:2 대비 블록 부트스트랩 p",
+   "candidates": {
+    "원래": {
+     "rows": {
+      "dev": {
+       "x1": {
+        "blend": {
+         "cagr": 0.1489,
+         "sharpe": 1.167,
+         "mdd": -0.1418
+        },
+        "dm2": {
+         "cagr": 0.0734,
+         "sharpe": 0.575,
+         "mdd": -0.158
+        },
+        "aw16": {
+         "cagr": 0.0444,
+         "sharpe": 0.695,
+         "mdd": -0.0829
+        }
+       },
+       "x3": {
+        "blend": {
+         "cagr": 0.1192,
+         "sharpe": 0.958,
+         "mdd": -0.1456
+        },
+        "dm2": {
+         "cagr": 0.0714,
+         "sharpe": 0.561,
+         "mdd": -0.1594
+        },
+        "aw16": {
+         "cagr": 0.0428,
+         "sharpe": 0.671,
+         "mdd": -0.0834
+        }
+       }
+      },
+      "holdout": {
+       "x1": {
+        "blend": {
+         "cagr": 0.169,
+         "sharpe": 1.146,
+         "mdd": -0.177
+        },
+        "dm2": {
+         "cagr": 0.159,
+         "sharpe": 0.915,
+         "mdd": -0.2771
+        },
+        "aw16": {
+         "cagr": 0.0766,
+         "sharpe": 1.249,
+         "mdd": -0.0811
+        }
+       },
+       "x3": {
+        "blend": {
+         "cagr": 0.1414,
+         "sharpe": 0.983,
+         "mdd": -0.1951
+        },
+        "dm2": {
+         "cagr": 0.1571,
+         "sharpe": 0.905,
+         "mdd": -0.2773
+        },
+        "aw16": {
+         "cagr": 0.0768,
+         "sharpe": 1.265,
+         "mdd": -0.0756
+        }
+       }
+      }
+     },
+     "pass": {
+      "dev": true,
+      "holdout": true
+     },
+     "p_vs_dm2": {
+      "dev": 0.0385,
+      "holdout": 0.215
+     }
+    },
+    "씨앗 +1000": {
+     "rows": {
+      "dev": {
+       "x1": {
+        "blend": {
+         "cagr": 0.1433,
+         "sharpe": 1.122,
+         "mdd": -0.1303
+        },
+        "dm2": {
+         "cagr": 0.0734,
+         "sharpe": 0.575,
+         "mdd": -0.158
+        },
+        "aw16": {
+         "cagr": 0.0444,
+         "sharpe": 0.695,
+         "mdd": -0.0829
+        }
+       },
+       "x3": {
+        "blend": {
+         "cagr": 0.114,
+         "sharpe": 0.915,
+         "mdd": -0.1341
+        },
+        "dm2": {
+         "cagr": 0.0714,
+         "sharpe": 0.561,
+         "mdd": -0.1594
+        },
+        "aw16": {
+         "cagr": 0.0428,
+         "sharpe": 0.671,
+         "mdd": -0.0834
+        }
+       }
+      },
+      "holdout": {
+       "x1": {
+        "blend": {
+         "cagr": 0.1347,
+         "sharpe": 0.966,
+         "mdd": -0.1971
+        },
+        "dm2": {
+         "cagr": 0.159,
+         "sharpe": 0.915,
+         "mdd": -0.2771
+        },
+        "aw16": {
+         "cagr": 0.0766,
+         "sharpe": 1.249,
+         "mdd": -0.0811
+        }
+       },
+       "x3": {
+        "blend": {
+         "cagr": 0.1079,
+         "sharpe": 0.798,
+         "mdd": -0.2048
+        },
+        "dm2": {
+         "cagr": 0.1571,
+         "sharpe": 0.905,
+         "mdd": -0.2773
+        },
+        "aw16": {
+         "cagr": 0.0768,
+         "sharpe": 1.265,
+         "mdd": -0.0756
+        }
+       }
+      }
+     },
+     "pass": {
+      "dev": true,
+      "holdout": false
+     },
+     "p_vs_dm2": {
+      "dev": 0.062,
+      "holdout": 0.4945
+     }
+    },
+    "씨앗 +2000": {
+     "rows": {
+      "dev": {
+       "x1": {
+        "blend": {
+         "cagr": 0.1468,
+         "sharpe": 1.16,
+         "mdd": -0.1962
+        },
+        "dm2": {
+         "cagr": 0.0734,
+         "sharpe": 0.575,
+         "mdd": -0.158
+        },
+        "aw16": {
+         "cagr": 0.0444,
+         "sharpe": 0.695,
+         "mdd": -0.0829
+        }
+       },
+       "x3": {
+        "blend": {
+         "cagr": 0.1176,
+         "sharpe": 0.952,
+         "mdd": -0.1991
+        },
+        "dm2": {
+         "cagr": 0.0714,
+         "sharpe": 0.561,
+         "mdd": -0.1594
+        },
+        "aw16": {
+         "cagr": 0.0428,
+         "sharpe": 0.671,
+         "mdd": -0.0834
+        }
+       }
+      },
+      "holdout": {
+       "x1": {
+        "blend": {
+         "cagr": 0.123,
+         "sharpe": 0.892,
+         "mdd": -0.21
+        },
+        "dm2": {
+         "cagr": 0.159,
+         "sharpe": 0.915,
+         "mdd": -0.2771
+        },
+        "aw16": {
+         "cagr": 0.0766,
+         "sharpe": 1.249,
+         "mdd": -0.0811
+        }
+       },
+       "x3": {
+        "blend": {
+         "cagr": 0.0968,
+         "sharpe": 0.727,
+         "mdd": -0.2138
+        },
+        "dm2": {
+         "cagr": 0.1571,
+         "sharpe": 0.905,
+         "mdd": -0.2773
+        },
+        "aw16": {
+         "cagr": 0.0768,
+         "sharpe": 1.265,
+         "mdd": -0.0756
+        }
+       }
+      }
+     },
+     "pass": {
+      "dev": false,
+      "holdout": false
+     },
+     "p_vs_dm2": {
+      "dev": 0.0575,
+      "holdout": 0.56
+     }
+    },
+    "세 씨앗 평균": {
+     "rows": {
+      "dev": {
+       "x1": {
+        "blend": {
+         "cagr": 0.1447,
+         "sharpe": 1.141,
+         "mdd": -0.1609
+        },
+        "dm2": {
+         "cagr": 0.0734,
+         "sharpe": 0.575,
+         "mdd": -0.158
+        },
+        "aw16": {
+         "cagr": 0.0444,
+         "sharpe": 0.695,
+         "mdd": -0.0829
+        }
+       },
+       "x3": {
+        "blend": {
+         "cagr": 0.1153,
+         "sharpe": 0.932,
+         "mdd": -0.1644
+        },
+        "dm2": {
+         "cagr": 0.0714,
+         "sharpe": 0.561,
+         "mdd": -0.1594
+        },
+        "aw16": {
+         "cagr": 0.0428,
+         "sharpe": 0.671,
+         "mdd": -0.0834
+        }
+       }
+      },
+      "holdout": {
+       "x1": {
+        "blend": {
+         "cagr": 0.1767,
+         "sharpe": 1.214,
+         "mdd": -0.1975
+        },
+        "dm2": {
+         "cagr": 0.159,
+         "sharpe": 0.915,
+         "mdd": -0.2771
+        },
+        "aw16": {
+         "cagr": 0.0766,
+         "sharpe": 1.249,
+         "mdd": -0.0811
+        }
+       },
+       "x3": {
+        "blend": {
+         "cagr": 0.149,
+         "sharpe": 1.05,
+         "mdd": -0.2013
+        },
+        "dm2": {
+         "cagr": 0.1571,
+         "sharpe": 0.905,
+         "mdd": -0.2773
+        },
+        "aw16": {
+         "cagr": 0.0768,
+         "sharpe": 1.265,
+         "mdd": -0.0756
+        }
+       }
+      }
+     },
+     "pass": {
+      "dev": false,
+      "holdout": true
+     },
+     "p_vs_dm2": {
+      "dev": 0.0515,
+      "holdout": 0.143
+     }
+    }
+   },
+   "secs": 193
   }
  },
  "holdout_opened": [
   "1:ridge·10일·10종목",
   "1:ridge·20일·3종목",
-  "1:ridge·20일·10종목"
+  "1:ridge·20일·10종목",
+  "1:ridge·10일·10종목",
+  "1:gbm·5일·3종목",
+  "2:gbm·10일·3종목·업종",
+  "2:ens·10일·3종목",
+  "2:ens·10일·10종목",
+  "3:종목 30% + 전천후 70% (나무·5일·3종목)",
+  "3:종목 50% + 전천후 50% (나무·5일·3종목)",
+  "3:종목 단독 + 변동성 목표 20% (나무·5일·3종목)",
+  "3:종목 단독 + 변동성 목표 20% (나무·5일·10종목)",
+  "5:나무·5일·3종목 · 상위 6 안이면 계속 보유",
+  "5:나무·5일·3종목 · 상위 10 안이면 계속 보유",
+  "5:종목 30% (상위 10 안 계속 보유) + 전천후 70% — DM:2 대비",
+  "4:DM:2 대비 (최종 기간 포함)",
+  "4:씨앗 +1000",
+  "4:씨앗 +2000",
+  "4:실제 주식 수",
+  "6:원래",
+  "6:씨앗 +1000",
+  "6:씨앗 +2000",
+  "6:세 씨앗 평균"
  ],
- "n_trials": 15
+ "n_trials": 53
 }

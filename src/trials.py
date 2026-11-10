@@ -43,6 +43,7 @@ def count():
     chart = jload("data/chart_lab.json", {}) or {}
     edge = jload("data/edge_lab.json", {}) or {}
     exits = jload("data/exit_lab.json", {}) or {}
+    wf = jload("data/wf_lab.json", {}) or {}
     rows = {
         "kr_short_models": {"n": kr_models, "what": "국내 단기 고정 후보 (종목 모델 + 지수 ETF 규칙)"},
         "kr_rule_grid": {"n": grid, "what": "고르는 방식 격자 (얼마나 자주·몇 일 성적·무엇으로·몇 개·끈기)"},
@@ -60,6 +61,7 @@ def count():
         "intraday": {"n": int(intra.get("n_trials") or 0), "what": "불장단타왕 분봉 규칙 엔진 (토스 1분봉 → 5분봉, 시장별)"},
         "intraday_sweep": {"n": int(sweep.get("n_trials") or 0), "what": "분봉 규칙 격자 탐색 (손절·익절·나눠 파는 비율·매수 자리 × 시장별, 서로 다른 칸 수)"},
         "chart_setups": {"n": int(chart.get("n_trials") or 0), "what": "차트 자리 20개 × 손절 4 × 익절 5 × 보유 3 (일봉, 그때의 대형주 100)"},
+        "walk_forward": {"n": int(wf.get("n_trials") or 0), "what": f"해마다 다시 배우는 종목 순위·시장 타이밍·섞기 (최종 확인 연 횟수 {len(wf.get('holdout_opened') or [])})"},
         "exit_rules": {"n": int(exits.get("n_trials") or 0), "what": "매도 규칙 1,464가지(손절·익절 넓게·나눠 팔기·본전 손절·고점 대비 손절·보유) × 매수 자리 3"},
         "edge_mining": {"n": int(edge.get("n_trials") or 0), "what": "새 재료 36개(수급·밤/낮·종가 위치·회전율·시장 폭·달력) 하나·둘 조합 × 손절=익절 3가지 + 확률 모델"},
     }

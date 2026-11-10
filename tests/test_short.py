@@ -1176,6 +1176,32 @@ def test_exit_lab_partial_breakeven_trailing_gap():
     assert abs(XL.nets(np.array([1.0]))[0] - ((1 - (CL_cs := 0.000186 + 0.0005 + 0.0020)) / (1 + 0.000186 + 0.0005) - 1)) < 1e-12 and CL_cs > 0
 
 
+def test_wf_lab_gbm_book_and_discipline():
+    """해마다 다시 배우는 실험실: 나무 부스팅이 섞인 효과를 찾음 · 덮개로 쉬는 기간은 현금 0% · 규칙 대 습관 계좌 장부."""
+    import wf_lab as W
+    import discipline_lab as DL
+    rng = np.random.default_rng(1)
+    n = 40_000
+    X = rng.random((n, 5)).astype(np.float32)
+    y = 0.03 * ((X[:, 0] > 0.7) & (X[:, 1] < 0.3)) + rng.normal(0, 0.02, n)
+    g = W.fit_gbm(X[:30_000], y[:30_000], n_trees=30, min_leaf=200)
+    r = W.fit_ridge(X[:30_000].astype(float), y[:30_000])
+    cg = np.corrcoef(W.predict(g, X[30_000:]), y[30_000:])[0, 1]
+    cr = np.corrcoef(W.predict(r, X[30_000:]), y[30_000:])[0, 1]
+    assert cg > cr and cg > 0.3                                                    # 선형으로는 못 잡는 '둘 다' 조건
+    dates = pd.bdate_range("2019-01-01", periods=60)
+    D = pd.DataFrame({"date": np.repeat(dates, 4), "y5": np.tile([0.10, 0.0, 0.0, -0.10], 60)})
+    p = np.tile([3.0, 2.0, 1.0, 0.0], 60).astype(float)
+    p[:40] = np.nan                                                                # 앞 10일은 덮개로 쉼
+    bk = W.book(D, p, 5, 1, "2019-01-01", None)
+    assert len(bk) == 12 and (bk["s"].iloc[:2] == 0).all()                         # 쉬는 기간도 기간으로 남고 0%
+    assert abs(bk["s"].iloc[3] - (1.10 * (1 - W.CS) / (1 + W.CB) - 1)) < 1e-12 and abs(bk["ew"].iloc[3]) < 1e-12
+    d0 = pd.Timestamp("2020-01-01")
+    rows = [(d0 + pd.Timedelta(days=i), 0) for i in range(4)]
+    st = DL.book_slots(rows, [0.1, 0.1, 0.1, 0.1], [d0 + pd.Timedelta(days=10)] * 4, slots=3)
+    assert st["trades"] == 3 and abs(st["total"] - 0.1) < 1e-12                    # 자리 3개가 차면 네 번째는 못 산다
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
