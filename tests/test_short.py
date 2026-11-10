@@ -1147,6 +1147,35 @@ def test_edge_lab_features_calendar_and_model():
     assert (tm.sum(1) == 3).all()
 
 
+def test_exit_lab_partial_breakeven_trailing_gap():
+    """매도 규칙: 1차 익절 절반 → 본전 손절 · 고점 대비 따라 올라가는 손절 · 갭 하락은 시가 · 안 닿으면 기한 날 종가."""
+    import exit_lab as XL
+    H = XL.HMAX
+
+    class PA:                                                                       # noqa: E306
+        n = 4
+        o = np.full((4, H), 1.002)                                                  # 기본 가격은 본전(1.0)보다 조금 위
+        h = np.full((4, H), 1.01)
+        l = np.full((4, H), 1.001)                                                  # noqa: E741
+        c = np.full((4, H), 1.005)
+    PA.h[0, 1] = 1.11                                                               # 0: 1일째 +10% 닿음 → 절반 팔고
+    PA.l[0, 3] = 0.99                                                               #    3일째 본전(1.0) 깨짐
+    PA.c[1, 1], PA.h[1, 1] = 1.2, 1.2                                               # 1: 종가 1.2 까지 → 고점 대비 −10% = 1.08
+    PA.o[1, 2], PA.l[1, 2] = 1.15, 1.07
+    PA.o[2, 1], PA.l[2, 1] = 0.85, 0.84                                             # 2: 1일째 시가가 손절선(0.9) 아래 → 0.85
+    PA.c[3, 19] = 1.03                                                              # 3: 아무것도 안 닿음 → 20일째 종가
+    got, xd = XL.simulate(PA, (0.10, 0.10, 0.5, 9.0, 1, 0.0, 20), detail=True)
+    assert abs(got[0] - (0.5 * 1.10 + 0.5 * 1.0)) < 1e-12 and xd[0] == 3
+    assert abs(got[2] - 0.85) < 1e-12 and xd[2] == 1 and abs(got[3] - 1.03) < 1e-12 and xd[3] == 19
+    g2, x2 = XL.simulate(PA, (0.10, 0.50, 1.0, 9.0, 0, 0.10, 20), detail=True)
+    assert abs(g2[1] - 1.08) < 1e-12 and x2[1] == 2                                 # 고점 1.2 × 0.9
+    g3 = XL.simulate(PA, (0.10, 0.10, 0.5, 9.0, 0, 0.0, 20))
+    assert g3[0] > got[0]                                                           # 본전 손절을 안 하면 0번은 끝까지 감
+    assert XL.combo_key((0.1, 0.1, 1.0, 0.3, 1, 0.0, 20)) == XL.combo_key((0.1, 0.1, 1.0, 0.5, 0, 0.0, 20))
+    assert XL.combo_key((0.1, 0.3, 0.5, 0.3, 1, 0.0, 20)) is None
+    assert abs(XL.nets(np.array([1.0]))[0] - ((1 - (CL_cs := 0.000186 + 0.0005 + 0.0020)) / (1 + 0.000186 + 0.0005) - 1)) < 1e-12 and CL_cs > 0
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
