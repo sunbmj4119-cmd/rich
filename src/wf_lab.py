@@ -89,6 +89,7 @@ def build(log=print, hs=HS, sector=False):
         ok[i1:] = False
         t, j = np.nonzero(ok)
         keys = list(EL.FEAT) + (list(SEC_FEAT) if sector else [])
+        assert not ({f"y{h}" for h in hs} | {"date", "era", "j", "t"}) & set(keys), "정답 열 이름이 재료 이름과 겹침"
         X = np.c_[[F[k][t, j] for k in keys]].T.astype(np.float32)
         lab = {}
         for h in hs:
@@ -97,7 +98,7 @@ def build(log=print, hs=HS, sector=False):
             r = px / O[e, j] - 1
             r[t + 1 + h >= T] = np.nan
             lab[h] = r.astype(np.float32)
-        parts.append(pd.DataFrame({"date": dates[t], "era": era, "j": j, "t": t, **{f"r{h}": lab[h] for h in hs}}).assign(**{k: X[:, i] for i, k in enumerate(keys)}))
+        parts.append(pd.DataFrame({"date": dates[t], "era": era, "j": j, "t": t, **{f"y{h}": lab[h] for h in hs}}).assign(**{k: X[:, i] for i, k in enumerate(keys)}))
         # 시장 행 (날마다 하나): 지수 수익 · 집계 재료
         m = pd.Series(np.asarray(idx, float), index=dates)
         agg = pd.DataFrame({"date": dates, "era": era, "idx": m.to_numpy()})
@@ -220,8 +221,8 @@ def walk_forward(D, keys, h, kind, every=1, log=print):
     pred = np.full(len(D), np.nan)
     years = range(2008, int(D["date"].dt.year.max()) + 1)
     X = np.nan_to_num(D[keys].to_numpy(np.float32), nan=0.5)
-    y = D[f"r{h}"].to_numpy(float)
-    dm = D.groupby("date")[f"r{h}"].transform("mean").to_numpy()
+    y = D[f"y{h}"].to_numpy(float)
+    dm = D.groupby("date")[f"y{h}"].transform("mean").to_numpy()
     ex = np.clip(y - dm, -0.3, 0.3)                                              # 그날 대형주 평균 대비 (상대 성적)
     dates = D["date"].to_numpy()
     udates = np.unique(dates)
@@ -244,15 +245,18 @@ def walk_forward(D, keys, h, kind, every=1, log=print):
 def book(D, pred, h, k, a, b, cost_mult=1.0):
     """h 거래일마다 예측 상위 k (같은 비중) → 기간 수익 (비용 뺌) · 같은 기간 대형주 전체 평균 (비용 없음)."""
     cb, cs = SL.COMM + SL.SLIP * cost_mult, SL.COMM + SL.SLIP * cost_mult + SL.TAX
-    sel = (D["date"] >= pd.Timestamp(a)) & ((D["date"] <= pd.Timestamp(b)) if b else True) & np.isfinite(pred) & np.isfinite(D[f"r{h}"])
-    d = D.loc[sel, ["date", f"r{h}"]].assign(p=pred[sel.to_numpy()])
+    sel = (D["date"] >= pd.Timestamp(a)) & ((D["date"] <= pd.Timestamp(b)) if b else True) & np.isfinite(D[f"y{h}"])
+    d = D.loc[sel, ["date", f"y{h}"]].assign(p=pred[sel.to_numpy()])
     days = np.sort(d["date"].unique())
     reb = days[::h]
     d = d[d["date"].isin(reb)]
-    g = d.groupby("date")
-    top = d.sort_values(["date", "p"], ascending=[True, False]).groupby("date").head(k)
-    strat = top.groupby("date")[f"r{h}"].apply(lambda r: float(((1 + r) * (1 - cs) / (1 + cb) - 1).mean()))
-    ew = g[f"r{h}"].mean()
+    ew = d.groupby("date")[f"y{h}"].mean()
+    dp = d[np.isfinite(d["p"])]
+    if dp.empty:
+        return pd.DataFrame(columns=["s", "ew"])
+    top = dp.sort_values(["date", "p"], ascending=[True, False]).groupby("date").head(k)
+    strat = top.groupby("date")[f"y{h}"].apply(lambda r: float(((1 + r) * (1 - cs) / (1 + cb) - 1).mean()))
+    strat = strat.reindex(ew.index).fillna(0.0)                                    # 예측이 없는 기간(덮개로 쉼) = 현금 0%
     return pd.DataFrame({"s": strat, "ew": ew}).dropna()
 
 
@@ -357,6 +361,13 @@ ROUNDS = {
         "hs": (5, 10, 20), "sector": False,
         "cands": [{"model": m, "h": h, "k": k} for m in ("ridge", "gbm") for h in (5, 10, 20) for k in (3, 10)],
         "timing": (5, 10, 20)},
+    2: {"why": "1회차(10일 칸 유효)에서 나무 모델이 대형주보다 연 +13~17% 앞섰지만 낙폭이 코스피보다 3~4%p 나빴다 → "
+               "업종 재료 더하기 · 두 모델 합치기 · 코스피 200일선 아래면 현금 · 40일 보유(비용 줄이기)",
+        "hs": (10, 40), "sector": True,
+        "cands": [{"model": "gbm", "h": 10, "k": k, "feat": "sec"} for k in (3, 10)]
+                 + [{"model": "ens", "h": 10, "k": k} for k in (3, 10)]
+                 + [{"model": "gbm", "h": 10, "k": k, "overlay": "ma200"} for k in (3, 10)]
+                 + [{"model": "gbm", "h": 40, "k": k} for k in (3, 10)]},
 }
 CACHE = "data/cache"
 
@@ -396,18 +407,23 @@ def main():
     log("■ 자료 묶기")
     hs = tuple(sorted(set(cfg["hs"])))
     D, M = build(log, hs=hs, sector=cfg["sector"])
-    keys = list(EL.FEAT) + (list(SEC_FEAT) if cfg["sector"] else [])
-    tag = ("sec" if cfg["sector"] else "base") + "_" + "-".join(map(str, hs))
+    base_keys = list(EL.FEAT)
+    sec_keys = base_keys + (list(SEC_FEAT) if cfg["sector"] else [])
     prev = json.load(open(OUT, encoding="utf-8")) if os.path.exists(OUT) else {}
     rounds = prev.get("rounds", {})
     opened = prev.get("holdout_opened", [])
     res = {"generated": time.strftime("%Y-%m-%d %H:%M"), "why": cfg["why"], "dev": DEV, "holdout": HOLD, "criteria": CRIT, "candidates": {}}
     log("■ 해마다 다시 배우기 (2008~)")
     for spec in cfg["cands"]:
-        p = stock_pred(D, keys, spec, tag, log)
-        name = f"{spec['model']}·{spec['h']}일·{spec['k']}종목" + ("·업종" if cfg["sector"] else "") + ("·타이밍" if spec.get("overlay") else "")
+        sec = spec.get("feat") == "sec"
+        p = stock_pred(D, sec_keys if sec else base_keys, spec, "sec" if sec else "base", log)
+        name = (f"{spec['model']}·{spec['h']}일·{spec['k']}종목" + ("·업종" if sec else "")
+                + {None: "", "timing": "·타이밍", "ma200": "·200일선"}[spec.get("overlay")])
         if spec.get("overlay") == "timing":
             p, _ = overlay_timing(D, M, p, spec["h"])
+        elif spec.get("overlay") == "ma200":                                       # 그날 저녁 코스피가 200일선 아래면 그 기간은 현금
+            on = M["ma200"].reindex(D["date"]).to_numpy() > 0
+            p = np.where(on, p, np.nan)
         dev = evaluate(D, M, p, spec["h"], spec["k"], DEV)
         row = {"spec": spec, "dev": dev, "dev_pass": passes(dev)}
         if row["dev_pass"]:
