@@ -6,18 +6,18 @@
    "side": "sell",
    "code": "GILD",
    "qty": 4.5218,
-   "est_price": 169.36,
+   "est_price": 169.32,
    "sleeve": "us"
   },
   {
    "side": "buy",
    "code": "JNJ",
-   "usd": 741.98,
-   "est_price": 281.91,
+   "usd": 741.88,
+   "est_price": 282.11,
    "sleeve": "us"
   }
  ],
- "equity_usd": 7419.81,
+ "equity_usd": 7418.82,
  "target": [
   "ABBV",
   "AMGN",
@@ -38,7 +38,7 @@
   "sleeves": {
    "us": {
     "days": 8,
-    "sr_star": 0.524,
+    "sr_star": 0.529,
     "vol_star": 0.1849,
     "review": false,
     "action": "ACTIVE",
@@ -47,12 +47,12 @@
      "정상 — 감쇠 누적 5% (100% 면 경보) · 낙폭 -3.0% (경고선 -6.0%)"
     ],
     "cusum": {
-     "S": 0.0519,
-     "h": 1.0893,
+     "S": 0.0524,
+     "h": 1.0977,
      "level": 0.048,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 828,
+     "detect_days_if_zero": 823,
      "false_alarm_years": 7.0
     },
     "dd": {
@@ -61,10 +61,10 @@
      "p99": -0.0887
     },
     "expect": {
-     "sr_bt": 1.049,
+     "sr_bt": 1.059,
      "vol": 0.1849,
      "src": "미국 추세 상위 10 2016~",
-     "sr_star": 0.524
+     "sr_star": 0.529
     }
    }
   },

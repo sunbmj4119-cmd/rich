@@ -36,20 +36,28 @@
  },
  "pending": [
   {
+   "side": "sell",
+   "code": "001450",
+   "qty": 22,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-10"
+  },
+  {
    "side": "buy",
    "code": "028050",
    "qty": 15,
    "kind": "limit",
-   "limit": 61100,
-   "date": "2026-11-09"
+   "limit": 64500,
+   "date": "2026-11-10"
   },
   {
    "side": "buy",
-   "code": "006800",
-   "qty": 44,
+   "code": "003490",
+   "qty": 29,
    "kind": "limit",
-   "limit": 21100,
-   "date": "2026-11-09"
+   "limit": 32900,
+   "date": "2026-11-10"
   }
  ],
  "fills": [
@@ -311,6 +319,26 @@
    "status": "체결",
    "fill": 30050.0,
    "fill_date": "2026-11-09"
+  },
+  {
+   "side": "buy",
+   "code": "028050",
+   "qty": 15,
+   "kind": "limit",
+   "limit": 61100,
+   "date": "2026-11-09",
+   "status": "미체결(지정가 초과)",
+   "fill": null
+  },
+  {
+   "side": "buy",
+   "code": "006800",
+   "qty": 44,
+   "kind": "limit",
+   "limit": 21100,
+   "date": "2026-11-09",
+   "status": "미체결(지정가 초과)",
+   "fill": null
   }
  ],
  "start": "2026-10-29",
@@ -346,6 +374,10 @@
   {
    "date": "2026-11-09",
    "equity": 9433405
+  },
+  {
+   "date": "2026-11-10",
+   "equity": 9722455
   }
  ]
 }

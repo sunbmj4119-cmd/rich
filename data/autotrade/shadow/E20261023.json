@@ -42,7 +42,24 @@
    "avg": 36704.975
   }
  },
- "pending": [],
+ "pending": [
+  {
+   "side": "sell",
+   "code": "001450",
+   "qty": 22,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-10"
+  },
+  {
+   "side": "buy",
+   "code": "028050",
+   "qty": 15,
+   "kind": "limit",
+   "limit": 64500,
+   "date": "2026-11-10"
+  }
+ ],
  "fills": [
   {
    "side": "buy",
@@ -336,6 +353,10 @@
   {
    "date": "2026-11-09",
    "equity": 9518930
+  },
+  {
+   "date": "2026-11-10",
+   "equity": 9816730
   }
  ]
 }

@@ -1,6 +1,6 @@
 {
- "asof": "2026-11-09",
- "generated": "2026-11-10T04:19:27+09:00",
+ "asof": "2026-11-10",
+ "generated": "2026-11-10T21:43:15+09:00",
  "broker": "paper",
  "live": false,
  "approval": "auto",
@@ -26,16 +26,16 @@
  "journal": [],
  "gate": {
   "regime": "급락장",
-  "trend": -0.16381329145335366,
-  "breadth": 0.14691943127962084,
-  "dd": -0.28715458283981343,
-  "rebound": 0.0,
+  "trend": -0.13557016042876202,
+  "breadth": 0.14218009478672985,
+  "dd": -0.2629332912295934,
+  "rebound": 0.03397832268700296,
   "open": false,
-  "reason": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
+  "reason": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
   "need": "지수가 20일 저점 대비 +5% 이상 반등"
  },
  "flags": {
-  "flow_last": "2026-11-09",
+  "flow_last": "2026-11-10",
   "flow_stale": false,
   "flow_gap": 0,
   "account_halt": null,
@@ -55,9 +55,9 @@
   {
    "code": "034730",
    "name": "SK",
-   "date": "2026-11-09",
+   "date": "2026-11-10",
    "rank": 1,
-   "price": 446000.0,
+   "price": 475500.0,
    "sector": "지주",
    "ref": {
     "items": [
@@ -71,21 +71,21 @@
      {
       "key": "hi52",
       "label": "52주 고가 대비",
-      "value": "52%",
+      "value": "55%",
       "good": false,
       "source": "George & Hwang 2004"
      },
      {
       "key": "rsi14",
       "label": "RSI(14)",
-      "value": "40",
+      "value": "45",
       "good": true,
       "source": "Wilder 1978"
      },
      {
       "key": "disp20",
       "label": "20일선 이격",
-      "value": "-7.7%",
+      "value": "-1.4%",
       "good": true,
       "source": "position_lab"
      },
@@ -120,7 +120,7 @@
      {
       "key": "sec_mom_rank",
       "label": "섹터 6개월 모멘텀",
-      "value": "상위 32%",
+      "value": "상위 18%",
       "good": true,
       "source": "Moskowitz & Grinblatt 1999"
      },
@@ -147,13 +147,13 @@
     {
      "label": "시장 게이트 (급락장 바닥확인)",
      "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
      "tier": "검증됨"
     },
     {
      "label": "외국인 20일 순매도 아님",
      "ok": true,
-     "value": "+108.2bp(시총대비)",
+     "value": "+109.1bp(시총대비)",
      "tier": "검증됨"
     },
     {
@@ -171,37 +171,37 @@
   {
    "code": "078930",
    "name": "GS",
-   "date": "2026-11-09",
+   "date": "2026-11-10",
    "rank": 2,
-   "price": 78700.0,
+   "price": 83000.0,
    "sector": "지주",
    "ref": {
     "items": [
      {
       "key": "trend_up",
       "label": "추세정렬(50>200일선)",
-      "value": "아니오",
-      "good": false,
+      "value": "예",
+      "good": true,
       "source": "Faber 2007 · Minervini"
      },
      {
       "key": "hi52",
       "label": "52주 고가 대비",
-      "value": "61%",
+      "value": "64%",
       "good": false,
       "source": "George & Hwang 2004"
      },
      {
       "key": "rsi14",
       "label": "RSI(14)",
-      "value": "32",
+      "value": "41",
       "good": true,
       "source": "Wilder 1978"
      },
      {
       "key": "disp20",
       "label": "20일선 이격",
-      "value": "-7.9%",
+      "value": "-2.0%",
       "good": true,
       "source": "position_lab"
      },
@@ -236,7 +236,7 @@
      {
       "key": "sec_mom_rank",
       "label": "섹터 6개월 모멘텀",
-      "value": "상위 32%",
+      "value": "상위 18%",
       "good": true,
       "source": "Moskowitz & Grinblatt 1999"
      },
@@ -248,8 +248,8 @@
       "source": "—"
      }
     ],
-    "good": 8,
-    "bad": 2
+    "good": 9,
+    "bad": 1
    },
    "state": "관망",
    "action": "",
@@ -263,13 +263,13 @@
     {
      "label": "시장 게이트 (급락장 바닥확인)",
      "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
      "tier": "검증됨"
     },
     {
      "label": "외국인 20일 순매도 아님",
      "ok": true,
-     "value": "+74.0bp(시총대비)",
+     "value": "+55.8bp(시총대비)",
      "tier": "검증됨"
     },
     {
@@ -287,9 +287,9 @@
   {
    "code": "001450",
    "name": "현대해상",
-   "date": "2026-11-09",
+   "date": "2026-11-10",
    "rank": 3,
-   "price": 41600.0,
+   "price": 39900.0,
    "sector": "금융",
    "ref": {
     "items": [
@@ -303,21 +303,21 @@
      {
       "key": "hi52",
       "label": "52주 고가 대비",
-      "value": "78%",
+      "value": "75%",
       "good": false,
       "source": "George & Hwang 2004"
      },
      {
       "key": "rsi14",
       "label": "RSI(14)",
-      "value": "38",
+      "value": "33",
       "good": true,
       "source": "Wilder 1978"
      },
      {
       "key": "disp20",
       "label": "20일선 이격",
-      "value": "-3.2%",
+      "value": "-6.3%",
       "good": true,
       "source": "position_lab"
      },
@@ -352,7 +352,7 @@
      {
       "key": "sec_mom_rank",
       "label": "섹터 6개월 모멘텀",
-      "value": "상위 21%",
+      "value": "상위 29%",
       "good": true,
       "source": "Moskowitz & Grinblatt 1999"
      },
@@ -379,13 +379,13 @@
     {
      "label": "시장 게이트 (급락장 바닥확인)",
      "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
      "tier": "검증됨"
     },
     {
      "label": "외국인 20일 순매도 아님",
      "ok": true,
-     "value": "+106.2bp(시총대비)",
+     "value": "+115.9bp(시총대비)",
      "tier": "검증됨"
     },
     {
@@ -403,9 +403,9 @@
   {
    "code": "267250",
    "name": "HD현대",
-   "date": "2026-11-09",
+   "date": "2026-11-10",
    "rank": 4,
-   "price": 121800.0,
+   "price": 127000.0,
    "sector": "지주",
    "ref": {
     "items": [
@@ -419,21 +419,21 @@
      {
       "key": "hi52",
       "label": "52주 고가 대비",
-      "value": "39%",
+      "value": "41%",
       "good": false,
       "source": "George & Hwang 2004"
      },
      {
       "key": "rsi14",
       "label": "RSI(14)",
-      "value": "24",
+      "value": "29",
       "good": false,
       "source": "Wilder 1978"
      },
      {
       "key": "disp20",
       "label": "20일선 이격",
-      "value": "-15.4%",
+      "value": "-10.6%",
       "good": true,
       "source": "position_lab"
      },
@@ -468,7 +468,7 @@
      {
       "key": "sec_mom_rank",
       "label": "섹터 6개월 모멘텀",
-      "value": "상위 32%",
+      "value": "상위 18%",
       "good": true,
       "source": "Moskowitz & Grinblatt 1999"
      },
@@ -495,13 +495,13 @@
     {
      "label": "시장 게이트 (급락장 바닥확인)",
      "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
      "tier": "검증됨"
     },
     {
      "label": "외국인 20일 순매도 아님",
      "ok": true,
-     "value": "+16.8bp(시총대비)",
+     "value": "+19.1bp(시총대비)",
      "tier": "검증됨"
     },
     {
@@ -519,9 +519,9 @@
   {
    "code": "006800",
    "name": "미래에셋증권",
-   "date": "2026-11-09",
+   "date": "2026-11-10",
    "rank": 5,
-   "price": 20900.0,
+   "price": 21650.0,
    "sector": "금융",
    "ref": {
     "items": [
@@ -535,21 +535,21 @@
      {
       "key": "hi52",
       "label": "52주 고가 대비",
-      "value": "25%",
+      "value": "26%",
       "good": false,
       "source": "George & Hwang 2004"
      },
      {
       "key": "rsi14",
       "label": "RSI(14)",
-      "value": "28",
-      "good": false,
+      "value": "32",
+      "good": true,
       "source": "Wilder 1978"
      },
      {
       "key": "disp20",
       "label": "20일선 이격",
-      "value": "-15.8%",
+      "value": "-11.9%",
       "good": true,
       "source": "position_lab"
      },
@@ -584,7 +584,7 @@
      {
       "key": "sec_mom_rank",
       "label": "섹터 6개월 모멘텀",
-      "value": "상위 21%",
+      "value": "상위 29%",
       "good": true,
       "source": "Moskowitz & Grinblatt 1999"
      },
@@ -596,8 +596,8 @@
       "source": "—"
      }
     ],
-    "good": 7,
-    "bad": 3
+    "good": 8,
+    "bad": 2
    },
    "state": "관망",
    "action": "",
@@ -611,13 +611,13 @@
     {
      "label": "시장 게이트 (급락장 바닥확인)",
      "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
      "tier": "검증됨"
     },
     {
      "label": "외국인 20일 순매도 아님",
      "ok": true,
-     "value": "+21.3bp(시총대비)",
+     "value": "+9.5bp(시총대비)",
      "tier": "검증됨"
     },
     {
@@ -633,128 +633,12 @@
    ]
   },
   {
-   "code": "120110",
-   "name": "코오롱인더",
-   "date": "2026-11-09",
+   "code": "005930",
+   "name": "삼성전자",
+   "date": "2026-11-10",
    "rank": 6,
-   "price": 36250.0,
-   "sector": "화학·에너지",
-   "ref": {
-    "items": [
-     {
-      "key": "trend_up",
-      "label": "추세정렬(50>200일선)",
-      "value": "아니오",
-      "good": false,
-      "source": "Faber 2007 · Minervini"
-     },
-     {
-      "key": "hi52",
-      "label": "52주 고가 대비",
-      "value": "36%",
-      "good": false,
-      "source": "George & Hwang 2004"
-     },
-     {
-      "key": "rsi14",
-      "label": "RSI(14)",
-      "value": "27",
-      "good": false,
-      "source": "Wilder 1978"
-     },
-     {
-      "key": "disp20",
-      "label": "20일선 이격",
-      "value": "-15.6%",
-      "good": true,
-      "source": "position_lab"
-     },
-     {
-      "key": "fscore",
-      "label": "F-score(7점)",
-      "value": "5/7",
-      "good": true,
-      "source": "Piotroski 2000"
-     },
-     {
-      "key": "sue",
-      "label": "이익 서프라이즈",
-      "value": "+0.66%p",
-      "good": true,
-      "source": "Bernard & Thomas 1989"
-     },
-     {
-      "key": "op_yoy",
-      "label": "영업이익 TTM 증가",
-      "value": "+40%",
-      "good": true,
-      "source": "—"
-     },
-     {
-      "key": "sec_value_rank",
-      "label": "섹터 내 가치 순위",
-      "value": "상위 7%",
-      "good": true,
-      "source": "Asness et al. 2000"
-     },
-     {
-      "key": "sec_mom_rank",
-      "label": "섹터 6개월 모멘텀",
-      "value": "상위 64%",
-      "good": false,
-      "source": "Moskowitz & Grinblatt 1999"
-     },
-     {
-      "key": "sec_earn",
-      "label": "섹터 이익 증가율(중앙값)",
-      "value": "+16%",
-      "good": true,
-      "source": "—"
-     }
-    ],
-    "good": 6,
-    "bad": 4
-   },
-   "state": "관망",
-   "action": "",
-   "checks": [
-    {
-     "label": "종합순위 10위 이내",
-     "ok": true,
-     "value": "6위",
-     "tier": "검증됨"
-    },
-    {
-     "label": "시장 게이트 (급락장 바닥확인)",
-     "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
-     "tier": "검증됨"
-    },
-    {
-     "label": "외국인 20일 순매도 아님",
-     "ok": true,
-     "value": "+421.5bp(시총대비)",
-     "tier": "검증됨"
-    },
-    {
-     "label": "중대 악재 공시 없음",
-     "ok": true,
-     "value": "최근 14일 없음",
-     "tier": "안전장치"
-    }
-   ],
-   "reason": "시장 게이트 (급락장 바닥확인) ✗",
-   "need": [
-    "지수가 20일 저점 대비 +5% 이상 반등"
-   ]
-  },
-  {
-   "code": "002380",
-   "name": "KCC",
-   "date": "2026-11-09",
-   "rank": 7,
-   "price": 366500.0,
-   "sector": "화학·에너지",
+   "price": 197300.0,
+   "sector": "통신·인터넷",
    "ref": {
     "items": [
      {
@@ -774,247 +658,14 @@
      {
       "key": "rsi14",
       "label": "RSI(14)",
-      "value": "34",
+      "value": "39",
       "good": true,
       "source": "Wilder 1978"
      },
      {
       "key": "disp20",
       "label": "20일선 이격",
-      "value": "-8.1%",
-      "good": true,
-      "source": "position_lab"
-     },
-     {
-      "key": "fscore",
-      "label": "F-score(7점)",
-      "value": "5/7",
-      "good": true,
-      "source": "Piotroski 2000"
-     },
-     {
-      "key": "sue",
-      "label": "이익 서프라이즈",
-      "value": "-0.05%p",
-      "good": false,
-      "source": "Bernard & Thomas 1989"
-     },
-     {
-      "key": "op_yoy",
-      "label": "영업이익 TTM 증가",
-      "value": "-14%",
-      "good": false,
-      "source": "—"
-     },
-     {
-      "key": "sec_value_rank",
-      "label": "섹터 내 가치 순위",
-      "value": "상위 4%",
-      "good": true,
-      "source": "Asness et al. 2000"
-     },
-     {
-      "key": "sec_mom_rank",
-      "label": "섹터 6개월 모멘텀",
-      "value": "상위 64%",
-      "good": false,
-      "source": "Moskowitz & Grinblatt 1999"
-     },
-     {
-      "key": "sec_earn",
-      "label": "섹터 이익 증가율(중앙값)",
-      "value": "+16%",
-      "good": true,
-      "source": "—"
-     }
-    ],
-    "good": 5,
-    "bad": 5
-   },
-   "state": "관망",
-   "action": "",
-   "checks": [
-    {
-     "label": "종합순위 10위 이내",
-     "ok": true,
-     "value": "7위",
-     "tier": "검증됨"
-    },
-    {
-     "label": "시장 게이트 (급락장 바닥확인)",
-     "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
-     "tier": "검증됨"
-    },
-    {
-     "label": "외국인 20일 순매도 아님",
-     "ok": true,
-     "value": "+6.0bp(시총대비)",
-     "tier": "검증됨"
-    },
-    {
-     "label": "중대 악재 공시 없음",
-     "ok": true,
-     "value": "최근 14일 없음",
-     "tier": "안전장치"
-    }
-   ],
-   "reason": "시장 게이트 (급락장 바닥확인) ✗",
-   "need": [
-    "지수가 20일 저점 대비 +5% 이상 반등"
-   ]
-  },
-  {
-   "code": "088350",
-   "name": "한화생명",
-   "date": "2026-11-09",
-   "rank": 8,
-   "price": 3900.0,
-   "sector": "금융",
-   "ref": {
-    "items": [
-     {
-      "key": "trend_up",
-      "label": "추세정렬(50>200일선)",
-      "value": "아니오",
-      "good": false,
-      "source": "Faber 2007 · Minervini"
-     },
-     {
-      "key": "hi52",
-      "label": "52주 고가 대비",
-      "value": "59%",
-      "good": false,
-      "source": "George & Hwang 2004"
-     },
-     {
-      "key": "rsi14",
-      "label": "RSI(14)",
-      "value": "27",
-      "good": false,
-      "source": "Wilder 1978"
-     },
-     {
-      "key": "disp20",
-      "label": "20일선 이격",
-      "value": "-8.6%",
-      "good": true,
-      "source": "position_lab"
-     },
-     {
-      "key": "fscore",
-      "label": "F-score(7점)",
-      "value": "5/7",
-      "good": true,
-      "source": "Piotroski 2000"
-     },
-     {
-      "key": "sue",
-      "label": "이익 서프라이즈",
-      "value": "+0.21%p",
-      "good": true,
-      "source": "Bernard & Thomas 1989"
-     },
-     {
-      "key": "op_yoy",
-      "label": "영업이익 TTM 증가",
-      "value": "+77%",
-      "good": true,
-      "source": "—"
-     },
-     {
-      "key": "sec_value_rank",
-      "label": "섹터 내 가치 순위",
-      "value": "상위 0%",
-      "good": true,
-      "source": "Asness et al. 2000"
-     },
-     {
-      "key": "sec_mom_rank",
-      "label": "섹터 6개월 모멘텀",
-      "value": "상위 21%",
-      "good": true,
-      "source": "Moskowitz & Grinblatt 1999"
-     },
-     {
-      "key": "sec_earn",
-      "label": "섹터 이익 증가율(중앙값)",
-      "value": "+13%",
-      "good": true,
-      "source": "—"
-     }
-    ],
-    "good": 7,
-    "bad": 3
-   },
-   "state": "관망",
-   "action": "",
-   "checks": [
-    {
-     "label": "종합순위 10위 이내",
-     "ok": true,
-     "value": "8위",
-     "tier": "검증됨"
-    },
-    {
-     "label": "시장 게이트 (급락장 바닥확인)",
-     "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
-     "tier": "검증됨"
-    },
-    {
-     "label": "외국인 20일 순매도 아님",
-     "ok": false,
-     "value": "-30.9bp(시총대비)",
-     "tier": "검증됨"
-    },
-    {
-     "label": "중대 악재 공시 없음",
-     "ok": true,
-     "value": "최근 14일 없음",
-     "tier": "안전장치"
-    }
-   ],
-   "reason": "시장 게이트 (급락장 바닥확인) ✗ · 외국인 20일 순매도 아님 ✗",
-   "need": [
-    "지수가 20일 저점 대비 +5% 이상 반등",
-    "외국인 20일 순매수 전환"
-   ]
-  },
-  {
-   "code": "005930",
-   "name": "삼성전자",
-   "date": "2026-11-09",
-   "rank": 9,
-   "price": 187000.0,
-   "sector": "통신·인터넷",
-   "ref": {
-    "items": [
-     {
-      "key": "trend_up",
-      "label": "추세정렬(50>200일선)",
-      "value": "아니오",
-      "good": false,
-      "source": "Faber 2007 · Minervini"
-     },
-     {
-      "key": "hi52",
-      "label": "52주 고가 대비",
-      "value": "52%",
-      "good": false,
-      "source": "George & Hwang 2004"
-     },
-     {
-      "key": "rsi14",
-      "label": "RSI(14)",
-      "value": "33",
-      "good": true,
-      "source": "Wilder 1978"
-     },
-     {
-      "key": "disp20",
-      "label": "20일선 이격",
-      "value": "-14.3%",
+      "value": "-8.9%",
       "good": true,
       "source": "position_lab"
      },
@@ -1070,19 +721,19 @@
     {
      "label": "종합순위 10위 이내",
      "ok": true,
-     "value": "9위",
+     "value": "6위",
      "tier": "검증됨"
     },
     {
      "label": "시장 게이트 (급락장 바닥확인)",
      "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
      "tier": "검증됨"
     },
     {
      "label": "외국인 20일 순매도 아님",
      "ok": false,
-     "value": "-39.9bp(시총대비)",
+     "value": "-25.7bp(시총대비)",
      "tier": "검증됨"
     },
     {
@@ -1099,11 +750,360 @@
    ]
   },
   {
+   "code": "120110",
+   "name": "코오롱인더",
+   "date": "2026-11-10",
+   "rank": 7,
+   "price": 38200.0,
+   "sector": "화학·에너지",
+   "ref": {
+    "items": [
+     {
+      "key": "trend_up",
+      "label": "추세정렬(50>200일선)",
+      "value": "아니오",
+      "good": false,
+      "source": "Faber 2007 · Minervini"
+     },
+     {
+      "key": "hi52",
+      "label": "52주 고가 대비",
+      "value": "38%",
+      "good": false,
+      "source": "George & Hwang 2004"
+     },
+     {
+      "key": "rsi14",
+      "label": "RSI(14)",
+      "value": "34",
+      "good": true,
+      "source": "Wilder 1978"
+     },
+     {
+      "key": "disp20",
+      "label": "20일선 이격",
+      "value": "-9.6%",
+      "good": true,
+      "source": "position_lab"
+     },
+     {
+      "key": "fscore",
+      "label": "F-score(7점)",
+      "value": "5/7",
+      "good": true,
+      "source": "Piotroski 2000"
+     },
+     {
+      "key": "sue",
+      "label": "이익 서프라이즈",
+      "value": "+0.66%p",
+      "good": true,
+      "source": "Bernard & Thomas 1989"
+     },
+     {
+      "key": "op_yoy",
+      "label": "영업이익 TTM 증가",
+      "value": "+40%",
+      "good": true,
+      "source": "—"
+     },
+     {
+      "key": "sec_value_rank",
+      "label": "섹터 내 가치 순위",
+      "value": "상위 7%",
+      "good": true,
+      "source": "Asness et al. 2000"
+     },
+     {
+      "key": "sec_mom_rank",
+      "label": "섹터 6개월 모멘텀",
+      "value": "상위 72%",
+      "good": false,
+      "source": "Moskowitz & Grinblatt 1999"
+     },
+     {
+      "key": "sec_earn",
+      "label": "섹터 이익 증가율(중앙값)",
+      "value": "+16%",
+      "good": true,
+      "source": "—"
+     }
+    ],
+    "good": 7,
+    "bad": 3
+   },
+   "state": "관망",
+   "action": "",
+   "checks": [
+    {
+     "label": "종합순위 10위 이내",
+     "ok": true,
+     "value": "7위",
+     "tier": "검증됨"
+    },
+    {
+     "label": "시장 게이트 (급락장 바닥확인)",
+     "ok": false,
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
+     "tier": "검증됨"
+    },
+    {
+     "label": "외국인 20일 순매도 아님",
+     "ok": true,
+     "value": "+403.2bp(시총대비)",
+     "tier": "검증됨"
+    },
+    {
+     "label": "중대 악재 공시 없음",
+     "ok": true,
+     "value": "최근 14일 없음",
+     "tier": "안전장치"
+    }
+   ],
+   "reason": "시장 게이트 (급락장 바닥확인) ✗",
+   "need": [
+    "지수가 20일 저점 대비 +5% 이상 반등"
+   ]
+  },
+  {
+   "code": "088350",
+   "name": "한화생명",
+   "date": "2026-11-10",
+   "rank": 8,
+   "price": 3950.0,
+   "sector": "금융",
+   "ref": {
+    "items": [
+     {
+      "key": "trend_up",
+      "label": "추세정렬(50>200일선)",
+      "value": "아니오",
+      "good": false,
+      "source": "Faber 2007 · Minervini"
+     },
+     {
+      "key": "hi52",
+      "label": "52주 고가 대비",
+      "value": "60%",
+      "good": false,
+      "source": "George & Hwang 2004"
+     },
+     {
+      "key": "rsi14",
+      "label": "RSI(14)",
+      "value": "30",
+      "good": true,
+      "source": "Wilder 1978"
+     },
+     {
+      "key": "disp20",
+      "label": "20일선 이격",
+      "value": "-6.3%",
+      "good": true,
+      "source": "position_lab"
+     },
+     {
+      "key": "fscore",
+      "label": "F-score(7점)",
+      "value": "5/7",
+      "good": true,
+      "source": "Piotroski 2000"
+     },
+     {
+      "key": "sue",
+      "label": "이익 서프라이즈",
+      "value": "+0.21%p",
+      "good": true,
+      "source": "Bernard & Thomas 1989"
+     },
+     {
+      "key": "op_yoy",
+      "label": "영업이익 TTM 증가",
+      "value": "+77%",
+      "good": true,
+      "source": "—"
+     },
+     {
+      "key": "sec_value_rank",
+      "label": "섹터 내 가치 순위",
+      "value": "상위 0%",
+      "good": true,
+      "source": "Asness et al. 2000"
+     },
+     {
+      "key": "sec_mom_rank",
+      "label": "섹터 6개월 모멘텀",
+      "value": "상위 29%",
+      "good": true,
+      "source": "Moskowitz & Grinblatt 1999"
+     },
+     {
+      "key": "sec_earn",
+      "label": "섹터 이익 증가율(중앙값)",
+      "value": "+13%",
+      "good": true,
+      "source": "—"
+     }
+    ],
+    "good": 8,
+    "bad": 2
+   },
+   "state": "관망",
+   "action": "",
+   "checks": [
+    {
+     "label": "종합순위 10위 이내",
+     "ok": true,
+     "value": "8위",
+     "tier": "검증됨"
+    },
+    {
+     "label": "시장 게이트 (급락장 바닥확인)",
+     "ok": false,
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
+     "tier": "검증됨"
+    },
+    {
+     "label": "외국인 20일 순매도 아님",
+     "ok": false,
+     "value": "-22.8bp(시총대비)",
+     "tier": "검증됨"
+    },
+    {
+     "label": "중대 악재 공시 없음",
+     "ok": true,
+     "value": "최근 14일 없음",
+     "tier": "안전장치"
+    }
+   ],
+   "reason": "시장 게이트 (급락장 바닥확인) ✗ · 외국인 20일 순매도 아님 ✗",
+   "need": [
+    "지수가 20일 저점 대비 +5% 이상 반등",
+    "외국인 20일 순매수 전환"
+   ]
+  },
+  {
+   "code": "002380",
+   "name": "KCC",
+   "date": "2026-11-10",
+   "rank": 9,
+   "price": 372500.0,
+   "sector": "화학·에너지",
+   "ref": {
+    "items": [
+     {
+      "key": "trend_up",
+      "label": "추세정렬(50>200일선)",
+      "value": "아니오",
+      "good": false,
+      "source": "Faber 2007 · Minervini"
+     },
+     {
+      "key": "hi52",
+      "label": "52주 고가 대비",
+      "value": "55%",
+      "good": false,
+      "source": "George & Hwang 2004"
+     },
+     {
+      "key": "rsi14",
+      "label": "RSI(14)",
+      "value": "37",
+      "good": true,
+      "source": "Wilder 1978"
+     },
+     {
+      "key": "disp20",
+      "label": "20일선 이격",
+      "value": "-5.9%",
+      "good": true,
+      "source": "position_lab"
+     },
+     {
+      "key": "fscore",
+      "label": "F-score(7점)",
+      "value": "5/7",
+      "good": true,
+      "source": "Piotroski 2000"
+     },
+     {
+      "key": "sue",
+      "label": "이익 서프라이즈",
+      "value": "-0.05%p",
+      "good": false,
+      "source": "Bernard & Thomas 1989"
+     },
+     {
+      "key": "op_yoy",
+      "label": "영업이익 TTM 증가",
+      "value": "-14%",
+      "good": false,
+      "source": "—"
+     },
+     {
+      "key": "sec_value_rank",
+      "label": "섹터 내 가치 순위",
+      "value": "상위 0%",
+      "good": true,
+      "source": "Asness et al. 2000"
+     },
+     {
+      "key": "sec_mom_rank",
+      "label": "섹터 6개월 모멘텀",
+      "value": "상위 72%",
+      "good": false,
+      "source": "Moskowitz & Grinblatt 1999"
+     },
+     {
+      "key": "sec_earn",
+      "label": "섹터 이익 증가율(중앙값)",
+      "value": "+16%",
+      "good": true,
+      "source": "—"
+     }
+    ],
+    "good": 5,
+    "bad": 5
+   },
+   "state": "관망",
+   "action": "",
+   "checks": [
+    {
+     "label": "종합순위 10위 이내",
+     "ok": true,
+     "value": "9위",
+     "tier": "검증됨"
+    },
+    {
+     "label": "시장 게이트 (급락장 바닥확인)",
+     "ok": false,
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
+     "tier": "검증됨"
+    },
+    {
+     "label": "외국인 20일 순매도 아님",
+     "ok": true,
+     "value": "+3.0bp(시총대비)",
+     "tier": "검증됨"
+    },
+    {
+     "label": "중대 악재 공시 없음",
+     "ok": true,
+     "value": "최근 14일 없음",
+     "tier": "안전장치"
+    }
+   ],
+   "reason": "시장 게이트 (급락장 바닥확인) ✗",
+   "need": [
+    "지수가 20일 저점 대비 +5% 이상 반등"
+   ]
+  },
+  {
    "code": "000150",
    "name": "두산",
-   "date": "2026-11-09",
+   "date": "2026-11-10",
    "rank": 10,
-   "price": 595000.0,
+   "price": 626000.0,
    "sector": "반도체",
    "ref": {
     "items": [
@@ -1117,21 +1117,21 @@
      {
       "key": "hi52",
       "label": "52주 고가 대비",
-      "value": "27%",
+      "value": "28%",
       "good": false,
       "source": "George & Hwang 2004"
      },
      {
       "key": "rsi14",
       "label": "RSI(14)",
-      "value": "27",
+      "value": "30",
       "good": false,
       "source": "Wilder 1978"
      },
      {
       "key": "disp20",
       "label": "20일선 이격",
-      "value": "-36.4%",
+      "value": "-31.1%",
       "good": true,
       "source": "position_lab"
      },
@@ -1166,7 +1166,7 @@
      {
       "key": "sec_mom_rank",
       "label": "섹터 6개월 모멘텀",
-      "value": "상위 88%",
+      "value": "상위 96%",
       "good": false,
       "source": "Moskowitz & Grinblatt 1999"
      },
@@ -1193,13 +1193,13 @@
     {
      "label": "시장 게이트 (급락장 바닥확인)",
      "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
      "tier": "검증됨"
     },
     {
      "label": "외국인 20일 순매도 아님",
      "ok": true,
-     "value": "+128.4bp(시총대비)",
+     "value": "+101.7bp(시총대비)",
      "tier": "검증됨"
     },
     {
@@ -1215,11 +1215,129 @@
    ]
   },
   {
+   "code": "402340",
+   "name": "SK스퀘어",
+   "date": "2026-11-10",
+   "rank": 11,
+   "price": 749000.0,
+   "sector": "지주",
+   "ref": {
+    "items": [
+     {
+      "key": "trend_up",
+      "label": "추세정렬(50>200일선)",
+      "value": "아니오",
+      "good": false,
+      "source": "Faber 2007 · Minervini"
+     },
+     {
+      "key": "hi52",
+      "label": "52주 고가 대비",
+      "value": "38%",
+      "good": false,
+      "source": "George & Hwang 2004"
+     },
+     {
+      "key": "rsi14",
+      "label": "RSI(14)",
+      "value": "40",
+      "good": true,
+      "source": "Wilder 1978"
+     },
+     {
+      "key": "disp20",
+      "label": "20일선 이격",
+      "value": "-8.6%",
+      "good": true,
+      "source": "position_lab"
+     },
+     {
+      "key": "fscore",
+      "label": "F-score(7점)",
+      "value": "6/7",
+      "good": true,
+      "source": "Piotroski 2000"
+     },
+     {
+      "key": "sue",
+      "label": "이익 서프라이즈",
+      "value": "+30.41%p",
+      "good": true,
+      "source": "Bernard & Thomas 1989"
+     },
+     {
+      "key": "op_yoy",
+      "label": "영업이익 TTM 증가",
+      "value": "+467%",
+      "good": true,
+      "source": "—"
+     },
+     {
+      "key": "sec_value_rank",
+      "label": "섹터 내 가치 순위",
+      "value": "상위 33%",
+      "good": true,
+      "source": "Asness et al. 2000"
+     },
+     {
+      "key": "sec_mom_rank",
+      "label": "섹터 6개월 모멘텀",
+      "value": "상위 18%",
+      "good": true,
+      "source": "Moskowitz & Grinblatt 1999"
+     },
+     {
+      "key": "sec_earn",
+      "label": "섹터 이익 증가율(중앙값)",
+      "value": "+20%",
+      "good": true,
+      "source": "—"
+     }
+    ],
+    "good": 8,
+    "bad": 2
+   },
+   "state": "관망",
+   "action": "",
+   "checks": [
+    {
+     "label": "종합순위 10위 이내",
+     "ok": false,
+     "value": "11위",
+     "tier": "검증됨"
+    },
+    {
+     "label": "시장 게이트 (급락장 바닥확인)",
+     "ok": false,
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
+     "tier": "검증됨"
+    },
+    {
+     "label": "외국인 20일 순매도 아님",
+     "ok": false,
+     "value": "-32.5bp(시총대비)",
+     "tier": "검증됨"
+    },
+    {
+     "label": "중대 악재 공시 없음",
+     "ok": true,
+     "value": "최근 14일 없음",
+     "tier": "안전장치"
+    }
+   ],
+   "reason": "종합순위 10위 이내 ✗ · 시장 게이트 (급락장 바닥확인) ✗ · 외국인 20일 순매도 아님 ✗",
+   "need": [
+    "순위 10위 이내 진입 (현재 11위)",
+    "지수가 20일 저점 대비 +5% 이상 반등",
+    "외국인 20일 순매수 전환"
+   ]
+  },
+  {
    "code": "000990",
    "name": "DB하이텍",
-   "date": "2026-11-09",
-   "rank": 11,
-   "price": 81000.0,
+   "date": "2026-11-10",
+   "rank": 12,
+   "price": 86600.0,
    "sector": "반도체",
    "ref": {
     "items": [
@@ -1233,21 +1351,21 @@
      {
       "key": "hi52",
       "label": "52주 고가 대비",
-      "value": "37%",
+      "value": "39%",
       "good": false,
       "source": "George & Hwang 2004"
      },
      {
       "key": "rsi14",
       "label": "RSI(14)",
-      "value": "34",
+      "value": "39",
       "good": true,
       "source": "Wilder 1978"
      },
      {
       "key": "disp20",
       "label": "20일선 이격",
-      "value": "-18.3%",
+      "value": "-10.8%",
       "good": true,
       "source": "position_lab"
      },
@@ -1282,7 +1400,7 @@
      {
       "key": "sec_mom_rank",
       "label": "섹터 6개월 모멘텀",
-      "value": "상위 88%",
+      "value": "상위 96%",
       "good": false,
       "source": "Moskowitz & Grinblatt 1999"
      },
@@ -1303,136 +1421,19 @@
     {
      "label": "종합순위 10위 이내",
      "ok": false,
-     "value": "11위",
-     "tier": "검증됨"
-    },
-    {
-     "label": "시장 게이트 (급락장 바닥확인)",
-     "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
-     "tier": "검증됨"
-    },
-    {
-     "label": "외국인 20일 순매도 아님",
-     "ok": true,
-     "value": "+61.2bp(시총대비)",
-     "tier": "검증됨"
-    },
-    {
-     "label": "중대 악재 공시 없음",
-     "ok": true,
-     "value": "최근 14일 없음",
-     "tier": "안전장치"
-    }
-   ],
-   "reason": "종합순위 10위 이내 ✗ · 시장 게이트 (급락장 바닥확인) ✗",
-   "need": [
-    "순위 10위 이내 진입 (현재 11위)",
-    "지수가 20일 저점 대비 +5% 이상 반등"
-   ]
-  },
-  {
-   "code": "357780",
-   "name": "솔브레인",
-   "date": "2026-11-09",
-   "rank": 12,
-   "price": 249500.0,
-   "sector": "화학·에너지",
-   "ref": {
-    "items": [
-     {
-      "key": "trend_up",
-      "label": "추세정렬(50>200일선)",
-      "value": "아니오",
-      "good": false,
-      "source": "Faber 2007 · Minervini"
-     },
-     {
-      "key": "hi52",
-      "label": "52주 고가 대비",
-      "value": "50%",
-      "good": false,
-      "source": "George & Hwang 2004"
-     },
-     {
-      "key": "rsi14",
-      "label": "RSI(14)",
-      "value": "31",
-      "good": true,
-      "source": "Wilder 1978"
-     },
-     {
-      "key": "disp20",
-      "label": "20일선 이격",
-      "value": "-19.5%",
-      "good": true,
-      "source": "position_lab"
-     },
-     {
-      "key": "fscore",
-      "label": "F-score(7점)",
-      "value": "7/7",
-      "good": true,
-      "source": "Piotroski 2000"
-     },
-     {
-      "key": "sue",
-      "label": "이익 서프라이즈",
-      "value": "+1.62%p",
-      "good": true,
-      "source": "Bernard & Thomas 1989"
-     },
-     {
-      "key": "op_yoy",
-      "label": "영업이익 TTM 증가",
-      "value": "+27%",
-      "good": true,
-      "source": "—"
-     },
-     {
-      "key": "sec_value_rank",
-      "label": "섹터 내 가치 순위",
-      "value": "상위 85%",
-      "good": false,
-      "source": "Asness et al. 2000"
-     },
-     {
-      "key": "sec_mom_rank",
-      "label": "섹터 6개월 모멘텀",
-      "value": "상위 64%",
-      "good": false,
-      "source": "Moskowitz & Grinblatt 1999"
-     },
-     {
-      "key": "sec_earn",
-      "label": "섹터 이익 증가율(중앙값)",
-      "value": "+16%",
-      "good": true,
-      "source": "—"
-     }
-    ],
-    "good": 6,
-    "bad": 4
-   },
-   "state": "관망",
-   "action": "",
-   "checks": [
-    {
-     "label": "종합순위 10위 이내",
-     "ok": false,
      "value": "12위",
      "tier": "검증됨"
     },
     {
      "label": "시장 게이트 (급락장 바닥확인)",
      "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
      "tier": "검증됨"
     },
     {
      "label": "외국인 20일 순매도 아님",
      "ok": true,
-     "value": "+69.8bp(시총대비)",
+     "value": "+41.8bp(시총대비)",
      "tier": "검증됨"
     },
     {
@@ -1449,225 +1450,11 @@
    ]
   },
   {
-   "code": "028050",
-   "name": "삼성E&A",
-   "date": "2026-11-09",
-   "rank": 13,
-   "price": 60500.0,
-   "sector": "건설·건자재",
-   "ref": {
-    "items": [
-     {
-      "key": "trend_up",
-      "label": "추세정렬(50>200일선)",
-      "value": "예",
-      "good": true,
-      "source": "Faber 2007 · Minervini"
-     },
-     {
-      "key": "hi52",
-      "label": "52주 고가 대비",
-      "value": "90%",
-      "good": true,
-      "source": "George & Hwang 2004"
-     },
-     {
-      "key": "rsi14",
-      "label": "RSI(14)",
-      "value": "58",
-      "good": true,
-      "source": "Wilder 1978"
-     },
-     {
-      "key": "disp20",
-      "label": "20일선 이격",
-      "value": "+8.4%",
-      "good": true,
-      "source": "position_lab"
-     },
-     {
-      "key": "sec_value_rank",
-      "label": "섹터 내 가치 순위",
-      "value": "상위 41%",
-      "good": true,
-      "source": "Asness et al. 2000"
-     },
-     {
-      "key": "sec_mom_rank",
-      "label": "섹터 6개월 모멘텀",
-      "value": "상위 78%",
-      "good": false,
-      "source": "Moskowitz & Grinblatt 1999"
-     },
-     {
-      "key": "sec_earn",
-      "label": "섹터 이익 증가율(중앙값)",
-      "value": "-35%",
-      "good": false,
-      "source": "—"
-     }
-    ],
-    "good": 5,
-    "bad": 2
-   },
-   "state": "관망",
-   "action": "",
-   "checks": [
-    {
-     "label": "종합순위 10위 이내",
-     "ok": false,
-     "value": "13위",
-     "tier": "검증됨"
-    },
-    {
-     "label": "시장 게이트 (급락장 바닥확인)",
-     "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
-     "tier": "검증됨"
-    },
-    {
-     "label": "외국인 20일 순매도 아님",
-     "ok": true,
-     "value": "+315.6bp(시총대비)",
-     "tier": "검증됨"
-    },
-    {
-     "label": "중대 악재 공시 없음",
-     "ok": true,
-     "value": "최근 14일 없음",
-     "tier": "안전장치"
-    }
-   ],
-   "reason": "종합순위 10위 이내 ✗ · 시장 게이트 (급락장 바닥확인) ✗",
-   "need": [
-    "순위 10위 이내 진입 (현재 13위)",
-    "지수가 20일 저점 대비 +5% 이상 반등"
-   ]
-  },
-  {
-   "code": "402340",
-   "name": "SK스퀘어",
-   "date": "2026-11-09",
-   "rank": 14,
-   "price": 703000.0,
-   "sector": "지주",
-   "ref": {
-    "items": [
-     {
-      "key": "trend_up",
-      "label": "추세정렬(50>200일선)",
-      "value": "아니오",
-      "good": false,
-      "source": "Faber 2007 · Minervini"
-     },
-     {
-      "key": "hi52",
-      "label": "52주 고가 대비",
-      "value": "36%",
-      "good": false,
-      "source": "George & Hwang 2004"
-     },
-     {
-      "key": "rsi14",
-      "label": "RSI(14)",
-      "value": "36",
-      "good": true,
-      "source": "Wilder 1978"
-     },
-     {
-      "key": "disp20",
-      "label": "20일선 이격",
-      "value": "-14.8%",
-      "good": true,
-      "source": "position_lab"
-     },
-     {
-      "key": "fscore",
-      "label": "F-score(7점)",
-      "value": "6/7",
-      "good": true,
-      "source": "Piotroski 2000"
-     },
-     {
-      "key": "sue",
-      "label": "이익 서프라이즈",
-      "value": "+30.41%p",
-      "good": true,
-      "source": "Bernard & Thomas 1989"
-     },
-     {
-      "key": "op_yoy",
-      "label": "영업이익 TTM 증가",
-      "value": "+467%",
-      "good": true,
-      "source": "—"
-     },
-     {
-      "key": "sec_value_rank",
-      "label": "섹터 내 가치 순위",
-      "value": "상위 30%",
-      "good": true,
-      "source": "Asness et al. 2000"
-     },
-     {
-      "key": "sec_mom_rank",
-      "label": "섹터 6개월 모멘텀",
-      "value": "상위 32%",
-      "good": true,
-      "source": "Moskowitz & Grinblatt 1999"
-     },
-     {
-      "key": "sec_earn",
-      "label": "섹터 이익 증가율(중앙값)",
-      "value": "+20%",
-      "good": true,
-      "source": "—"
-     }
-    ],
-    "good": 8,
-    "bad": 2
-   },
-   "state": "관망",
-   "action": "",
-   "checks": [
-    {
-     "label": "종합순위 10위 이내",
-     "ok": false,
-     "value": "14위",
-     "tier": "검증됨"
-    },
-    {
-     "label": "시장 게이트 (급락장 바닥확인)",
-     "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
-     "tier": "검증됨"
-    },
-    {
-     "label": "외국인 20일 순매도 아님",
-     "ok": false,
-     "value": "-55.7bp(시총대비)",
-     "tier": "검증됨"
-    },
-    {
-     "label": "중대 악재 공시 없음",
-     "ok": true,
-     "value": "최근 14일 없음",
-     "tier": "안전장치"
-    }
-   ],
-   "reason": "종합순위 10위 이내 ✗ · 시장 게이트 (급락장 바닥확인) ✗ · 외국인 20일 순매도 아님 ✗",
-   "need": [
-    "순위 10위 이내 진입 (현재 14위)",
-    "지수가 20일 저점 대비 +5% 이상 반등",
-    "외국인 20일 순매수 전환"
-   ]
-  },
-  {
    "code": "000660",
    "name": "SK하이닉스",
-   "date": "2026-11-09",
-   "rank": 15,
-   "price": 1115000.0,
+   "date": "2026-11-10",
+   "rank": 13,
+   "price": 1198000.0,
    "sector": "반도체",
    "ref": {
     "items": [
@@ -1681,21 +1468,21 @@
      {
       "key": "hi52",
       "label": "52주 고가 대비",
-      "value": "38%",
+      "value": "41%",
       "good": false,
       "source": "George & Hwang 2004"
      },
      {
       "key": "rsi14",
       "label": "RSI(14)",
-      "value": "33",
+      "value": "39",
       "good": true,
       "source": "Wilder 1978"
      },
      {
       "key": "disp20",
       "label": "20일선 이격",
-      "value": "-16.2%",
+      "value": "-9.1%",
       "good": true,
       "source": "position_lab"
      },
@@ -1730,7 +1517,7 @@
      {
       "key": "sec_mom_rank",
       "label": "섹터 6개월 모멘텀",
-      "value": "상위 88%",
+      "value": "상위 96%",
       "good": false,
       "source": "Moskowitz & Grinblatt 1999"
      },
@@ -1751,19 +1538,19 @@
     {
      "label": "종합순위 10위 이내",
      "ok": false,
-     "value": "15위",
+     "value": "13위",
      "tier": "검증됨"
     },
     {
      "label": "시장 게이트 (급락장 바닥확인)",
      "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
      "tier": "검증됨"
     },
     {
      "label": "외국인 20일 순매도 아님",
      "ok": false,
-     "value": "-131.2bp(시총대비)",
+     "value": "-93.4bp(시총대비)",
      "tier": "검증됨"
     },
     {
@@ -1775,18 +1562,114 @@
    ],
    "reason": "종합순위 10위 이내 ✗ · 시장 게이트 (급락장 바닥확인) ✗ · 외국인 20일 순매도 아님 ✗",
    "need": [
-    "순위 10위 이내 진입 (현재 15위)",
+    "순위 10위 이내 진입 (현재 13위)",
     "지수가 20일 저점 대비 +5% 이상 반등",
     "외국인 20일 순매수 전환"
    ]
   },
   {
-   "code": "004170",
-   "name": "신세계",
-   "date": "2026-11-09",
-   "rank": 16,
-   "price": 245500.0,
-   "sector": "소비·유통",
+   "code": "028050",
+   "name": "삼성E&A",
+   "date": "2026-11-10",
+   "rank": 14,
+   "price": 63900.0,
+   "sector": "건설·건자재",
+   "ref": {
+    "items": [
+     {
+      "key": "trend_up",
+      "label": "추세정렬(50>200일선)",
+      "value": "예",
+      "good": true,
+      "source": "Faber 2007 · Minervini"
+     },
+     {
+      "key": "hi52",
+      "label": "52주 고가 대비",
+      "value": "96%",
+      "good": true,
+      "source": "George & Hwang 2004"
+     },
+     {
+      "key": "rsi14",
+      "label": "RSI(14)",
+      "value": "63",
+      "good": true,
+      "source": "Wilder 1978"
+     },
+     {
+      "key": "disp20",
+      "label": "20일선 이격",
+      "value": "+12.6%",
+      "good": false,
+      "source": "position_lab"
+     },
+     {
+      "key": "sec_value_rank",
+      "label": "섹터 내 가치 순위",
+      "value": "상위 41%",
+      "good": true,
+      "source": "Asness et al. 2000"
+     },
+     {
+      "key": "sec_mom_rank",
+      "label": "섹터 6개월 모멘텀",
+      "value": "상위 63%",
+      "good": false,
+      "source": "Moskowitz & Grinblatt 1999"
+     },
+     {
+      "key": "sec_earn",
+      "label": "섹터 이익 증가율(중앙값)",
+      "value": "-35%",
+      "good": false,
+      "source": "—"
+     }
+    ],
+    "good": 4,
+    "bad": 3
+   },
+   "state": "관망",
+   "action": "",
+   "checks": [
+    {
+     "label": "종합순위 10위 이내",
+     "ok": false,
+     "value": "14위",
+     "tier": "검증됨"
+    },
+    {
+     "label": "시장 게이트 (급락장 바닥확인)",
+     "ok": false,
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
+     "tier": "검증됨"
+    },
+    {
+     "label": "외국인 20일 순매도 아님",
+     "ok": true,
+     "value": "+291.9bp(시총대비)",
+     "tier": "검증됨"
+    },
+    {
+     "label": "중대 악재 공시 없음",
+     "ok": true,
+     "value": "최근 14일 없음",
+     "tier": "안전장치"
+    }
+   ],
+   "reason": "종합순위 10위 이내 ✗ · 시장 게이트 (급락장 바닥확인) ✗",
+   "need": [
+    "순위 10위 이내 진입 (현재 14위)",
+    "지수가 20일 저점 대비 +5% 이상 반등"
+   ]
+  },
+  {
+   "code": "357780",
+   "name": "솔브레인",
+   "date": "2026-11-10",
+   "rank": 15,
+   "price": 265500.0,
+   "sector": "화학·에너지",
    "ref": {
     "items": [
      {
@@ -1799,69 +1682,69 @@
      {
       "key": "hi52",
       "label": "52주 고가 대비",
-      "value": "32%",
+      "value": "53%",
       "good": false,
       "source": "George & Hwang 2004"
      },
      {
       "key": "rsi14",
       "label": "RSI(14)",
-      "value": "34",
+      "value": "37",
       "good": true,
       "source": "Wilder 1978"
      },
      {
       "key": "disp20",
       "label": "20일선 이격",
-      "value": "-6.2%",
+      "value": "-12.4%",
       "good": true,
       "source": "position_lab"
      },
      {
       "key": "fscore",
       "label": "F-score(7점)",
-      "value": "6/7",
+      "value": "7/7",
       "good": true,
       "source": "Piotroski 2000"
      },
      {
       "key": "sue",
       "label": "이익 서프라이즈",
-      "value": "+0.55%p",
+      "value": "+1.62%p",
       "good": true,
       "source": "Bernard & Thomas 1989"
      },
      {
       "key": "op_yoy",
       "label": "영업이익 TTM 증가",
-      "value": "+58%",
+      "value": "+27%",
       "good": true,
       "source": "—"
      },
      {
       "key": "sec_value_rank",
       "label": "섹터 내 가치 순위",
-      "value": "상위 0%",
-      "good": true,
+      "value": "상위 89%",
+      "good": false,
       "source": "Asness et al. 2000"
      },
      {
       "key": "sec_mom_rank",
       "label": "섹터 6개월 모멘텀",
-      "value": "상위 11%",
-      "good": true,
+      "value": "상위 72%",
+      "good": false,
       "source": "Moskowitz & Grinblatt 1999"
      },
      {
       "key": "sec_earn",
       "label": "섹터 이익 증가율(중앙값)",
-      "value": "+21%",
+      "value": "+16%",
       "good": true,
       "source": "—"
      }
     ],
-    "good": 8,
-    "bad": 2
+    "good": 6,
+    "bad": 4
    },
    "state": "관망",
    "action": "",
@@ -1869,19 +1752,19 @@
     {
      "label": "종합순위 10위 이내",
      "ok": false,
-     "value": "16위",
+     "value": "15위",
      "tier": "검증됨"
     },
     {
      "label": "시장 게이트 (급락장 바닥확인)",
      "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
      "tier": "검증됨"
     },
     {
      "label": "외국인 20일 순매도 아님",
      "ok": true,
-     "value": "+18.0bp(시총대비)",
+     "value": "+71.9bp(시총대비)",
      "tier": "검증됨"
     },
     {
@@ -1893,16 +1776,16 @@
    ],
    "reason": "종합순위 10위 이내 ✗ · 시장 게이트 (급락장 바닥확인) ✗",
    "need": [
-    "순위 10위 이내 진입 (현재 16위)",
+    "순위 10위 이내 진입 (현재 15위)",
     "지수가 20일 저점 대비 +5% 이상 반등"
    ]
   },
   {
    "code": "002790",
    "name": "아모레퍼시픽홀딩스",
-   "date": "2026-11-09",
-   "rank": 17,
-   "price": 26650.0,
+   "date": "2026-11-10",
+   "rank": 16,
+   "price": 26500.0,
    "sector": "화학·에너지",
    "ref": {
     "items": [
@@ -1923,14 +1806,14 @@
      {
       "key": "rsi14",
       "label": "RSI(14)",
-      "value": "57",
+      "value": "56",
       "good": true,
       "source": "Wilder 1978"
      },
      {
       "key": "disp20",
       "label": "20일선 이격",
-      "value": "+5.3%",
+      "value": "+4.3%",
       "good": true,
       "source": "position_lab"
      },
@@ -1958,14 +1841,14 @@
      {
       "key": "sec_value_rank",
       "label": "섹터 내 가치 순위",
-      "value": "상위 15%",
+      "value": "상위 11%",
       "good": true,
       "source": "Asness et al. 2000"
      },
      {
       "key": "sec_mom_rank",
       "label": "섹터 6개월 모멘텀",
-      "value": "상위 64%",
+      "value": "상위 72%",
       "good": false,
       "source": "Moskowitz & Grinblatt 1999"
      },
@@ -1986,19 +1869,19 @@
     {
      "label": "종합순위 10위 이내",
      "ok": false,
-     "value": "17위",
+     "value": "16위",
      "tier": "검증됨"
     },
     {
      "label": "시장 게이트 (급락장 바닥확인)",
      "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
      "tier": "검증됨"
     },
     {
      "label": "외국인 20일 순매도 아님",
      "ok": true,
-     "value": "+35.9bp(시총대비)",
+     "value": "+34.8bp(시총대비)",
      "tier": "검증됨"
     },
     {
@@ -2010,16 +1893,16 @@
    ],
    "reason": "종합순위 10위 이내 ✗ · 시장 게이트 (급락장 바닥확인) ✗",
    "need": [
-    "순위 10위 이내 진입 (현재 17위)",
+    "순위 10위 이내 진입 (현재 16위)",
     "지수가 20일 저점 대비 +5% 이상 반등"
    ]
   },
   {
    "code": "003550",
    "name": "LG",
-   "date": "2026-11-09",
-   "rank": 18,
-   "price": 90700.0,
+   "date": "2026-11-10",
+   "rank": 17,
+   "price": 90400.0,
    "sector": "지주",
    "ref": {
     "items": [
@@ -2040,14 +1923,14 @@
      {
       "key": "rsi14",
       "label": "RSI(14)",
-      "value": "28",
+      "value": "27",
       "good": false,
       "source": "Wilder 1978"
      },
      {
       "key": "disp20",
       "label": "20일선 이격",
-      "value": "-8.4%",
+      "value": "-8.1%",
       "good": true,
       "source": "position_lab"
      },
@@ -2082,7 +1965,7 @@
      {
       "key": "sec_mom_rank",
       "label": "섹터 6개월 모멘텀",
-      "value": "상위 32%",
+      "value": "상위 18%",
       "good": true,
       "source": "Moskowitz & Grinblatt 1999"
      },
@@ -2103,19 +1986,19 @@
     {
      "label": "종합순위 10위 이내",
      "ok": false,
-     "value": "18위",
+     "value": "17위",
      "tier": "검증됨"
     },
     {
      "label": "시장 게이트 (급락장 바닥확인)",
      "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
      "tier": "검증됨"
     },
     {
      "label": "외국인 20일 순매도 아님",
      "ok": false,
-     "value": "-3.3bp(시총대비)",
+     "value": "-3.6bp(시총대비)",
      "tier": "검증됨"
     },
     {
@@ -2127,18 +2010,210 @@
    ],
    "reason": "종합순위 10위 이내 ✗ · 시장 게이트 (급락장 바닥확인) ✗ · 외국인 20일 순매도 아님 ✗",
    "need": [
-    "순위 10위 이내 진입 (현재 18위)",
+    "순위 10위 이내 진입 (현재 17위)",
     "지수가 20일 저점 대비 +5% 이상 반등",
     "외국인 20일 순매수 전환"
    ]
   },
   {
-   "code": "009155",
-   "name": "삼성전기우",
-   "date": "2026-11-09",
+   "code": "475150",
+   "name": "SK이터닉스",
+   "date": "2026-11-10",
+   "rank": 18,
+   "price": 37750.0,
+   "sector": "건설·건자재",
+   "ref": {
+    "items": [
+     {
+      "key": "trend_up",
+      "label": "추세정렬(50>200일선)",
+      "value": "아니오",
+      "good": false,
+      "source": "Faber 2007 · Minervini"
+     },
+     {
+      "key": "hi52",
+      "label": "52주 고가 대비",
+      "value": "47%",
+      "good": false,
+      "source": "George & Hwang 2004"
+     },
+     {
+      "key": "rsi14",
+      "label": "RSI(14)",
+      "value": "40",
+      "good": true,
+      "source": "Wilder 1978"
+     },
+     {
+      "key": "disp20",
+      "label": "20일선 이격",
+      "value": "-3.7%",
+      "good": true,
+      "source": "position_lab"
+     },
+     {
+      "key": "sec_value_rank",
+      "label": "섹터 내 가치 순위",
+      "value": "상위 41%",
+      "good": true,
+      "source": "Asness et al. 2000"
+     },
+     {
+      "key": "sec_mom_rank",
+      "label": "섹터 6개월 모멘텀",
+      "value": "상위 63%",
+      "good": false,
+      "source": "Moskowitz & Grinblatt 1999"
+     },
+     {
+      "key": "sec_earn",
+      "label": "섹터 이익 증가율(중앙값)",
+      "value": "-35%",
+      "good": false,
+      "source": "—"
+     }
+    ],
+    "good": 3,
+    "bad": 4
+   },
+   "state": "관망",
+   "action": "",
+   "checks": [
+    {
+     "label": "종합순위 10위 이내",
+     "ok": false,
+     "value": "18위",
+     "tier": "검증됨"
+    },
+    {
+     "label": "시장 게이트 (급락장 바닥확인)",
+     "ok": false,
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
+     "tier": "검증됨"
+    },
+    {
+     "label": "외국인 20일 순매도 아님",
+     "ok": true,
+     "value": "+88.0bp(시총대비)",
+     "tier": "검증됨"
+    },
+    {
+     "label": "중대 악재 공시 없음",
+     "ok": true,
+     "value": "최근 14일 없음",
+     "tier": "안전장치"
+    }
+   ],
+   "reason": "종합순위 10위 이내 ✗ · 시장 게이트 (급락장 바닥확인) ✗",
+   "need": [
+    "순위 10위 이내 진입 (현재 18위)",
+    "지수가 20일 저점 대비 +5% 이상 반등"
+   ]
+  },
+  {
+   "code": "028670",
+   "name": "팬오션",
+   "date": "2026-11-10",
    "rank": 19,
-   "price": 299000.0,
-   "sector": "반도체",
+   "price": 5020.0,
+   "sector": "운송·물류",
+   "ref": {
+    "items": [
+     {
+      "key": "trend_up",
+      "label": "추세정렬(50>200일선)",
+      "value": "아니오",
+      "good": false,
+      "source": "Faber 2007 · Minervini"
+     },
+     {
+      "key": "hi52",
+      "label": "52주 고가 대비",
+      "value": "69%",
+      "good": false,
+      "source": "George & Hwang 2004"
+     },
+     {
+      "key": "rsi14",
+      "label": "RSI(14)",
+      "value": "34",
+      "good": true,
+      "source": "Wilder 1978"
+     },
+     {
+      "key": "disp20",
+      "label": "20일선 이격",
+      "value": "-15.8%",
+      "good": true,
+      "source": "position_lab"
+     },
+     {
+      "key": "sec_value_rank",
+      "label": "섹터 내 가치 순위",
+      "value": "상위 20%",
+      "good": true,
+      "source": "Asness et al. 2000"
+     },
+     {
+      "key": "sec_mom_rank",
+      "label": "섹터 6개월 모멘텀",
+      "value": "상위 9%",
+      "good": true,
+      "source": "Moskowitz & Grinblatt 1999"
+     },
+     {
+      "key": "sec_earn",
+      "label": "섹터 이익 증가율(중앙값)",
+      "value": "-15%",
+      "good": false,
+      "source": "—"
+     }
+    ],
+    "good": 4,
+    "bad": 3
+   },
+   "state": "관망",
+   "action": "",
+   "checks": [
+    {
+     "label": "종합순위 10위 이내",
+     "ok": false,
+     "value": "19위",
+     "tier": "검증됨"
+    },
+    {
+     "label": "시장 게이트 (급락장 바닥확인)",
+     "ok": false,
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
+     "tier": "검증됨"
+    },
+    {
+     "label": "외국인 20일 순매도 아님",
+     "ok": true,
+     "value": "+128.1bp(시총대비)",
+     "tier": "검증됨"
+    },
+    {
+     "label": "중대 악재 공시 없음",
+     "ok": true,
+     "value": "최근 14일 없음",
+     "tier": "안전장치"
+    }
+   ],
+   "reason": "종합순위 10위 이내 ✗ · 시장 게이트 (급락장 바닥확인) ✗",
+   "need": [
+    "순위 10위 이내 진입 (현재 19위)",
+    "지수가 20일 저점 대비 +5% 이상 반등"
+   ]
+  },
+  {
+   "code": "047040",
+   "name": "대우건설",
+   "date": "2026-11-10",
+   "rank": 20,
+   "price": 11340.0,
+   "sector": "건설·건자재",
    "ref": {
     "items": [
      {
@@ -2158,110 +2233,14 @@
      {
       "key": "rsi14",
       "label": "RSI(14)",
-      "value": "29",
-      "good": false,
-      "source": "Wilder 1978"
-     },
-     {
-      "key": "disp20",
-      "label": "20일선 이격",
-      "value": "-25.2%",
-      "good": true,
-      "source": "position_lab"
-     },
-     {
-      "key": "sec_value_rank",
-      "label": "섹터 내 가치 순위",
-      "value": "상위 36%",
-      "good": true,
-      "source": "Asness et al. 2000"
-     },
-     {
-      "key": "sec_mom_rank",
-      "label": "섹터 6개월 모멘텀",
-      "value": "상위 88%",
-      "good": false,
-      "source": "Moskowitz & Grinblatt 1999"
-     },
-     {
-      "key": "sec_earn",
-      "label": "섹터 이익 증가율(중앙값)",
-      "value": "+53%",
-      "good": true,
-      "source": "—"
-     }
-    ],
-    "good": 3,
-    "bad": 4
-   },
-   "state": "관망",
-   "action": "",
-   "checks": [
-    {
-     "label": "종합순위 10위 이내",
-     "ok": false,
-     "value": "19위",
-     "tier": "검증됨"
-    },
-    {
-     "label": "시장 게이트 (급락장 바닥확인)",
-     "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
-     "tier": "검증됨"
-    },
-    {
-     "label": "외국인 20일 순매도 아님",
-     "ok": true,
-     "value": "+112.5bp(시총대비)",
-     "tier": "검증됨"
-    },
-    {
-     "label": "중대 악재 공시 없음",
-     "ok": true,
-     "value": "최근 14일 없음",
-     "tier": "안전장치"
-    }
-   ],
-   "reason": "종합순위 10위 이내 ✗ · 시장 게이트 (급락장 바닥확인) ✗",
-   "need": [
-    "순위 10위 이내 진입 (현재 19위)",
-    "지수가 20일 저점 대비 +5% 이상 반등"
-   ]
-  },
-  {
-   "code": "475150",
-   "name": "SK이터닉스",
-   "date": "2026-11-09",
-   "rank": 20,
-   "price": 36650.0,
-   "sector": "건설·건자재",
-   "ref": {
-    "items": [
-     {
-      "key": "trend_up",
-      "label": "추세정렬(50>200일선)",
-      "value": "아니오",
-      "good": false,
-      "source": "Faber 2007 · Minervini"
-     },
-     {
-      "key": "hi52",
-      "label": "52주 고가 대비",
-      "value": "45%",
-      "good": false,
-      "source": "George & Hwang 2004"
-     },
-     {
-      "key": "rsi14",
-      "label": "RSI(14)",
-      "value": "37",
+      "value": "38",
       "good": true,
       "source": "Wilder 1978"
      },
      {
       "key": "disp20",
       "label": "20일선 이격",
-      "value": "-7.2%",
+      "value": "-12.6%",
       "good": true,
       "source": "position_lab"
      },
@@ -2275,7 +2254,7 @@
      {
       "key": "sec_mom_rank",
       "label": "섹터 6개월 모멘텀",
-      "value": "상위 78%",
+      "value": "상위 63%",
       "good": false,
       "source": "Moskowitz & Grinblatt 1999"
      },
@@ -2302,13 +2281,13 @@
     {
      "label": "시장 게이트 (급락장 바닥확인)",
      "ok": false,
-     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +0.0%)",
+     "value": "급락장 · 바닥 미확인 (지수 20일 저점 대비 +3.4%)",
      "tier": "검증됨"
     },
     {
      "label": "외국인 20일 순매도 아님",
      "ok": true,
-     "value": "+104.6bp(시총대비)",
+     "value": "+79.0bp(시총대비)",
      "tier": "검증됨"
     },
     {
@@ -2372,6 +2351,10 @@
   {
    "date": "2026-11-09",
    "equity": 10000000
+  },
+  {
+   "date": "2026-11-10",
+   "equity": 10000000
   }
  ],
  "shadows": [
@@ -2409,14 +2392,14 @@
      "reason": "시장 게이트 (급락장 바닥확인) ✗"
     },
     {
-     "name": "삼성E&A",
+     "name": "삼성전자",
      "rank": 4,
-     "reason": "시장 게이트 (급락장 바닥확인) ✗"
+     "reason": "시장 게이트 (급락장 바닥확인) ✗ · 외국인 20일 순매도 아님 ✗"
     },
     {
-     "name": "삼성전자",
+     "name": "삼성E&A",
      "rank": 5,
-     "reason": "시장 게이트 (급락장 바닥확인) ✗ · 외국인 20일 순매도 아님 ✗"
+     "reason": "시장 게이트 (급락장 바닥확인) ✗"
     }
    ],
    "curve": [
@@ -2451,6 +2434,10 @@
     {
      "date": "2026-11-09",
      "equity": 10000000
+    },
+    {
+     "date": "2026-11-10",
+     "equity": 10000000
     }
    ]
   },
@@ -2464,8 +2451,8 @@
     "급락장 게이트 켬→끔"
    ],
    "start": "2026-10-29",
-   "equity": 9518930,
-   "ret": -0.0481,
+   "equity": 9816730,
+   "ret": -0.0183,
    "cash": 401081,
    "gate_open": true,
    "crash_gate": false,
@@ -2475,140 +2462,114 @@
      "name": "GS",
      "shares": 11,
      "avg": 81021,
-     "last": 78700.0
+     "last": 83000.0
     },
     {
      "code": "001450",
      "name": "현대해상",
      "shares": 22,
      "avg": 43866,
-     "last": 41600.0
+     "last": 39900.0
     },
     {
      "code": "316140",
      "name": "우리금융지주",
      "shares": 32,
      "avg": 30546,
-     "last": 31450.0
+     "last": 31150.0
     },
     {
      "code": "089860",
      "name": "롯데렌탈",
      "shares": 18,
      "avg": 51177,
-     "last": 58400.0
+     "last": 58500.0
     },
     {
      "code": "357780",
      "name": "솔브레인",
      "shares": 3,
      "avg": 252879,
-     "last": 249500.0
+     "last": 265500.0
     },
     {
      "code": "120110",
      "name": "코오롱인더",
      "shares": 24,
      "avg": 37456,
-     "last": 36250.0
+     "last": 38200.0
     },
     {
      "code": "034730",
      "name": "SK",
      "shares": 2,
      "avg": 446669,
-     "last": 446000.0
+     "last": 475500.0
     },
     {
      "code": "000990",
      "name": "DB하이텍",
      "shares": 11,
      "avg": 81122,
-     "last": 81000.0
+     "last": 86600.0
     },
     {
      "code": "006360",
      "name": "GS건설",
      "shares": 32,
      "avg": 30095,
-     "last": 30050.0
+     "last": 31700.0
     },
     {
      "code": "475150",
      "name": "SK이터닉스",
      "shares": 25,
      "avg": 36705,
-     "last": 36650.0
+     "last": 37750.0
     }
    ],
-   "orders": [],
-   "fills": [
+   "orders": [
     {
      "side": "sell",
+     "code": "001450",
+     "name": "현대해상",
+     "qty": 22,
+     "ref_price": 39900.0,
+     "reason": "트레일 고점대비 -10.0% (폭 -8%, 고점수익 +1%)"
+    },
+    {
+     "side": "buy",
      "code": "028050",
+     "name": "삼성E&A",
      "qty": 15,
-     "fill": 60500.0,
-     "status": "체결"
-    },
-    {
-     "side": "sell",
-     "code": "006800",
-     "qty": 37,
-     "fill": 20900.0,
-     "status": "체결"
-    },
-    {
-     "side": "buy",
-     "code": "034730",
-     "qty": 2,
-     "fill": 446000.0,
-     "status": "체결"
-    },
-    {
-     "side": "buy",
-     "code": "000990",
-     "qty": 11,
-     "fill": 81000.0,
-     "status": "체결"
-    },
-    {
-     "side": "buy",
-     "code": "006360",
-     "qty": 32,
-     "fill": 30050.0,
-     "status": "체결"
-    },
-    {
-     "side": "buy",
-     "code": "475150",
-     "qty": 25,
-     "fill": 36650.0,
-     "status": "체결"
+     "ref_price": 63900.0,
+     "reason": "4위 · 모든 조건 통과 · 손절가 57,510원"
     }
    ],
+   "fills": [],
    "watch": [
     {
-     "name": "삼성E&A",
-     "rank": 4,
-     "reason": "빈 자리 ✗"
-    },
-    {
      "name": "삼성전자",
-     "rank": 6,
+     "rank": 5,
      "reason": "외국인 20일 순매도 아님 ✗"
     },
     {
-     "name": "미래에셋증권",
+     "name": "SK스퀘어",
      "rank": 9,
+     "reason": "외국인 20일 순매도 아님 ✗"
+    },
+    {
+     "name": "대한항공",
+     "rank": 10,
      "reason": "빈 자리 ✗"
     },
     {
-     "name": "삼성전기우",
-     "rank": 12,
-     "reason": "종합순위 10위 이내 ✗"
+     "name": "SK하이닉스",
+     "rank": 11,
+     "reason": "종합순위 10위 이내 ✗ · 외국인 20일 순매도 아님 ✗"
     },
     {
-     "name": "대우건설",
+     "name": "팬오션",
      "rank": 13,
      "reason": "종합순위 10위 이내 ✗"
     }
@@ -2645,6 +2606,10 @@
     {
      "date": "2026-11-09",
      "equity": 9518930
+    },
+    {
+     "date": "2026-11-10",
+     "equity": 9816730
     }
    ]
   },
@@ -2659,8 +2624,8 @@
     "급락장 게이트 켬→끔"
    ],
    "start": "2026-10-29",
-   "equity": 9433405,
-   "ret": -0.0567,
+   "equity": 9722455,
+   "ret": -0.0278,
    "cash": 2213055,
    "gate_open": true,
    "crash_gate": false,
@@ -2670,127 +2635,85 @@
      "name": "GS",
      "shares": 11,
      "avg": 81021,
-     "last": 78700.0
+     "last": 83000.0
     },
     {
      "code": "001450",
      "name": "현대해상",
      "shares": 22,
      "avg": 43866,
-     "last": 41600.0
+     "last": 39900.0
     },
     {
      "code": "089860",
      "name": "롯데렌탈",
      "shares": 18,
      "avg": 51177,
-     "last": 58400.0
+     "last": 58500.0
     },
     {
      "code": "017670",
      "name": "SK텔레콤",
      "shares": 12,
      "avg": 77416,
-     "last": 77100.0
+     "last": 81900.0
     },
     {
      "code": "034730",
      "name": "SK",
      "shares": 2,
      "avg": 446669,
-     "last": 446000.0
+     "last": 475500.0
     },
     {
      "code": "000990",
      "name": "DB하이텍",
      "shares": 11,
      "avg": 81122,
-     "last": 81000.0
+     "last": 86600.0
     },
     {
      "code": "357780",
      "name": "솔브레인",
      "shares": 3,
      "avg": 249874,
-     "last": 249500.0
+     "last": 265500.0
     },
     {
      "code": "006360",
      "name": "GS건설",
      "shares": 31,
      "avg": 30095,
-     "last": 30050.0
+     "last": 31700.0
     }
    ],
    "orders": [
+    {
+     "side": "sell",
+     "code": "001450",
+     "name": "현대해상",
+     "qty": 22,
+     "ref_price": 39900.0,
+     "reason": "트레일 고점대비 -10.0% (폭 -8%, 고점수익 +1%)"
+    },
     {
      "side": "buy",
      "code": "028050",
      "name": "삼성E&A",
      "qty": 15,
-     "ref_price": 60500.0,
-     "reason": "6위 · 모든 조건 통과 · 손절가 54,450원"
+     "ref_price": 63900.0,
+     "reason": "5위 · 모든 조건 통과 · 손절가 57,510원"
     },
     {
      "side": "buy",
-     "code": "006800",
-     "name": "미래에셋증권",
-     "qty": 44,
-     "ref_price": 20900.0,
-     "reason": "9위 · 모든 조건 통과 · 손절가 18,810원"
+     "code": "003490",
+     "name": "대한항공",
+     "qty": 29,
+     "ref_price": 32600.0,
+     "reason": "10위 · 모든 조건 통과 · 손절가 29,340원"
     }
    ],
-   "fills": [
-    {
-     "side": "sell",
-     "code": "028050",
-     "qty": 15,
-     "fill": 60500.0,
-     "status": "체결"
-    },
-    {
-     "side": "sell",
-     "code": "006800",
-     "qty": 37,
-     "fill": 20900.0,
-     "status": "체결"
-    },
-    {
-     "side": "sell",
-     "code": "161890",
-     "qty": 8,
-     "fill": 103600.0,
-     "status": "체결"
-    },
-    {
-     "side": "buy",
-     "code": "034730",
-     "qty": 2,
-     "fill": 446000.0,
-     "status": "체결"
-    },
-    {
-     "side": "buy",
-     "code": "000990",
-     "qty": 11,
-     "fill": 81000.0,
-     "status": "체결"
-    },
-    {
-     "side": "buy",
-     "code": "357780",
-     "qty": 3,
-     "fill": 249500.0,
-     "status": "체결"
-    },
-    {
-     "side": "buy",
-     "code": "006360",
-     "qty": 31,
-     "fill": 30050.0,
-     "status": "체결"
-    }
-   ],
+   "fills": [],
    "watch": [
     {
      "name": "삼성전자",
@@ -2799,22 +2722,22 @@
     },
     {
      "name": "SK하이닉스",
-     "rank": 8,
+     "rank": 6,
      "reason": "외국인 20일 순매도 아님 ✗"
     },
     {
      "name": "SK스퀘어",
-     "rank": 10,
+     "rank": 8,
      "reason": "외국인 20일 순매도 아님 ✗"
     },
     {
      "name": "SK이터닉스",
-     "rank": 11,
+     "rank": 12,
      "reason": "종합순위 10위 이내 ✗"
     },
     {
-     "name": "삼성전기우",
-     "rank": 14,
+     "name": "팬오션",
+     "rank": 13,
      "reason": "종합순위 10위 이내 ✗"
     }
    ],
@@ -2850,6 +2773,10 @@
     {
      "date": "2026-11-09",
      "equity": 9433405
+    },
+    {
+     "date": "2026-11-10",
+     "equity": 9722455
     }
    ]
   },
@@ -2863,8 +2790,8 @@
     "급락장 게이트 켬→끔"
    ],
    "start": "2026-10-29",
-   "equity": 9454509,
-   "ret": -0.0545,
+   "equity": 9629209,
+   "ret": -0.0371,
    "cash": 4171909,
    "gate_open": true,
    "crash_gate": false,
@@ -2874,122 +2801,94 @@
      "name": "GS",
      "shares": 11,
      "avg": 81021,
-     "last": 78700.0
+     "last": 83000.0
     },
     {
      "code": "001450",
      "name": "현대해상",
      "shares": 22,
      "avg": 43866,
-     "last": 41600.0
+     "last": 39900.0
     },
     {
      "code": "089860",
      "name": "롯데렌탈",
      "shares": 18,
      "avg": 51177,
-     "last": 58400.0
+     "last": 58500.0
     },
     {
      "code": "034730",
      "name": "SK",
      "shares": 2,
      "avg": 446669,
-     "last": 446000.0
+     "last": 475500.0
     },
     {
      "code": "000990",
      "name": "DB하이텍",
      "shares": 10,
      "avg": 81122,
-     "last": 81000.0
+     "last": 86600.0
     },
     {
      "code": "357780",
      "name": "솔브레인",
      "shares": 3,
      "avg": 249874,
-     "last": 249500.0
+     "last": 265500.0
     }
    ],
    "orders": [
     {
+     "side": "sell",
+     "code": "001450",
+     "name": "현대해상",
+     "qty": 22,
+     "ref_price": 39900.0,
+     "reason": "트레일 고점대비 -10.0% (폭 -8%, 고점수익 +1%)"
+    },
+    {
      "side": "buy",
      "code": "028050",
      "name": "삼성E&A",
-     "qty": 15,
-     "ref_price": 60500.0,
-     "reason": "7위 · 모든 조건 통과 · 손절가 54,450원"
+     "qty": 14,
+     "ref_price": 63900.0,
+     "reason": "8위 · 모든 조건 통과 · 손절가 57,510원"
     },
     {
      "side": "buy",
      "code": "006800",
      "name": "미래에셋증권",
      "qty": 44,
-     "ref_price": 20900.0,
-     "reason": "10위 · 모든 조건 통과 · 손절가 18,810원"
+     "ref_price": 21650.0,
+     "reason": "10위 · 모든 조건 통과 · 손절가 19,485원"
     }
    ],
-   "fills": [
-    {
-     "side": "sell",
-     "code": "028050",
-     "qty": 15,
-     "fill": 60500.0,
-     "status": "체결"
-    },
-    {
-     "side": "sell",
-     "code": "006800",
-     "qty": 37,
-     "fill": 20900.0,
-     "status": "체결"
-    },
-    {
-     "side": "buy",
-     "code": "034730",
-     "qty": 2,
-     "fill": 446000.0,
-     "status": "체결"
-    },
-    {
-     "side": "buy",
-     "code": "000990",
-     "qty": 10,
-     "fill": 81000.0,
-     "status": "체결"
-    },
-    {
-     "side": "buy",
-     "code": "357780",
-     "qty": 3,
-     "fill": 249500.0,
-     "status": "체결"
-    }
-   ],
+   "fills": [],
    "watch": [
     {
      "name": "삼성전자",
-     "rank": 4,
+     "rank": 3,
      "reason": "외국인 20일 순매도 아님 ✗"
     },
     {
      "name": "SK하이닉스",
-     "rank": 6,
+     "rank": 5,
      "reason": "외국인 20일 순매도 아님 ✗"
     },
     {
      "name": "SK스퀘어",
-     "rank": 9,
+     "rank": 7,
      "reason": "외국인 20일 순매도 아님 ✗"
     },
     {
-     "name": "SK이터닉스",
+     "name": "SK텔레콤",
      "rank": 11,
      "reason": "종합순위 10위 이내 ✗"
     },
     {
-     "name": "SK텔레콤",
+     "name": "대한항공",
      "rank": 12,
      "reason": "종합순위 10위 이내 ✗"
     }
@@ -3026,6 +2925,10 @@
     {
      "date": "2026-11-09",
      "equity": 9454509
+    },
+    {
+     "date": "2026-11-10",
+     "equity": 9629209
     }
    ]
   }

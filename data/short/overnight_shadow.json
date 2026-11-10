@@ -1,6 +1,6 @@
 {
  "start": "2026-11-09",
- "days": 1,
+ "days": 2,
  "what": "그림자 기록 — 실제 돈 아님",
  "D1_overnight": {
   "equity": 200000,
@@ -8,11 +8,11 @@
   "nights_in": 0
  },
  "D2_mix": {
-  "equity": 200000,
-  "ret": 0.0
+  "equity": 200819,
+  "ret": 0.0041
  },
  "DM2": {
-  "equity": 200347,
-  "ret": 0.0017
+  "equity": 201987,
+  "ret": 0.0099
  }
 }
