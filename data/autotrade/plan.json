@@ -1,10 +1,71 @@
 {
- "date": "2026-11-10",
- "created": "2026-11-10T21:43:15+09:00",
+ "date": "2026-11-11",
+ "created": "2026-11-12T01:52:46+09:00",
  "broker": "paper",
  "equity": 10000000.0,
  "cash": 10000000.0,
- "orders": [],
+ "orders": [
+  {
+   "side": "buy",
+   "code": "034730",
+   "name": "SK",
+   "qty": 1,
+   "kind": "limit",
+   "price": 502000,
+   "ref_price": 497500.0,
+   "reason": "1위 · 모든 조건 통과 · 손절가 447,750원"
+  },
+  {
+   "side": "buy",
+   "code": "078930",
+   "name": "GS",
+   "qty": 11,
+   "kind": "limit",
+   "price": 84800,
+   "ref_price": 84000.0,
+   "reason": "2위 · 모든 조건 통과 · 손절가 75,600원"
+  },
+  {
+   "side": "buy",
+   "code": "001450",
+   "name": "현대해상",
+   "qty": 25,
+   "kind": "limit",
+   "price": 39150,
+   "ref_price": 38800.0,
+   "reason": "3위 · 모든 조건 통과 · 손절가 34,920원"
+  },
+  {
+   "side": "buy",
+   "code": "267250",
+   "name": "HD현대",
+   "qty": 7,
+   "kind": "limit",
+   "price": 126400,
+   "ref_price": 125200.0,
+   "reason": "4위 · 모든 조건 통과 · 손절가 112,680원"
+  },
+  {
+   "side": "buy",
+   "code": "006800",
+   "name": "미래에셋증권",
+   "qty": 44,
+   "kind": "limit",
+   "price": 22450,
+   "ref_price": 22250.0,
+   "reason": "6위 · 모든 조건 통과 · 손절가 20,025원"
+  },
+  {
+   "side": "buy",
+   "code": "120110",
+   "name": "코오롱인더",
+   "qty": 25,
+   "kind": "limit",
+   "price": 38900,
+   "ref_price": 38550.0,
+   "reason": "8위 · 모든 조건 통과 · 손절가 34,695원"
+  }
+ ],
  "dropped": 0,
  "issues": [],
  "approval": "auto",

@@ -1,10 +1,65 @@
 {
- "made": "2026-11-10",
+ "made": "2026-11-11",
  "model": "S:REV3_LV:5:H5:crash",
  "model_desc": "3일반전+저변동 · 5종목 · 5일 보유 · 급락장 제외",
- "orders": [],
+ "orders": [
+  {
+   "session": "open",
+   "kind": "stock",
+   "code": "055550",
+   "name": "신한지주",
+   "side": "sell",
+   "qty": 4,
+   "est_price": 85600.0
+  },
+  {
+   "session": "open",
+   "kind": "stock",
+   "code": "088980",
+   "name": "맥쿼리인프라",
+   "side": "sell",
+   "qty": 38,
+   "est_price": 9760.0
+  },
+  {
+   "session": "open",
+   "kind": "stock",
+   "code": "011200",
+   "name": "HMM",
+   "side": "buy",
+   "qty": 18,
+   "est_price": 20050.0
+  },
+  {
+   "session": "open",
+   "kind": "stock",
+   "code": "029780",
+   "name": "삼성카드",
+   "side": "buy",
+   "qty": 8,
+   "est_price": 40950.0
+  },
+  {
+   "session": "open",
+   "kind": "stock",
+   "code": "138040",
+   "name": "메리츠금융지주",
+   "side": "buy",
+   "qty": 2,
+   "est_price": 124300.0
+  },
+  {
+   "session": "open",
+   "kind": "stock",
+   "code": "271560",
+   "name": "오리온",
+   "side": "buy",
+   "qty": 3,
+   "est_price": 112700.0
+  }
+ ],
  "notes": [],
- "equity_est": 1880690,
+ "equity_est": 1874330,
  "aw": {
   "regime": "급락",
   "target": [
@@ -83,18 +138,18 @@
   "rebalance": false,
   "card": "DM:2",
   "px": {
-   "069500": 82000.0,
-   "114800": 1290.0,
-   "122630": 58435.0,
-   "252670": 115.0,
-   "229200": 10810.0,
-   "153130": 113435.0,
-   "114260": 62750.0,
-   "148070": 109385.0,
-   "261240": 13900.0,
-   "132030": 23020.0,
-   "143850": 75785.0,
-   "133690": 165035.0
+   "069500": 84540.0,
+   "114800": 1251.0,
+   "122630": 61995.0,
+   "252670": 108.0,
+   "229200": 11595.0,
+   "153130": 113425.0,
+   "114260": 62580.0,
+   "148070": 108580.0,
+   "261240": 13865.0,
+   "132030": 22645.0,
+   "143850": 75700.0,
+   "133690": 165925.0
   }
  },
  "risk": {
@@ -104,72 +159,72 @@
   ],
   "sleeves": {
    "live": {
-    "days": 11,
-    "sr_star": 0.416,
+    "days": 12,
+    "sr_star": 0.414,
     "vol_star": 0.2875,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 6% (100% 면 경보) · 낙폭 -3.4% (경고선 -11.1%)"
+     "정상 — 감쇠 누적 6% (100% 면 경보) · 낙폭 -3.8% (경고선 -11.5%)"
     ],
     "cusum": {
-     "S": 0.0518,
-     "h": 0.9002,
-     "level": 0.058,
+     "S": 0.0567,
+     "h": 0.8966,
+     "level": 0.063,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 946,
+     "detect_days_if_zero": 948,
      "false_alarm_years": 7.0
     },
     "dd": {
-     "now": -0.0343,
-     "p95": -0.1112,
-     "p99": -0.158
+     "now": -0.0375,
+     "p95": -0.1151,
+     "p99": -0.161
     },
     "expect": {
-     "sr_bt": 0.833,
+     "sr_bt": 0.829,
      "vol": 0.2875,
      "src": "short_lab 채택 규칙 2019~",
-     "sr_star": 0.416
+     "sr_star": 0.414
     }
    },
    "aw": {
-    "days": 11,
-    "sr_star": 0.577,
+    "days": 12,
+    "sr_star": 0.581,
     "vol_star": 0.0583,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 3% (100% 면 경보) · 낙폭 -0.7% (경고선 -2.3%)"
+     "정상 — 감쇠 누적 5% (100% 면 경보) · 낙폭 -0.7% (경고선 -2.4%)"
     ],
     "cusum": {
-     "S": 0.0389,
-     "h": 1.1768,
-     "level": 0.033,
+     "S": 0.0593,
+     "h": 1.1833,
+     "level": 0.05,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 779,
+     "detect_days_if_zero": 775,
      "false_alarm_years": 7.0
     },
     "dd": {
      "now": -0.0065,
-     "p95": -0.0228,
-     "p99": -0.0332
+     "p95": -0.0236,
+     "p99": -0.0336
     },
     "expect": {
-     "sr_bt": 1.153,
+     "sr_bt": 1.162,
      "vol": 0.0583,
      "src": "전천후 혼합 2016~",
      "sr_oos": 0.985,
-     "sr_star": 0.577
+     "sr_star": 0.581
     }
    }
   },
   "log": [],
-  "orders_before": 0,
-  "orders_after": 0,
+  "orders_before": 6,
+  "orders_after": 6,
   "limits": {
    "decay_action": "alert",
    "drawdown_action": "alert",
@@ -186,7 +241,7 @@
    "mode": "paper",
    "state": "REDUCING",
    "why": [
-    "증권사 잔고 대사 기록이 2영업일 묵음 — 서버 저녁 대사(evening.sh) 확인 전까지 새 매수 금지"
+    "증권사 잔고 대사 기록이 4영업일 묵음 — 서버 저녁 대사(evening.sh) 확인 전까지 새 매수 금지"
    ],
    "blocked": [],
    "slippage_med_bp": null
