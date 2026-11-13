@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-12 23:12",
+ "generated": "2026-11-13 23:10",
  "oos_end": "2013-12-31",
  "assumptions": {
   "div": 0.015,
@@ -2538,32 +2538,32 @@
  "kr_attr": [
   {
    "sector": "건설·건자재",
-   "trades": 2610,
-   "avg_bp": 154.6,
-   "win": 0.476
+   "trades": 2614,
+   "avg_bp": 154.4,
+   "win": 0.477
   },
   {
    "sector": "운송·물류",
-   "trades": 2248,
-   "avg_bp": 87.5,
-   "win": 0.456
+   "trades": 2250,
+   "avg_bp": 87.0,
+   "win": 0.455
   },
   {
    "sector": "IT·전자",
-   "trades": 5705,
-   "avg_bp": 85.2,
+   "trades": 5711,
+   "avg_bp": 86.5,
    "win": 0.525
   },
   {
    "sector": "반도체",
-   "trades": 7426,
-   "avg_bp": 70.7,
-   "win": 0.492
+   "trades": 7439,
+   "avg_bp": 73.1,
+   "win": 0.493
   },
   {
    "sector": "조선·기계·방산",
-   "trades": 5717,
-   "avg_bp": 68.0,
+   "trades": 5719,
+   "avg_bp": 68.3,
    "win": 0.483
   },
   {
@@ -2574,7 +2574,7 @@
   },
   {
    "sector": "바이오·제약",
-   "trades": 7914,
+   "trades": 7915,
    "avg_bp": 28.9,
    "win": 0.466
   },
@@ -2592,19 +2592,19 @@
   },
   {
    "sector": "화학·에너지",
-   "trades": 13709,
+   "trades": 13711,
    "avg_bp": -5.4,
    "win": 0.453
   },
   {
    "sector": "지주",
-   "trades": 10444,
-   "avg_bp": -7.6,
+   "trades": 10445,
+   "avg_bp": -7.7,
    "win": 0.474
   },
   {
    "sector": "통신·인터넷",
-   "trades": 8115,
+   "trades": 8117,
    "avg_bp": -13.7,
    "win": 0.454
   },
@@ -2616,8 +2616,8 @@
   },
   {
    "sector": "금융",
-   "trades": 6430,
-   "avg_bp": -35.6,
+   "trades": 6432,
+   "avg_bp": -36.0,
    "win": 0.447
   }
  ],
