@@ -26,9 +26,9 @@
     "fit": 0.5745
    },
    "forward": {
-    "days": 14,
-    "ret": -0.0773,
-    "sharpe": -5.328
+    "days": 15,
+    "ret": -0.0624,
+    "sharpe": -3.871
    },
    "eligible": false
   },
@@ -58,9 +58,9 @@
     "fit": 0.3114
    },
    "forward": {
-    "days": 11,
-    "ret": -0.0756,
-    "sharpe": -5.544
+    "days": 12,
+    "ret": -0.0563,
+    "sharpe": -3.567
    },
    "eligible": false
   },
@@ -90,9 +90,9 @@
     "fit": 0.3112
    },
    "forward": {
-    "days": 10,
-    "ret": -0.1006,
-    "sharpe": -9.535
+    "days": 11,
+    "ret": -0.0891,
+    "sharpe": -7.39
    },
    "eligible": false
   },
@@ -123,9 +123,9 @@
     "fit": 0.311
    },
    "forward": {
-    "days": 9,
-    "ret": -0.0977,
-    "sharpe": -9.434
+    "days": 10,
+    "ret": -0.082,
+    "sharpe": -6.673
    },
    "eligible": false
   }

@@ -18,19 +18,19 @@
   },
   "source": "초기 설정 (config/autotrade.yaml)",
   "fit": {
-   "fit": 0.155,
+   "fit": 0.1571,
    "sharpe": 1.0,
-   "ann": 22.4,
+   "ann": 22.5,
    "mdd": -43.6,
    "trades": 972,
-   "adj": -0.015
+   "adj": -0.0129
   },
   "forward": {
-   "days": 14,
+   "days": 15,
    "me": {
     "ann": null,
-    "total": -0.1,
-    "sharpe": -4.4,
+    "total": 0.5,
+    "sharpe": 3.47,
     "mdd": -0.1
    }
   }
@@ -63,44 +63,44 @@
    "status": "관찰 중",
    "source": "무학습 기준 (6요소 동일가중 + 기본 규칙)",
    "forward": {
-    "days": 14,
+    "days": 15,
     "me": {
      "ann": null,
-     "total": -0.1,
-     "sharpe": -4.4,
+     "total": 1.2,
+     "sharpe": 3.92,
      "mdd": -0.1
     },
     "champ": {
      "ann": null,
-     "total": -0.1,
-     "sharpe": -4.4,
+     "total": 0.5,
+     "sharpe": 3.47,
      "mdd": -0.1
     },
     "p": null,
     "msprt": null
    },
    "fit_now": {
-    "fit": 0.1275,
-    "sharpe": 1.02,
-    "ann": 23.7,
+    "fit": 0.1322,
+    "sharpe": 1.03,
+    "ann": 23.9,
     "mdd": -35.4,
     "trades": 1063
    },
    "checks": {
     "A": {
      "days": false,
-     "beat": false,
+     "beat": true,
      "fit": true,
      "meta": false
     },
     "B": {
      "days": false,
-     "beat": false,
+     "beat": true,
      "p": false
     },
     "C": {
      "days": false,
-     "beat": false,
+     "beat": true,
      "evidence": false
     }
    }
@@ -140,28 +140,28 @@
    "status": "관찰 중",
    "source": "주간 진화 · 수축 (기본값에서 멀수록 감점)",
    "forward": {
-    "days": 14,
+    "days": 15,
     "me": {
      "ann": null,
-     "total": -5.3,
-     "sharpe": -2.38,
+     "total": -3.3,
+     "sharpe": -1.29,
      "mdd": -9.8
     },
     "champ": {
      "ann": null,
-     "total": -0.1,
-     "sharpe": -4.4,
+     "total": 0.5,
+     "sharpe": 3.47,
      "mdd": -0.1
     },
     "p": null,
     "msprt": null
    },
    "fit_now": {
-    "fit": 0.5402,
-    "sharpe": 1.04,
-    "ann": 27.2,
+    "fit": 0.5486,
+    "sharpe": 1.05,
+    "ann": 27.6,
     "mdd": -38.8,
-    "trades": 1183
+    "trades": 1186
    },
    "checks": {
     "A": {
@@ -217,28 +217,28 @@
    "status": "관찰 중",
    "source": "연속 진화 · 수축 (기본값에서 멀수록 감점)",
    "forward": {
-    "days": 14,
+    "days": 15,
     "me": {
      "ann": null,
-     "total": -6.3,
-     "sharpe": -2.41,
+     "total": -4.3,
+     "sharpe": -1.44,
      "mdd": -11.8
     },
     "champ": {
      "ann": null,
-     "total": -0.1,
-     "sharpe": -4.4,
+     "total": 0.5,
+     "sharpe": 3.47,
      "mdd": -0.1
     },
     "p": null,
     "msprt": null
    },
    "fit_now": {
-    "fit": 0.4619,
-    "sharpe": 0.98,
-    "ann": 24.6,
+    "fit": 0.4698,
+    "sharpe": 0.99,
+    "ann": 25.0,
     "mdd": -35.4,
-    "trades": 1197
+    "trades": 1198
    },
    "checks": {
     "A": {
@@ -294,28 +294,28 @@
    "status": "관찰 중",
    "source": "주간 진화 · 수축 (기본값에서 멀수록 감점)",
    "forward": {
-    "days": 14,
+    "days": 15,
     "me": {
      "ann": null,
-     "total": -4.1,
-     "sharpe": -1.65,
+     "total": -2.8,
+     "sharpe": -1.03,
      "mdd": -8.9
     },
     "champ": {
      "ann": null,
-     "total": -0.1,
-     "sharpe": -4.4,
+     "total": 0.5,
+     "sharpe": 3.47,
      "mdd": -0.1
     },
     "p": null,
     "msprt": null
    },
    "fit_now": {
-    "fit": 0.5233,
+    "fit": 0.5285,
     "sharpe": 1.03,
-    "ann": 25.7,
+    "ann": 25.9,
     "mdd": -38.0,
-    "trades": 1159
+    "trades": 1160
    },
    "checks": {
     "A": {
@@ -338,5 +338,5 @@
   }
  ],
  "retired": [],
- "n_evaluated": 983068
+ "n_evaluated": 999894
 }
