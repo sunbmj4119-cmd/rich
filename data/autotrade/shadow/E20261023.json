@@ -1,5 +1,5 @@
 {
- "cash": 333271.97500000056,
+ "cash": 2115095.2250000006,
  "positions": {
   "078930": {
    "shares": 11,
@@ -17,17 +17,9 @@
    "shares": 3,
    "avg": 252878.75
   },
-  "120110": {
-   "shares": 24,
-   "avg": 37456.1
-  },
   "034730": {
    "shares": 2,
    "avg": 446669.0
-  },
-  "000990": {
-   "shares": 11,
-   "avg": 81121.5
   },
   "006360": {
    "shares": 32,
@@ -45,35 +37,35 @@
  "pending": [
   {
    "side": "sell",
-   "code": "120110",
-   "qty": 24,
+   "code": "475150",
+   "qty": 25,
    "kind": "market",
    "limit": null,
-   "date": "2026-11-12"
-  },
-  {
-   "side": "sell",
-   "code": "000990",
-   "qty": 11,
-   "kind": "market",
-   "limit": null,
-   "date": "2026-11-12"
-  },
-  {
-   "side": "buy",
-   "code": "005930",
-   "qty": 4,
-   "kind": "limit",
-   "limit": 208500,
-   "date": "2026-11-12"
+   "date": "2026-11-13"
   },
   {
    "side": "buy",
    "code": "028050",
    "qty": 14,
    "kind": "limit",
-   "limit": 66300,
-   "date": "2026-11-12"
+   "limit": 70000,
+   "date": "2026-11-13"
+  },
+  {
+   "side": "buy",
+   "code": "003490",
+   "qty": 30,
+   "kind": "limit",
+   "limit": 31900,
+   "date": "2026-11-13"
+  },
+  {
+   "side": "buy",
+   "code": "028670",
+   "qty": 173,
+   "kind": "limit",
+   "limit": 5030,
+   "date": "2026-11-13"
   }
  ],
  "fills": [
@@ -367,6 +359,50 @@
    "status": "체결",
    "fill": 36750.0,
    "fill_date": "2026-11-12"
+  },
+  {
+   "side": "sell",
+   "code": "120110",
+   "qty": 24,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-12",
+   "status": "체결",
+   "fill": 36450.0,
+   "fill_date": "2026-11-13",
+   "pnl": -25458.59999999986
+  },
+  {
+   "side": "sell",
+   "code": "000990",
+   "qty": 11,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-12",
+   "status": "체결",
+   "fill": 82700.0,
+   "fill_date": "2026-11-13",
+   "pnl": 15998.950000000128
+  },
+  {
+   "side": "buy",
+   "code": "005930",
+   "qty": 4,
+   "kind": "limit",
+   "limit": 208500,
+   "date": "2026-11-12",
+   "status": "미체결(지정가 초과)",
+   "fill": null
+  },
+  {
+   "side": "buy",
+   "code": "028050",
+   "qty": 14,
+   "kind": "limit",
+   "limit": 66300,
+   "date": "2026-11-12",
+   "status": "미체결(지정가 초과)",
+   "fill": null
   }
  ],
  "start": "2026-10-29",
@@ -414,6 +450,10 @@
   {
    "date": "2026-11-12",
    "equity": 9694622
+  },
+  {
+   "date": "2026-11-13",
+   "equity": 9851045
   }
  ]
 }
