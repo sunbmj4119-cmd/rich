@@ -189,11 +189,108 @@ def analyze(idx, keys, M, X, EW, meta, F, log=print):
             "dist": {"excess_full_pct": [round(float(np.percentile(ex_full, q)), 4) for q in (5, 25, 50, 75, 95)]}}
 
 
+# ── 보조 검정 (DSR 이 0 으로 나온 뒤 추가 — 사전 등록 아님, 결과와 함께 그렇게 적는다) ──────────────
+#   DSR 의 기준선은 '후보들 샤프의 퍼짐'으로 정하는데, 이번 후보에는 같은 공식의 반대 부호가 짝으로 들어 있어
+#   진짜 신호와 그 거울상이 퍼짐을 키운다 → 기준선이 연 2.7 정도로 부풀려짐. 이런 '서로 얽힌 많은 후보 중 1등' 문제에
+#   쓰는 표준 검정이 Hansen SPA (White Reality Check 의 개선판): 후보 전체를 같은 날짜 덩어리로 다시 뽑아(정상 부트스트랩)
+#   '아무 후보도 대형주를 못 이긴다'는 가정 아래 1등의 성적이 이만큼 나올 확률을 직접 잰다.
+
+def spa(X, B=500, mean_block=20, seed=0):
+    """Hansen SPA (consistent, 표준화) — X: T×N 초과수익. 반환 p 값 (작을수록 '운만으로는 어렵다')."""
+    rng = np.random.default_rng(seed)
+    T, N = X.shape
+    mu = X.mean(0)
+    # 날짜 덩어리 길이가 평균 mean_block 인 정상 부트스트랩 → 덩어리 평균의 분산으로 표준오차
+    sd = X.std(0) / math.sqrt(T)
+    lag = int(mean_block)
+    adj = np.zeros(N)
+    for k in range(1, lag + 1):
+        w = 1 - k / (lag + 1)
+        adj += 2 * w * ((X[k:] - mu) * (X[:-k] - mu)).mean(0)
+    omega = np.sqrt(np.maximum((X.var(0) + adj) / T, 1e-18))
+    stat = float(np.max(mu / omega))
+    thr = -np.sqrt(2 * math.log(math.log(T))) * omega
+    mu_c = np.where(mu >= thr, mu, 0.0)
+    p_q = 1.0 / mean_block
+    cnt = 0
+    for _ in range(B):
+        idx = np.empty(T, int)
+        i = rng.integers(T)
+        for t in range(T):
+            if t == 0 or rng.random() < p_q:
+                i = rng.integers(T)
+            else:
+                i = (i + 1) % T
+            idx[t] = i
+        mb = X[idx].mean(0)
+        z = np.max((mb - mu + mu_c) / omega)
+        cnt += z >= stat
+    del sd
+    return {"stat": round(stat, 3), "p": round(cnt / B, 4), "B": B}
+
+
+def placebo(ER, idx, EW, n=30, seed=3):
+    """무작위 점수(아무 정보 없음)로 같은 규칙 → 대형주 대비 초과의 분포 (비용 뒤)."""
+    rng = np.random.default_rng(seed)
+    out = []
+    for i in range(n):
+        S = {e: np.where(E.U, rng.random(E.U.shape), np.nan).astype(np.float32) for e, E in ER.items()}
+        for rn, r in RULES3.items():
+            a = SC.stitch(ER, S, r, START, None)
+            x = a["r"].reindex(idx).fillna(0.0).to_numpy() - EW
+            out.append(float(x.mean() * 252))
+        SC._PREP.clear()
+    a = np.array(out)
+    return {"n": len(a), "mean": round(float(a.mean()), 4), "p95": round(float(np.percentile(a, 95)), 4), "max": round(float(a.max()), 4)}
+
+
+def yearly_hits(x, idx):
+    s = pd.Series(x, index=idx)
+    y = s.groupby(idx.year).sum()
+    return round(float((y > 0).mean()), 3), {str(k): round(float(v), 4) for k, v in y.items()}
+
+
+def snoop(log=print):
+    """저장된 7,350개 일별 수익으로 SPA · 무작위 기준선 · 해마다 이긴 비율 (상위 후보)."""
+    M = np.load("data/cache/robust_M.npy").astype(np.float64)
+    kj = json.load(open("data/cache/robust_keys.json"))
+    keys, idx = kj["keys"], pd.DatetimeIndex(kj["idx"])
+    SC.set_factors(True)
+    ER = SC.eras(lambda m: None)
+    F = formulas()
+    probe = SC.stitch(ER, {e: E.score(F[0]) for e, E in ER.items()}, RULES3["빠름"], START, None)
+    EW = probe["ew"].reindex(idx).fillna(0.0).to_numpy()
+    X = M - EW[:, None]
+    t0 = time.time()
+    out = {"spa_all": spa(X)}
+    log(f"  SPA (7,350개 전체 중 1등이 운인가): p = {out['spa_all']['p']} ({time.time() - t0:.0f}초)")
+    m19 = idx >= pd.Timestamp("2019-01-01")
+    out["spa_2019"] = spa(X[m19], B=500)
+    log(f"  SPA 2019~ 만: p = {out['spa_2019']['p']}")
+    out["placebo"] = placebo(ER, idx, EW)
+    log(f"  무작위 점수 (아무 정보 없음) 대형주 대비: 평균 {out['placebo']['mean']:+.1%} · 상위 5% {out['placebo']['p95']:+.1%} · 최고 {out['placebo']['max']:+.1%}")
+    res = json.load(open(OUT, encoding="utf-8"))
+    for r in res["top"]:
+        i = keys.index(r["key"])
+        r["year_hit"], r["years"] = yearly_hits(X[:, i], idx)
+    res["snoop"] = out
+    res["snoop_note"] = "SPA 와 무작위 기준선은 DSR 이 0 으로 나온 뒤 추가한 보조 검정 (사전 등록 아님)."
+    for fn in (OUT, DOCS):
+        json.dump(res, open(fn, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=float)
+    for r in sorted(res["top"], key=lambda r: -r["year_hit"])[:12]:
+        log(f"    이긴 해 {r['year_hit']:.0%} · {r['formula'][:38]:38s} {r['rule']} · 초과 {r['excess_full']:+.1%} · 시기별 {r['excess_2003~2007']:+.0%}/{r['excess_2008~2018']:+.0%}/{r['excess_2019~']:+.0%} · 거래 {r['trades_per_year']:.0f}/년")
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--snoop", action="store_true", help="저장된 결과로 보조 검정만")
     a = ap.parse_args()
     log = lambda m: print(m, flush=True)                                   # noqa: E731
+    if a.snoop:
+        snoop(log)
+        return
     idx, keys, M, X, EW, meta, F, secs = run(a.workers, log)
     res = analyze(idx, keys, M, X, EW, meta, F, log)
     res.update({"generated": time.strftime("%Y-%m-%d %H:%M"), "crit": CRIT, "rules": RULES3, "eras": ERAS3, "secs": round(secs)})
