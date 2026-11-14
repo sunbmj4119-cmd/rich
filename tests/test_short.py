@@ -1324,6 +1324,15 @@ def test_div_project_dca_and_bootstrap():
     assert b["p10"] <= b["p50"] <= b["p90"] and len(b["path"]["p50"]) == 121 and b["path"]["paid"][-1] == b["paid"]
 
 
+def test_trend_shadow_matches_research_and_waits_for_start():
+    """토스 도전자: 점수는 3차 연구(robust_lab)와 같고 · 규칙은 미리 정한 것 · 승격 기준은 고정."""
+    import robust_lab as RL
+    import trend_shadow as TS
+    assert TS.COMPOSITE == RL.COMPOSITE
+    assert TS.RULES["10자리"] == {**RL.RULES3["느림"]} and TS.RULES["5자리"]["slots"] == 5
+    assert TS.PROMOTE == {"min_days": 120, "max_dd": -0.25} and TS.FORWARD_START == "2026-11-16"
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
