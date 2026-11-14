@@ -208,7 +208,7 @@ def spa(X, B=500, mean_block=20, seed=0):
         w = 1 - k / (lag + 1)
         adj += 2 * w * ((X[k:] - mu) * (X[:-k] - mu)).mean(0)
     omega = np.sqrt(np.maximum((X.var(0) + adj) / T, 1e-18))
-    stat = float(np.max(mu / omega))
+    stat = max(0.0, float(np.max(mu / omega)))
     thr = -np.sqrt(2 * math.log(math.log(T))) * omega
     mu_c = np.where(mu >= thr, mu, 0.0)
     p_q = 1.0 / mean_block
@@ -223,7 +223,7 @@ def spa(X, B=500, mean_block=20, seed=0):
                 i = (i + 1) % T
             idx[t] = i
         mb = X[idx].mean(0)
-        z = np.max((mb - mu + mu_c) / omega)
+        z = max(0.0, float(np.max((mb - mu_c) / omega)))                  # Hansen: 쓸 만한 후보는 평균을 0 으로 옮기고, 아주 나쁜 후보는 그대로
         cnt += z >= stat
     del sd
     return {"stat": round(stat, 3), "p": round(cnt / B, 4), "B": B}
@@ -250,6 +250,37 @@ def yearly_hits(x, idx):
     return round(float((y > 0).mean()), 3), {str(k): round(float(v), 4) for k, v in y.items()}
 
 
+FAMILIES = {   # 결과를 본 뒤 정한 묶음 (탐색용) — 1등 하나가 아니라 같은 생각의 공식 전체가 통하는지
+    "장기 추세 + 단기 눌림": ({"r250x": 1, "r120": 1, "ma120": 1, "hi52": 1, "r60": 1}, {"r5": -1, "r1": -1, "ma20": -1, "clv5": -1, "clv1": -1, "r20": -1}),
+    "외국인 반대 + 눌림·수급": ({"for1": -1, "for5": -1, "for20": -1, "forstk": -1}, {"smart": 1, "ma20": -1, "r5": -1, "clv5": -1, "ind5": 1}),
+}
+
+
+def families(X, keys, F, idx):
+    out = {}
+    era_mask = {pn: ((idx >= pd.Timestamp(a)) & ((idx <= pd.Timestamp(b)) if b else True)) for pn, (a, b) in ERAS3.items()}
+    for nm, (A, Bs) in FAMILIES.items():
+        for rn in RULES3:
+            cols = []
+            for ka, sa in A.items():
+                for kb, sb in Bs.items():
+                    if ka == kb:
+                        continue
+                    for fi, w in enumerate(F):
+                        if len(w) == 2 and w.get(ka) == sa and w.get(kb) == sb:
+                            cols.append(keys.index(f"{fi}|{rn}"))
+            if not cols:
+                continue
+            ex = {pn: X[m][:, cols].mean(0) * 252 for pn, m in era_mask.items()}
+            allpos = np.all(np.stack([ex[pn] > 0 for pn in ERAS3]), axis=0)
+            xb = X[:, cols].mean(1)
+            out[f"{nm} · {rn}"] = {"members": len(cols), "all_eras_positive": round(float(allpos.mean()), 3),
+                                   **{f"median_{pn}": round(float(np.median(ex[pn])), 4) for pn in ERAS3},
+                                   "equal_mix_excess": {pn: round(float(xb[m].mean() * 252), 4) for pn, m in era_mask.items()},
+                                   "equal_mix_t": round(month_t(xb, idx), 2)}
+    return out
+
+
 def snoop(log=print):
     """저장된 7,350개 일별 수익으로 SPA · 무작위 기준선 · 해마다 이긴 비율 (상위 후보)."""
     M = np.load("data/cache/robust_M.npy").astype(np.float64)
@@ -269,6 +300,10 @@ def snoop(log=print):
     log(f"  SPA 2019~ 만: p = {out['spa_2019']['p']}")
     out["placebo"] = placebo(ER, idx, EW)
     log(f"  무작위 점수 (아무 정보 없음) 대형주 대비: 평균 {out['placebo']['mean']:+.1%} · 상위 5% {out['placebo']['p95']:+.1%} · 최고 {out['placebo']['max']:+.1%}")
+    out["families"] = families(X, keys, F, idx)
+    for k, v in out["families"].items():
+        log(f"  묶음 {k}: {v['members']}개 · 세 시기 모두 플러스 {v['all_eras_positive']:.0%} · 중앙 {v['median_2003~2007']:+.0%}/{v['median_2008~2018']:+.0%}/{v['median_2019~']:+.0%} "
+            f"· 고르게 섞기 {v['equal_mix_excess']['2003~2007']:+.0%}/{v['equal_mix_excess']['2008~2018']:+.0%}/{v['equal_mix_excess']['2019~']:+.0%} (t {v['equal_mix_t']:.1f})")
     res = json.load(open(OUT, encoding="utf-8"))
     for r in res["top"]:
         i = keys.index(r["key"])
