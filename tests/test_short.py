@@ -1252,6 +1252,29 @@ def test_score_lab_daily_rules():
     assert abs(150 * (1 + r["r"]).prod() - (150 - 101 * (1 + SC.CB) + 100 * 1.01 ** (T - 1))) < 1e-9   # 다음 날 시가(101)에 1주만 사고 나머지는 현금
 
 
+def test_score_lab_yearly_selection_uses_past_only():
+    """해마다 고르는 체계: 그해 성적이 아닌 직전 몇 해 성적으로 고르고 · 바꾼 몫만큼 비용 · 통과 후보가 없으면 코스피."""
+    import score_lab as SC
+    idx = pd.bdate_range("2008-01-01", "2013-12-31")
+    yr = idx.year
+    good_past = np.where(yr <= 2010, 0.002, -0.002)                       # A: 2010 까지 좋다가 나빠짐
+    good_late = np.where(yr <= 2010, -0.001, 0.003)                       # B: 반대
+    rng = np.random.default_rng(0)
+    R = pd.DataFrame({"A": good_past + rng.normal(0, 0.01, len(idx)), "B": good_late + rng.normal(0, 0.01, len(idx))}, index=idx)
+    ew = pd.Series(rng.normal(0, 0.01, len(idx)), index=idx)
+    ks = pd.Series(0.0, index=idx)
+    old = SC.SEL_START
+    SC.SEL_START = 2011
+    try:
+        r, picks = SC.yearly_system(R, ew, ks, lookback=3, topn=1)
+    finally:
+        SC.SEL_START = old
+    assert picks[2011]["chosen"] == ["A"]                                  # 2011 은 2008~2010 성적으로만 → 나중에 좋아질 B 를 미리 알 수 없음
+    assert picks[2013]["chosen"] == ["B"]                                  # 2010~2012 성적이면 B
+    first = r[r.index >= "2011-01-01"].iloc[0]
+    assert abs(first - (R.loc[r[r.index >= "2011-01-01"].index[0], "A"] - (SC.CB + SC.CS))) < 1e-12   # 처음 고를 때 왕복 비용
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 

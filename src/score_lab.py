@@ -889,10 +889,55 @@ def load():
         return {}
 
 
+def export(res, outdir):
+    """화면(대시보드)용 자료 파일 — {rows, meta} · meta 에 만든 코드."""
+    os.makedirs(outdir, exist_ok=True)
+    code = open(os.path.abspath(__file__), encoding="utf-8").read()
+    meta = [{"label": "score_lab.py", "value": code, "type": "code", "lang": "python"},
+            {"label": "입력", "value": "그때의 시총 상위 100 일봉·수급 (2002~2018 KRX 상장폐지 포함 · 2019~ 단기 패널), 코스피 지수, DM:2 (allweather)"},
+            {"label": "비용", "value": "수수료 0.0186% + 미끄러짐 0.05% (사고팔 때 각각) + 거래세 0.20% (팔 때) = 왕복 약 0.34%"}]
+    f = {}
+    f["factors"] = [{"factor": r["factor"], "name": r["name"], **{k: r[k] for k in r if k[:2] in ("ic", "t1", "t5", "t2", "yr", "to")}} for r in res.get("stage1", [])]
+    kind = lambda nm: "참고" if "참고" in nm else ("고정" if nm in FIXED or nm == "사전 부호 같은 비중" else "해마다 다시")   # noqa: E731
+    f["formulas"] = [{"formula": nm, "kind": kind(nm), "pass": bool(v["pass"]), **{k: v["dev"][k] for k in ("cagr", "sharpe", "mdd", "excess_ann", "t_excess", "ew_sharpe", "trades_per_year", "hold_days", "win")},
+                      "excess_x2": v["dev_x2"]["excess_ann"]} for nm, v in res.get("stage2", {}).items()]
+    f["rules1"] = [{"formula": nm, "rule": rule_label(v["chosen"]["rule"]), "plateau": v["chosen"]["plateau"], **{k: v["chosen"]["dev"][k] for k in ("cagr", "sharpe", "mdd", "trades_per_year", "hold_days")},
+                    "chosen": nm == res.get("final", {}).get("score")} for nm, v in res.get("stage3", {}).items() if v.get("chosen")]
+    fin = res.get("final")
+    if fin:
+        f["final1"] = [{"who": "고른 점수 + 규칙", **{k: fin["hold"][k] for k in ("cagr", "sharpe", "mdd")}, "excess_ann": fin["hold"]["excess_ann"]},
+                       {"who": "대형주 100 평균", "cagr": fin["hold"]["ew_cagr"], "sharpe": fin["hold"]["ew_sharpe"], "mdd": None, "excess_ann": 0.0},
+                       {"who": "코스피", **fin["kospi"], "excess_ann": None}, {"who": "DM:2", **fin["dm2"], "excess_ann": None}]
+    f["diagnosis"] = res.get("diagnosis", [])
+    r2 = res.get("round2")
+    if r2:
+        c = r2["curve"]
+        f["system_curve"] = [{"date": d, **{k: c[k][i] for k in ("system", "ew", "kospi", "dm2")}} for i, d in enumerate(c["date"])]
+        names = {"system": "해마다 다시 고르는 체계", "system_x2": "같은 체계 · 비용 2배", "ew": "대형주 100 평균", "kospi": "코스피", "dm2": "DM:2"}
+        f["system_table"] = [{"period": pn, "key": k, "who": names[k], **(st or {})} for pn, t in r2["table"].items() for k, st in t.items() if st]
+        f["system_years"] = [{"year": int(y), **v} for y, v in r2["years"].items()]
+        f["picks"] = r2["picks"]
+        f["sensitivity"] = [{"setting": k, "period": pn, **st} for k, v in r2["sensitivity"].items() for pn, st in v.items()]
+        card = r2["card"]
+        if card:
+            c0 = card[0]
+            f["card_weights"] = [{"factor": k, "name": c0["weight_names"].get(k, k), "weight": w} for k, w in c0["weights"].items()]
+            f["card_rules"] = [{"n": i + 1, "formula": x["score"], "rule": x["rule_text"], "slots": x["rule"]["slots"]} for i, x in enumerate(card)]
+            f["card_hold"] = [{"n": i + 1, "rule": x["rule_text"], **h} for i, x in enumerate(card) for h in x["holding"]]
+            f["card_top"] = [{**t, "date": c0["date"]} for t in c0["top_today"]]
+    for k, rows in f.items():
+        json.dump({"rows": rows, "meta": meta}, open(os.path.join(outdir, f"{k}.json"), "w", encoding="utf-8"), ensure_ascii=False, default=float)
+    return list(f)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--stage", default="all")
+    ap.add_argument("--export", default=None, help="화면용 자료 파일을 쓸 폴더 (계산 없이)")
     a = ap.parse_args()
+    if a.export:
+        print(export(load(), a.export))
+        return
     log = lambda m: print(m, flush=True)                     # noqa: E731
     t0 = time.time()
     set_factors(a.stage == "r2")
