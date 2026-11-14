@@ -317,14 +317,180 @@ def snoop(log=print):
     return out
 
 
+COMPOSITE = {"r250x": 1, "r120": 1, "ma120": 1, "hi52": 1, "r60": 1, "r5": -1, "r1": -1, "ma20": -1, "clv5": -1, "clv1": -1, "r20": -1}
+
+
+def composite(log=print):
+    """'장기 추세 + 단기 눌림' 묶음을 점수 하나로 (추세 5개 +1 · 눌림 6개 −1, 조정 없음) — 결과를 본 뒤 만든 탐색용.
+    규칙 3개 × 세 시기 · 비용 2배 · 코스피 · DM:2 · 정수 주식 계좌."""
+    SC.set_factors(True)
+    ER = SC.eras(lambda m: None)
+    S = {e: E.score(COMPOSITE) for e, E in ER.items()}
+    out = {"weights": COMPOSITE, "names": {k: SC.factor_name(k) for k in COMPOSITE}, "rules": {}}
+    for rn, r in RULES3.items():
+        a = SC.stitch(ER, S, r, START, None)
+        b = SC.stitch(ER, S, r, START, None, cost_mult=2.0)
+        idx = a["r"].index
+        ks = SC.kospi_daily(idx)
+        dm = SC.card_daily("DM:2", idx)
+        row = {"rule_text": SC.rule_label(r)}
+        for pn, (x0, x1) in {**ERAS3, "전체 2003~": (START, None)}.items():
+            c = lambda x: SC.cut(x, x0, x1)                                    # noqa: E731
+            row[pn] = {"strategy": SC.stats_full(c(a["r"]), a["ew"]), "x2": SC.stats_full(c(b["r"]), b["ew"]), "ew": SC.stats_full(c(a["ew"])),
+                       "kospi": SC.stats_full(c(ks)), "dm2": SC.stats_full(c(dm)) if x0 >= "2005" else None}
+        p = SC.perf(a)
+        row["trades_per_year"], row["hold_days"], row["win"] = p["trades_per_year"], p["hold_days"], p["win"]
+        yr = (1 + a["r"]).groupby(idx.year).prod() - 1
+        yew = (1 + a["ew"]).groupby(idx.year).prod() - 1
+        yks = (1 + ks).groupby(idx.year).prod() - 1
+        row["years"] = {str(y): {"strategy": round(float(yr[y]), 4), "ew": round(float(yew[y]), 4), "kospi": round(float(yks[y]), 4)} for y in yr.index}
+        row["year_hit"] = round(float((yr > yew).mean()), 3)
+        row["curve"] = {"date": [str(d.date()) for d in idx[::5]], "strategy": [round(float(v), 4) for v in (1 + a["r"]).cumprod()[::5]],
+                        "ew": [round(float(v), 4) for v in (1 + a["ew"]).cumprod()[::5]], "kospi": [round(float(v), 4) for v in (1 + ks).cumprod()[::5]]}
+        acc = {}
+        for c0 in (200_000, 1_000_000, 3_000_000, 10_000_000):
+            q = SC.stitch(ER, S, r, "2019-01-01", None, cash0=c0)
+            st = SC.stats_full(q["r"], q["ew"])
+            acc[str(c0)] = {**st, "invested": round(q["invested"], 3), "final": round(float(c0 * (1 + q["r"]).prod()))}
+        row["accounts_2019"] = acc
+        out["rules"][rn] = row
+        h = row["2019~"]
+        log(f"  {rn} ({row['rule_text']}): 전체 연 {row['전체 2003~']['strategy']['cagr']:+.1%} 샤프 {row['전체 2003~']['strategy']['sharpe']:.2f} 낙폭 {row['전체 2003~']['strategy']['mdd']:.0%} "
+            f"| 시기별 초과 {row['2003~2007']['strategy']['excess_ann']:+.0%}/{row['2008~2018']['strategy']['excess_ann']:+.0%}/{h['strategy']['excess_ann']:+.0%} "
+            f"| 2019~ 연 {h['strategy']['cagr']:+.1%} 샤프 {h['strategy']['sharpe']:.2f} 낙폭 {h['strategy']['mdd']:.0%} · 비용2배 {h['x2']['cagr']:+.1%} "
+            f"(대형주 {h['ew']['cagr']:+.1%}·{h['ew']['sharpe']:.2f} 코스피 {h['kospi']['cagr']:+.1%}·{h['kospi']['sharpe']:.2f} DM:2 {h['dm2']['cagr']:+.1%}·{h['dm2']['sharpe']:.2f}) "
+            f"· 이긴 해 {row['year_hit']:.0%} · 거래 {row['trades_per_year']:.0f}/년 보유 {row['hold_days']}일")
+        for c0, v in acc.items():
+            log(f"      2019~ {int(c0):>10,}원: 연 {v['cagr']:+.1%} · 샤프 {v['sharpe']:.2f} · 산 비율 {v['invested']:.0%}")
+        SC._PREP.clear()
+    # 오늘 기준: 점수 상위 (B 마지막 날)
+    import shadow_wf as SW
+    nm = SW.names()
+    E = ER["B"]
+    t = E.i1 - 1
+    Sm = np.where(E.U[t], S["B"][t], np.nan)
+    order = [j for j in np.argsort(-np.where(np.isfinite(Sm), Sm, -np.inf))[:15] if np.isfinite(Sm[j])]
+    out["today"] = {"date": str(E.dates[t].date()), "top": [{"rank": i + 1, "code": E.codes[j], "name": nm.get(E.codes[j], E.codes[j])} for i, j in enumerate(order)]}
+    log("  오늘 점수 상위: " + ", ".join(x["name"] for x in out["today"]["top"][:10]))
+    res = json.load(open(OUT, encoding="utf-8"))
+    res["composite"] = out
+    for fn in (OUT, DOCS):
+        json.dump(res, open(fn, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=float)
+    return out
+
+
+def robustness(log=print):
+    """합친 점수가 한 점에서만 되는지: 요소 하나씩 빼기 11가지 × 느림 규칙 · 규칙 이웃 27가지 (자리 5·10·15 × 파는 문턱 40·50·60% × 최소 보유 10·20·40일)."""
+    SC.set_factors(True)
+    ER = SC.eras(lambda m: None)
+    base = RULES3["느림"]
+    out = {"leave_one_out": [], "rule_neighbors": []}
+
+    def ev(w, r):
+        S = {e: E.score(w) for e, E in ER.items()}
+        a = SC.stitch(ER, S, r, START, None)
+        st = {pn: SC.stats_full(SC.cut(a["r"], x0, x1), a["ew"]) for pn, (x0, x1) in {**ERAS3, "전체": (START, None)}.items()}
+        SC._PREP.clear()
+        return st
+    for k in COMPOSITE:
+        w = {kk: v for kk, v in COMPOSITE.items() if kk != k}
+        st = ev(w, base)
+        out["leave_one_out"].append({"drop": k, "name": SC.factor_name(k), **{f"{pn}_{m}": st[pn][m] for pn in st for m in ("cagr", "sharpe", "excess_ann")}})
+    for sl in (5, 10, 15):
+        for qo in (0.4, 0.5, 0.6):
+            for mh in (10, 20, 40):
+                r = {**base, "slots": sl, "q_out": qo, "min_hold": mh}
+                st = ev(COMPOSITE, r)
+                out["rule_neighbors"].append({"slots": sl, "q_out": qo, "min_hold": mh, **{f"{pn}_{m}": st[pn][m] for pn in st for m in ("cagr", "sharpe", "excess_ann")}})
+    for nm, rows in list(out.items()):
+        ex = np.array([[r[f"{pn}_excess_ann"] for pn in ERAS3] for r in rows])
+        sh19 = np.array([r["2019~_sharpe"] for r in rows])
+        out[nm + "_summary"] = {"n": len(rows), "all_eras_positive": round(float((ex > 0).all(1).mean()), 3),
+                                "median_excess": [round(float(v), 4) for v in np.median(ex, 0)], "sharpe_2019_min": round(float(sh19.min()), 3),
+                                "sharpe_2019_median": round(float(np.median(sh19)), 3), "sharpe_2019_max": round(float(sh19.max()), 3)}
+        sm = out[nm + "_summary"]
+        log(f"  {nm}: {sm['n']}가지 · 세 시기 모두 초과 플러스 {sm['all_eras_positive']:.0%} · 중앙 초과 {sm['median_excess'][0]:+.0%}/{sm['median_excess'][1]:+.0%}/{sm['median_excess'][2]:+.0%} "
+            f"· 2019~ 샤프 {sm['sharpe_2019_min']:.2f}~{sm['sharpe_2019_max']:.2f} (중앙 {sm['sharpe_2019_median']:.2f})")
+    res = json.load(open(OUT, encoding="utf-8"))
+    res["robustness"] = out
+    for fn in (OUT, DOCS):
+        json.dump(res, open(fn, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=float)
+    return out
+
+
+def export(outdir):
+    """화면(대시보드)용 자료 파일 — {rows, meta}."""
+    res = json.load(open(OUT, encoding="utf-8"))
+    os.makedirs(outdir, exist_ok=True)
+    code = open(os.path.abspath(__file__), encoding="utf-8").read()
+    meta = [{"label": "robust_lab.py", "value": code, "type": "code", "lang": "python"},
+            {"label": "입력", "value": "그때의 시총 상위 100 일봉·수급 (2002~2018 KRX 상장폐지 포함 · 2019~ 단기 패널), 코스피 지수, DM:2"},
+            {"label": "주의", "value": "SPA·무작위 기준선·묶음·합친 점수·견고성은 사전 등록 기준(DSR)이 0 으로 나온 뒤 추가한 탐색 — 그렇게 읽을 것"}]
+    f = {}
+    sn = res.get("snoop", {})
+    f["funnel"] = [{"step": "후보 (공식 2,450 × 규칙 3)", "n": res["n_candidates"]},
+                   {"step": "세 시기 모두 비용 뒤 대형주보다 나음", "n": res["n_consistent"]},
+                   {"step": "+ 전체 기간 t ≥ 2", "n": res["n_t2"]},
+                   {"step": "+ DSR ≥ 0.95 (사전 등록)", "n": len(res["passed"])}]
+    f["tests"] = [{"test": "PBO (기간을 섞어 다시 고르기)", "value": res["pbo"]["pbo"], "read": "낮을수록 덜 속음"},
+                  {"test": "SPA p · 2003~ 전체", "value": sn.get("spa_all", {}).get("p"), "read": "작을수록 운만으로는 어려움"},
+                  {"test": "SPA p · 2019~ 만", "value": sn.get("spa_2019", {}).get("p"), "read": "작을수록 운만으로는 어려움"},
+                  {"test": "무작위 점수의 최고 초과수익", "value": sn.get("placebo", {}).get("max"), "read": "아무 정보 없이 고르면"}]
+    f["families"] = [{"family": k.split(" · ")[0], "rule": k.split(" · ")[1], **{kk: vv for kk, vv in v.items() if kk != "equal_mix_excess"},
+                      **{f"mix_{pn}": v["equal_mix_excess"][pn] for pn in ERAS3}} for k, v in sn.get("families", {}).items()]
+    f["top"] = [{k: r[k] for k in ("formula", "rule", "cagr", "sharpe", "mdd", "excess_full", "t_full", "excess_2003~2007", "excess_2008~2018", "excess_2019~", "excess_x2", "trades_per_year", "year_hit") if k in r}
+                for r in res["top"][:20]]
+    c = res.get("composite")
+    if c:
+        f["comp_weights"] = [{"factor": k, "name": c["names"][k], "weight": v} for k, v in c["weights"].items()]
+        rows = []
+        for rn, r in c["rules"].items():
+            for pn in list(ERAS3) + ["전체 2003~"]:
+                for who in ("strategy", "x2", "ew", "kospi", "dm2"):
+                    st = r[pn].get(who)
+                    if st:
+                        rows.append({"rule": rn, "rule_text": r["rule_text"], "period": pn, "who": who, **st})
+        f["comp_table"] = rows
+        slow = c["rules"]["느림"]
+        cv = slow["curve"]
+        f["comp_curve"] = [{"date": d, "strategy": cv["strategy"][i], "ew": cv["ew"][i], "kospi": cv["kospi"][i]} for i, d in enumerate(cv["date"])]
+        f["comp_years"] = [{"year": int(y), **v} for y, v in slow["years"].items()]
+        f["comp_accounts"] = [{"cash0": int(k), **v} for k, v in slow["accounts_2019"].items()]
+        f["comp_today"] = [{**x, "date": c["today"]["date"]} for x in c["today"]["top"]]
+        f["comp_rules"] = [{"rule": rn, "rule_text": r["rule_text"], "trades_per_year": r["trades_per_year"], "hold_days": r["hold_days"], "year_hit": r["year_hit"]} for rn, r in c["rules"].items()]
+    rb = res.get("robustness")
+    if rb:
+        f["robust"] = [{"kind": "요소 하나 빼기", "label": f"− {r['name']}", **{k: v for k, v in r.items() if k not in ("drop", "name")}} for r in rb["leave_one_out"]] + \
+                      [{"kind": "규칙 이웃", "label": f"{r['slots']}자리 · 상위 {r['q_out']:.0%} 밖 팜 · 최소 {r['min_hold']}일", **{k: v for k, v in r.items() if k not in ("slots", "q_out", "min_hold")}} for r in rb["rule_neighbors"]]
+        f["robust_summary"] = [{"kind": "요소 하나 빼기", **rb["leave_one_out_summary"]}, {"kind": "규칙 이웃", **rb["rule_neighbors_summary"]}]
+        for r in f["robust_summary"]:
+            m = r.pop("median_excess")
+            r.update({f"median_{pn}": v for pn, v in zip(ERAS3, m)})
+    for k, rows in f.items():
+        json.dump({"rows": rows, "meta": meta}, open(os.path.join(outdir, f"{k}.json"), "w", encoding="utf-8"), ensure_ascii=False, default=float)
+    return list(f)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--snoop", action="store_true", help="저장된 결과로 보조 검정만")
+    ap.add_argument("--composite", action="store_true", help="'장기 추세 + 단기 눌림' 점수 하나로")
+    ap.add_argument("--robust", action="store_true", help="합친 점수의 요소 빼기 · 규칙 이웃")
+    ap.add_argument("--export", default=None, help="화면용 자료 파일 폴더")
     a = ap.parse_args()
     log = lambda m: print(m, flush=True)                                   # noqa: E731
     if a.snoop:
         snoop(log)
+        return
+    if a.composite:
+        composite(log)
+        return
+    if a.robust:
+        robustness(log)
+        return
+    if a.export:
+        print(export(a.export))
         return
     idx, keys, M, X, EW, meta, F, secs = run(a.workers, log)
     res = analyze(idx, keys, M, X, EW, meta, F, log)
