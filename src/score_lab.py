@@ -630,6 +630,55 @@ def stage4(ER, S, rule, log=print):
     return out
 
 
+def rebuild(ER, w):
+    """저장된 가중치(고정 또는 해마다) → 점수 행렬."""
+    if "고정" in w:
+        return {e: E.score(w["고정"]) for e, E in ER.items()}
+    out = {e: np.full(E.G.shape, np.nan, np.float32) for e, E in ER.items()}
+    for y, ww in w.items():
+        y = int(y)
+        vec = np.array([ww.get(k, 0.0) for k in FACTORS], np.float32)
+        for e, E in ER.items():
+            lo = max(E.i0, int(np.searchsorted(E.dates, pd.Timestamp(f"{y}-01-01"))))
+            hi = min(E.i1, int(np.searchsorted(E.dates, pd.Timestamp(f"{y + 1}-01-01"))))
+            if hi > lo:
+                out[e][lo:hi] = np.tensordot(vec, E.X[:, lo:hi], axes=1)
+    return out
+
+
+def no_cost(fn):
+    c, t, sl = SL.COMM, SL.TAX, SL.SLIP
+    SL.COMM, SL.TAX, SL.SLIP = 0.0, 0.0, 0.0
+    try:
+        return fn()
+    finally:
+        SL.COMM, SL.TAX, SL.SLIP = c, t, sl
+
+
+def diagnose(ER, res, log=print):
+    """1차 탈락 원인 (고르는 데 안 씀): 후보마다 비용 뺀 것 · 비용 0 일 때의 대형주 대비 초과 — 개발 · 2019~."""
+    rules = {"R0": R0}
+    for nm, v in res.get("stage3", {}).items():
+        if v.get("chosen"):
+            rules[nm] = v["chosen"]["rule"]
+    out = []
+    for nm, v in res["stage2"].items():
+        if "참고" in nm:
+            continue
+        Sx = rebuild(ER, v["weights"])
+        for rn in ("R0",) + ((nm,) if nm in rules else ()):
+            r = rules[rn]
+            row = {"score": nm, "rule": "기본 규칙 R0" if rn == "R0" else "3단계에서 고른 규칙", "rule_text": rule_label(r)}
+            for pn, per in (("dev", DEV), ("hold", HOLD)):
+                p = perf(stitch(ER, Sx, r, *per))
+                g = no_cost(lambda: perf(stitch(ER, Sx, r, *per)))
+                row.update({f"{pn}_net": p["excess_ann"], f"{pn}_gross": g["excess_ann"], f"{pn}_sharpe": p["sharpe"], f"{pn}_cagr": p["cagr"],
+                            f"{pn}_trades": p["trades_per_year"], f"{pn}_hold": p["hold_days"]})
+            out.append(row)
+            log(f"  {nm:14s} {row['rule']}: 개발 초과 순 {row['dev_net']:+.0%} · 비용0 {row['dev_gross']:+.0%} | 2019~ 순 {row['hold_net']:+.0%} · 비용0 {row['hold_gross']:+.0%} · 거래 {row['hold_trades']:.0f}/년")
+    return out
+
+
 # ── 2차: 해마다 과거로만 다시 고르는 체계 ───────────────────────────────────
 
 RULES2 = [{"slots": sl, "q_in": qi, "q_out": qo, "min_hold": mh, "stop": st, "max_hold": 0}
@@ -853,6 +902,11 @@ def main():
                 "R0": R0, "grid": GRID,
                 "periods": {"pre": PRE, "dev": DEV, "hold": HOLD}, "crit": CRIT})
     st = a.stage
+    if st == "diag":
+        log("■ 1차 탈락 원인 진단 (고르는 데 안 씀)")
+        res["diagnosis"] = diagnose(ER, res, log)
+        save(res)
+        return
     if st == "r2":
         log("■ 2차: 해마다 과거로만 다시 고르는 체계")
         res["round2"] = round2(ER, log)
