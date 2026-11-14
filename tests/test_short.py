@@ -1202,6 +1202,24 @@ def test_wf_lab_gbm_book_and_discipline():
     assert st["trades"] == 3 and abs(st["total"] - 0.1) < 1e-12                    # 자리 3개가 차면 네 번째는 못 산다
 
 
+def test_shadow_wf_staggered_groups():
+    """그림자 기록: 묶음마다 자기 날에만 바꾸고 · 계속 보유는 비용 없음 · 그 주 수익은 다음 결정일에 반영 (미래를 앞당기지 않음)."""
+    import shadow_wf as SW
+    dates = pd.bdate_range("2019-01-01", periods=20)
+    codes = np.tile(["A", "B", "C", "D"], 20)
+    D = pd.DataFrame({"date": np.repeat(dates, 4), "y5": np.tile([0.02, 0.01, 0.0, -0.05], 20)})
+    p = np.tile([3.0, 2.0, 1.0, 0.0], 20).astype(float)
+    days = SW.grid(D, "2019-01-01")
+    books = [SW.detailed_book(D, p, codes, days[g::SW.H]) for g in range(SW.H)]
+    assert [len(b) for b in books] == [4] * 5 and all(b.index[0] == days[g] for g, b in enumerate(books))
+    b0 = books[0]
+    assert b0["hold"].iloc[0] == ["A", "B", "C"] and b0["new"].iloc[0] == ["A", "B", "C"] and b0["new"].iloc[1] == []
+    cb = SW.W.SL.COMM + SW.W.SL.SLIP
+    assert abs(b0["s"].iloc[0] - (0.01 - cb)) < 1e-12 and abs(b0["s"].iloc[1] - 0.01) < 1e-12      # 처음만 매수 비용 · 계속 보유는 0
+    e = SW.realized(pd.Series([0.1, 0.2], index=[days[0], days[5]]), pd.DatetimeIndex(days))
+    assert e[days[0]] == 1.0 and e[days[4]] == 1.0 and abs(e[days[5]] - 1.1) < 1e-12 and abs(e[days[-1]] - 1.1) < 1e-12   # 마지막 기간은 다음 결정일이 와야 반영
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
