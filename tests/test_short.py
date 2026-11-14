@@ -1220,6 +1220,61 @@ def test_shadow_wf_staggered_groups():
     assert e[days[0]] == 1.0 and e[days[4]] == 1.0 and abs(e[days[5]] - 1.1) < 1e-12 and abs(e[days[-1]] - 1.1) < 1e-12   # 마지막 기간은 다음 결정일이 와야 반영
 
 
+def test_score_lab_daily_rules():
+    """점수 매매: 매일 판단 · 순위가 밀리면 다음 날 시가에 팔고 새 1등을 삼 · 손절 · 정수 주식 · 비용."""
+    import types
+    import score_lab as SC
+    T, N = 12, 4
+    dates = pd.bdate_range("2019-01-01", periods=T)
+    px = np.ones((T, N)) * 100.0
+    px[:, 0] = 100 * 1.01 ** np.arange(T)
+    px[:, 3] = 100 * 0.98 ** np.arange(T)
+
+    def era(name):
+        E = types.SimpleNamespace(era=name, dates=dates, U=np.ones((T, N), bool), buyable=np.ones((T, N), bool), px=px, Cf=px.copy())
+        G = np.full((T, N), np.nan)
+        G[:-2] = px[2:] / px[1:-1] - 1
+        E.G, E.ew = G, np.nanmean(G, 1)
+        E.rows = lambda a, b: (0, T)
+        return E
+    rule = {"slots": 1, "q_in": 0.25, "q_out": 0.3, "min_hold": 1, "stop": 0.0, "max_hold": 0}
+    S0 = np.tile([4.0, 3.0, 2.0, 1.0], (T, 1))
+    r = SC.simulate(era("t1"), S0, rule, None, None)
+    assert abs((1 + r["r"]).prod() - 1.01 ** (T - 2) / (1 + SC.CB)) < 1e-12                  # 1등을 계속 들고 감 · 산 비용만
+    S1 = S0.copy()
+    S1[3:, 3] = 9.0                                                                            # 3일째 장 마감부터 3번이 1등
+    r = SC.simulate(era("t2"), S1, rule, None, None)
+    assert list(r["holds"]) == [3] and abs(r["trades"][0] - (1.01 ** 3 * (1 - SC.CS) / (1 + SC.CB) - 1)) < 1e-12
+    S2 = np.tile([1.0, 2.0, 3.0, 9.0], (T, 1))
+    r = SC.simulate(era("t3"), S2, {**rule, "stop": 0.05}, None, None)
+    assert len(r["trades"]) >= 1 and r["trades"][0] < -0.05 and r["holds"][0] == 4             # 종가 −5% 넘으면 다음 날 시가에 손절
+    r = SC.simulate(era("t4"), S0, rule, None, None, cash0=150)
+    assert abs(150 * (1 + r["r"]).prod() - (150 - 101 * (1 + SC.CB) + 100 * 1.01 ** (T - 1))) < 1e-9   # 다음 날 시가(101)에 1주만 사고 나머지는 현금
+
+
+def test_score_lab_yearly_selection_uses_past_only():
+    """해마다 고르는 체계: 그해 성적이 아닌 직전 몇 해 성적으로 고르고 · 바꾼 몫만큼 비용 · 통과 후보가 없으면 코스피."""
+    import score_lab as SC
+    idx = pd.bdate_range("2008-01-01", "2013-12-31")
+    yr = idx.year
+    good_past = np.where(yr <= 2010, 0.002, -0.002)                       # A: 2010 까지 좋다가 나빠짐
+    good_late = np.where(yr <= 2010, -0.001, 0.003)                       # B: 반대
+    rng = np.random.default_rng(0)
+    R = pd.DataFrame({"A": good_past + rng.normal(0, 0.01, len(idx)), "B": good_late + rng.normal(0, 0.01, len(idx))}, index=idx)
+    ew = pd.Series(rng.normal(0, 0.01, len(idx)), index=idx)
+    ks = pd.Series(0.0, index=idx)
+    old = SC.SEL_START
+    SC.SEL_START = 2011
+    try:
+        r, picks = SC.yearly_system(R, ew, ks, lookback=3, topn=1)
+    finally:
+        SC.SEL_START = old
+    assert picks[2011]["chosen"] == ["A"]                                  # 2011 은 2008~2010 성적으로만 → 나중에 좋아질 B 를 미리 알 수 없음
+    assert picks[2013]["chosen"] == ["B"]                                  # 2010~2012 성적이면 B
+    first = r[r.index >= "2011-01-01"].iloc[0]
+    assert abs(first - (R.loc[r[r.index >= "2011-01-01"].index[0], "A"] - (SC.CB + SC.CS))) < 1e-12   # 처음 고를 때 왕복 비용
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
