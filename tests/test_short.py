@@ -1287,6 +1287,28 @@ def test_robust_lab_spa_detects_real_signal_only():
     assert len(RL.formulas()) == 2 * len(RL.SC.FACTORS) + 4 * len(RL.SC.FACTORS) * (len(RL.SC.FACTORS) - 1) // 2
 
 
+def test_div_lab_dividend_steps():
+    """배당 복원: 수정가/실제가 비율이 배당 시기에 계단처럼 오르고 남으면 배당 · 하루 튀고 돌아오면 아님 · 배당 시기 밖 작은 계단 버림."""
+    import types
+    import div_lab as DV
+    dates = pd.bdate_range("2019-12-02", periods=60)
+    T, N = len(dates), 3
+    raw = np.full((T, N), 100.0)
+    E = types.SimpleNamespace(G=np.zeros((T, N)), Cf=raw, dates=dates, codes=["A", "B", "C"])
+    ex = int(np.searchsorted(dates, pd.Timestamp("2019-12-27")))           # 12월 마지막 7거래일 안
+    adjA = np.where(np.arange(T) < ex, 100 / 1.03, 100.0)                  # 3% 배당: 전날까지 수정가가 낮다 → 그날 비율이 오름
+    adjB = np.full(T, 100.0)
+    adjB[10] = 104.0                                                       # 하루 튀고 돌아옴
+    adjC = np.where(np.arange(T) < 5, 100 / 1.005, 100.0)                  # 배당 시기 밖 0.5% 계단
+    adj = pd.DataFrame({"A": adjA, "B": adjB, "C": adjC}, index=dates)
+    Dv, cov = DV.dividend_events(E, adj)
+    assert abs(Dv[ex, 0] - 0.03) < 1e-6 and (Dv[:, 0] > 0).sum() == 1
+    assert (Dv[:, 1] > 0).sum() == 0 and (Dv[:, 2] > 0).sum() == 0
+    assert cov.all()
+    w = DV.dividend_windows(dates)
+    assert w[ex] and not w[0]
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
