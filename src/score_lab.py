@@ -19,7 +19,21 @@
   4  최종 확인     고른 점수 + 규칙을 2019~ 에 한 번
                    통과: 초과 > 0 · 샤프 ≥ max(대형주 평균, 코스피) · 비용 2배에도 초과 > 0
 
-  python src/score_lab.py [--stage 1|2|3|4|all] → data/score_lab.json
+  ── 1차 결과: 2~3단계 통과 → 4단계(2019~) 탈락. 진단: 비용 전엔 대부분 아직 시장보다 낫지만(+5~36%/년) 거래가 150~450번/년이라
+     비용이 다 먹음 · 2019 뒤 시장 성격이 바뀜 (반전 약해지고 추세 강해짐) · 2002 년부터 쌓은 가중치는 바뀐 시장을 못 따라감.
+
+  2차 (2026-11-14, 결과 보기 전에 적음) — '해마다 과거로만 다시 고르는 체계' 자체의 실적을 잰다 (중첩 워크포워드)
+     요소 5개 추가: 120일 수익 · 1년 수익(최근 20일 빼고) · 20일선 대비 · 60일 변동성 · 60일 고점 대비
+     점수 후보 17개: 고정 5 (반전 · 수급 · 추세 · 저위험 · 장기추세) + (IC 가중 · 선형 회귀 · 진화 탐색) × (5 · 20일) × (2002~ 전체 · 최근 3년)
+     규칙 후보 108개: 자리 3·5·10 × 매수 상위 2·5·10% × 매도 상위 20·40·60% 밖 × 최소 보유 1·10일 × 손절 없음·8%
+     → 1,836개를 2008~ 매일 흉내 (비용 1배 · 2배)
+     해마다 1월 1일: 직전 3년 '비용 뺀 샤프'가 대형주 평균보다 높은 후보 중 상위 5개를 골라 그해 5등분해 담음
+                     (없으면 코스피 지수 ETF) · 바꾼 몫만큼 왕복 비용
+     통과: 2011~2018 과 2019~ 각각 샤프 > max(대형주 평균, 코스피) · 대형주 대비 초과 > 0 · 비용 2배 체계도 초과 > 0
+     ⚠ 2019~ 는 1차에서 이미 봤고, 추가 요소·거래 줄이는 규칙은 그 진단에서 나왔다 → 깨끗한 시험지는 아님.
+     민감도(고르는 데 안 씀): 직전 1·3·5년 × 상위 1·5개
+
+  python src/score_lab.py [--stage 1|2|3|4|all|r2] → data/score_lab.json
 """
 import argparse
 import json
@@ -36,7 +50,19 @@ import setup_lab as SL  # noqa: E402
 
 OUT = "data/score_lab.json"
 DOCS = "docs/score_lab.json"
-FACTORS = [k for k in EL.FEAT if k not in EL.MARKET and k not in EL.BINARY]
+BASE = [k for k in EL.FEAT if k not in EL.MARKET and k not in EL.BINARY]
+EXTRA = {"r120": "120일 수익", "r250x": "1년 수익 (최근 20일 빼고)", "ma20": "20일선 대비", "vol60": "60일 변동성", "dd60": "60일 고점 대비"}
+FACTORS = list(BASE)
+
+
+def set_factors(extra):
+    """1차 = 30개 · 2차 = 30 + 5개 (전역 목록을 바꾼다 — 시대(Era)를 만들기 전에 부를 것)."""
+    global FACTORS
+    FACTORS = BASE + (list(EXTRA) if extra else [])
+
+
+def factor_name(k):
+    return EL.FEAT.get(k) or EXTRA.get(k, k)
 PRE = ("2002-01-01", "2007-12-31")
 DEV = ("2008-01-01", "2018-12-31")
 HOLD = ("2019-01-01", None)
@@ -80,6 +106,8 @@ class Era:
         opn[:-1] = np.isfinite(O[1:]) & (O[1:] > 0)
         self.U = U
         self.buyable = U & opn                                              # 내일 시가에 살 수 있는 오늘의 상위 100
+        if any(k in EXTRA for k in FACTORS):
+            F.update(extra_features(Cf, U))
         self.X = np.stack([np.where(U, np.nan_to_num(F[k], nan=0.5) - 0.5, np.nan) for k in FACTORS]).astype(np.float32)
         a, b = ("2002-01-01", "2018-12-31") if era == "A" else ("2019-01-01", None)
         self.i0 = int(np.searchsorted(self.dates, pd.Timestamp(a)))
@@ -109,6 +137,16 @@ class Era:
         if isinstance(w, dict):
             w = np.array([w.get(k, 0.0) for k in FACTORS], np.float32)
         return np.tensordot(np.asarray(w, np.float32), self.X, axes=1)
+
+
+def extra_features(Cf, U):
+    """2차에 더한 요소 (종가만으로) — 그날 상위 100 안의 순위 0~1."""
+    c = pd.DataFrame(Cf)
+    r = c.pct_change()
+    with np.errstate(all="ignore"):
+        raw = {"r120": c / c.shift(120) - 1, "r250x": c.shift(20) / c.shift(250) - 1, "ma20": c / c.rolling(20, min_periods=15).mean() - 1,
+               "vol60": r.rolling(60, min_periods=40).std(), "dd60": c / c.rolling(60, min_periods=40).max() - 1}
+    return {k: v.where(U).rank(axis=1, pct=True).to_numpy(np.float32) for k, v in raw.items()}
 
 
 def eras(log=print):
@@ -280,7 +318,8 @@ def simulate(E, S, rule, a, b, cost_mult=1.0, cash0=None):
     base = float(cash0) if cash0 else 1.0
     r = e.pct_change().fillna(e.iloc[0] / base - 1)
     res = {"r": r, "ew": pd.Series(ew, index=idx).fillna(0.0), "trades": np.array(trades, float), "holds": np.array(holds, float),
-           "invested": float(np.mean(invested)) if invested else 0.0}
+           "invested": float(np.mean(invested)) if invested else 0.0,
+           "pos": {int(j): {"value": p[0] / max(eq[-1], 1e-12) if eq else 0.0, "days": p[2], "entry": p[1]} for j, p in pos.items()}}
     return res
 
 
@@ -324,11 +363,12 @@ def passes(p, p2):
 
 # ── 2단계: 점수 공식 ─────────────────────────────────────────────────────────
 
-def train_rows(ER, h, cut_date, every=1):
-    """cut_date 전의 행 (두 시대) — 요소 X · 상대 라벨."""
+def train_rows(ER, h, cut_date, every=1, start=None):
+    """[start,] cut_date 전의 행 (두 시대) — 요소 X · 상대 라벨."""
     Xs, ys, ds = [], [], []
     for E in ER.values():
-        lo, hi = E.i0, min(E.i1, int(np.searchsorted(E.dates, cut_date)))
+        lo = E.i0 if start is None else max(E.i0, int(np.searchsorted(E.dates, pd.Timestamp(start))))
+        hi = min(E.i1, int(np.searchsorted(E.dates, cut_date)))
         if hi - lo < 50:
             continue
         sl = slice(lo, hi, every)
@@ -366,10 +406,10 @@ def fitness(ER, w, h, cut_date, k=5, every=3, start=PRE[0]):
     return float(v.mean() / (v.std() + 1e-9) * np.sqrt(252 / h)) - 0.02 * int(np.count_nonzero(w))
 
 
-def evolve(ER, h, cut_date, start_w, rng, passes_n=3, log=None):
+def evolve(ER, h, cut_date, start_w, rng, passes_n=3, log=None, start=PRE[0]):
     """정수 가중치(−2~+2) 좌표 탐색: 요소를 하나씩 바꿔 보고 학습 구간 성적이 오르면 남긴다 (과거 자료만)."""
     w = np.array(start_w, np.float32)
-    best = fitness(ER, w, h, cut_date)
+    best = fitness(ER, w, h, cut_date, start=start)
     for _ in range(passes_n):
         changed = False
         for i in rng.permutation(len(FACTORS)):
@@ -378,7 +418,7 @@ def evolve(ER, h, cut_date, start_w, rng, passes_n=3, log=None):
                     continue
                 w2 = w.copy()
                 w2[i] = v
-                f = fitness(ER, w2, h, cut_date)
+                f = fitness(ER, w2, h, cut_date, start=start)
                 if f > best + 1e-6:
                     best, w, changed = f, w2, True
         if not changed:
@@ -386,8 +426,9 @@ def evolve(ER, h, cut_date, start_w, rng, passes_n=3, log=None):
     return w, best
 
 
-def wf_scores(ER, method, h, log=print, ic_cache=None):
-    """해마다(1월 1일) 그 전까지(h+2 거래일 여유)의 자료로 가중치를 다시 정해 그해 점수를 매김 → {era: T×N} · 해마다 가중치."""
+def wf_scores(ER, method, h, log=print, ic_cache=None, window=None):
+    """해마다(1월 1일) 그 전까지(h+2 거래일 여유)의 자료로 가중치를 다시 정해 그해 점수를 매김 → {era: T×N} · 해마다 가중치.
+    window = None 이면 2002 년부터 전부, 숫자면 최근 그 햇수만."""
     S = {e: np.full(E.G.shape, np.nan, np.float32) for e, E in ER.items()}
     weights = {}
     rng = np.random.default_rng(7)
@@ -396,17 +437,18 @@ def wf_scores(ER, method, h, log=print, ic_cache=None):
     for y0 in years:
         start = pd.Timestamp(f"{y0}-01-01")
         cut_date = start - pd.Timedelta(days=int((h + 2) * 1.5) + 2)
+        tr0 = pd.Timestamp(PRE[0]) if window is None else max(pd.Timestamp(PRE[0]), start - pd.DateOffset(years=window))
         if method == "ic":
             w = np.zeros(len(FACTORS), np.float32)
             for i, k in enumerate(FACTORS):
                 s = ic_cache[(k, h)]
-                s = s[(s.index >= pd.Timestamp(PRE[0])) & (s.index < cut_date)]
+                s = s[(s.index >= tr0) & (s.index < cut_date)]
                 t = tstat_month(s)
                 if abs(t) >= 2:
                     w[i] = float(s.mean())
             w = w / (np.abs(w).max() + 1e-12)
         elif method == "ridge":
-            X, y, _ = train_rows(ER, h, cut_date, every=2)
+            X, y, _ = train_rows(ER, h, cut_date, every=2, start=tr0)
             w = ridge_w(X.astype(float), y).astype(np.float32)
             w = w / (np.abs(w).max() + 1e-12)
         elif method == "evo":
@@ -414,12 +456,12 @@ def wf_scores(ER, method, h, log=print, ic_cache=None):
                 start_w = np.zeros(len(FACTORS), np.float32)
                 for i, k in enumerate(FACTORS):
                     s = ic_cache[(k, h)]
-                    s = s[(s.index >= pd.Timestamp(PRE[0])) & (s.index < cut_date)]
+                    s = s[(s.index >= tr0) & (s.index < cut_date)]
                     if abs(tstat_month(s)) >= 2:
                         start_w[i] = np.sign(s.mean())
             else:
                 start_w = prev
-            w, f = evolve(ER, h, cut_date, start_w, rng)
+            w, f = evolve(ER, h, cut_date, start_w, rng, start=tr0)
             prev = w
         else:
             raise ValueError(method)
@@ -588,6 +630,202 @@ def stage4(ER, S, rule, log=print):
     return out
 
 
+# ── 2차: 해마다 과거로만 다시 고르는 체계 ───────────────────────────────────
+
+RULES2 = [{"slots": sl, "q_in": qi, "q_out": qo, "min_hold": mh, "stop": st, "max_hold": 0}
+          for sl in (3, 5, 10) for qi in (0.02, 0.05, 0.10) for qo in (0.2, 0.4, 0.6) for mh in (1, 10) for st in (0.0, 0.08)]
+FIXED2 = {**FIXED, "장기추세형": {"r250x": 1, "r120": 1}}
+LOOKBACK, TOPN, SEL_START = 3, 5, 2011
+
+
+def rule_label(r):
+    s = f"{r['slots']}자리 · 상위 {r['q_in']:.0%} 안이면 삼 · 상위 {r['q_out']:.0%} 밖이면 팜"
+    if r.get("min_hold", 1) > 1:
+        s += f" · 최소 {r['min_hold']}일 보유"
+    if r.get("stop"):
+        s += f" · 손절 {r['stop']:.0%}"
+    if r.get("max_hold"):
+        s += f" · 최대 {r['max_hold']}일"
+    return s
+
+
+def candidate_scores(ER, log=print):
+    ic_cache = {(k, h): ic_series(ER, h, k=k) for k in FACTORS for h in (5, 20)}
+    out = {}
+    for nm, w in FIXED2.items():
+        out[nm] = ({e: E.score(w) for e, E in ER.items()}, {"고정": w})
+    for method, label in (("ic", "IC 가중"), ("ridge", "선형 회귀"), ("evo", "진화 탐색")):
+        for h in (5, 20):
+            for win in (None, 3):
+                nm = f"{label} · {h}일 · {'2002~ 전체' if win is None else '최근 3년'}"
+                log(f"  ▸ {nm}")
+                S, ws = wf_scores(ER, method, h, lambda m: None, ic_cache, window=win)
+                out[nm] = (S, {str(y): v for y, v in ws.items()})
+    return out
+
+
+def run_candidates(ER, scores, log=print):
+    """모든 (점수, 규칙) 을 2008~ 매일 흉내 → 비용 1배·2배 일별 수익 표."""
+    R1, R2, meta = {}, {}, {}
+    ew = None
+    t0 = time.time()
+    for si, (nm, (S, _)) in enumerate(scores.items()):
+        for ri, r in enumerate(RULES2):
+            key = f"{si}:{ri}"
+            a = stitch(ER, S, r, DEV[0], None)
+            b = stitch(ER, S, r, DEV[0], None, cost_mult=2.0)
+            R1[key], R2[key] = a["r"], b["r"]
+            meta[key] = {"score": nm, "rule": r, "trades_per_year": round(len(a["trades"]) / (len(a["r"]) / 252), 1)}
+            ew = a["ew"]
+        log(f"    점수 {si + 1}/{len(scores)} {nm} ({time.time() - t0:.0f}초)")
+    return pd.DataFrame(R1), pd.DataFrame(R2), ew, meta
+
+
+def sharpe(x):
+    x = x.dropna()
+    return float(x.mean() / x.std() * np.sqrt(252)) if len(x) > 20 and x.std() > 0 else -9.0
+
+
+def yearly_system(R, ew, ks, lookback=LOOKBACK, topn=TOPN):
+    """해마다 1월 1일: 직전 lookback 년 샤프가 대형주 평균보다 높은 후보 중 상위 topn → 그해 똑같이 나눠 담음 (없으면 코스피).
+    바꾼 몫만큼 왕복 비용. 반환: 일별 수익 · 해마다 고른 것."""
+    years = range(SEL_START, R.index.max().year + 1)
+    out, picks, prev = [], {}, set()
+    rt = CB + CS
+    for y in years:
+        a, b = pd.Timestamp(f"{y - lookback}-01-01"), pd.Timestamp(f"{y}-01-01")
+        past = R[(R.index >= a) & (R.index < b)]
+        if len(past) < 120:
+            continue
+        sh = past.apply(sharpe)
+        bar = sharpe(ew[(ew.index >= a) & (ew.index < b)])
+        good = sh[sh > bar].sort_values(ascending=False)
+        chosen = list(good.index[:topn])
+        cur = R[(R.index >= b) & (R.index < pd.Timestamp(f"{y + 1}-01-01"))]
+        if cur.empty:
+            continue
+        if chosen:
+            r = cur[chosen].mean(axis=1)
+        else:
+            r = ks.reindex(cur.index).fillna(0.0)
+        changed = len(set(chosen) - prev) / max(len(chosen), 1) if chosen else (1.0 if prev else 0.0)
+        r = r.copy()
+        r.iloc[0] -= changed * rt
+        out.append(r)
+        picks[y] = {"chosen": chosen, "past_sharpe": [round(float(sh[c]), 3) for c in chosen], "bar": round(bar, 3)}
+        prev = set(chosen)
+    return pd.concat(out), picks
+
+
+def stats_full(r, ew=None):
+    if len(r) < 60:
+        return None
+    E = (1 + r).cumprod()
+    yrs = len(r) / 252
+    st = {"cagr": round(float(E.iloc[-1] ** (1 / yrs) - 1), 4), "sharpe": round(sharpe(r), 3), "mdd": round(float((E / E.cummax() - 1).min()), 4)}
+    if ew is not None:
+        ex = r - ew.reindex(r.index).fillna(0.0)
+        em = ex.groupby(ex.index.to_period("M")).sum()
+        st["excess_ann"] = round(float(ex.mean() * 252), 4)
+        st["t_excess"] = round(float(em.mean() / em.std() * np.sqrt(len(em))), 2) if em.std() > 0 else 0.0
+    return st
+
+
+def round2(ER, log=print):
+    t0 = time.time()
+    log("  점수 후보 만드는 중 (해마다 과거로만)")
+    scores = candidate_scores(ER, log)
+    log(f"  후보 {len(scores)} 점수 × {len(RULES2)} 규칙 = {len(scores) * len(RULES2)}개 매일 흉내")
+    R1, R2, ew, meta = run_candidates(ER, scores, log)
+    idx = R1.index
+    ks = kospi_daily(idx)
+    dm = card_daily("DM:2", idx)
+    sysr, picks = yearly_system(R1, ew, ks)
+    sysr2, _ = yearly_system(R2, ew, ks)
+    periods = {"2011~2018": ("2011-01-01", "2018-12-31"), "2019~": ("2019-01-01", None),
+               "최근 1년": ((idx.max() - pd.Timedelta(days=365)).strftime("%Y-%m-%d"), None), "2011~ 전체": ("2011-01-01", None)}
+    table = {}
+    for pn, (a, b) in periods.items():
+        c = lambda x: cut(x, a, b)                                      # noqa: E731
+        table[pn] = {"system": stats_full(c(sysr), ew), "system_x2": stats_full(c(sysr2), ew), "ew": stats_full(c(ew)),
+                     "kospi": stats_full(c(ks)), "dm2": stats_full(c(dm))}
+    ok = {}
+    for pn in ("2011~2018", "2019~"):
+        t = table[pn]
+        ok[pn] = bool(t["system"]["sharpe"] > max(t["ew"]["sharpe"], t["kospi"]["sharpe"]) and t["system"]["excess_ann"] > 0 and t["system_x2"]["excess_ann"] > 0)
+    sens = {}
+    for lb in (1, 3, 5):
+        for tn in (1, 5):
+            r, _ = yearly_system(R1, ew, ks, lb, tn)
+            sens[f"직전 {lb}년 · 상위 {tn}"] = {pn: stats_full(cut(r, *periods[pn]), ew) for pn in ("2011~2018", "2019~")}
+    # 후보 하나에 계속 머물렀다면 (비교용): 2011~2018 샤프 1등 후보를 끝까지
+    dev_best = R1[(R1.index >= "2011-01-01") & (R1.index <= "2018-12-31")].apply(sharpe).idxmax()
+    fixed_best = {pn: stats_full(cut(R1[dev_best], *periods[pn]), ew) for pn in ("2011~2018", "2019~")}
+    # 해마다 고른 것 풀어 쓰기
+    pick_rows = []
+    for y, v in picks.items():
+        for c, ps in zip(v["chosen"], v["past_sharpe"]):
+            m = meta[c]
+            yr = cut(R1[c], f"{y}-01-01", f"{y}-12-31")
+            pick_rows.append({"year": y, "key": c, "score": m["score"], "rule": rule_label(m["rule"]), "past_sharpe": ps, "bar": v["bar"],
+                              "year_ret": round(float((1 + yr).prod() - 1), 4), "trades_per_year": m["trades_per_year"]})
+        if not v["chosen"]:
+            pick_rows.append({"year": y, "key": "", "score": "코스피 지수 (통과 후보 없음)", "rule": "", "past_sharpe": None, "bar": v["bar"],
+                              "year_ret": round(float((1 + cut(ks, f"{y}-01-01", f"{y}-12-31")).prod() - 1), 4), "trades_per_year": 0})
+    yrs = sorted({d.year for d in sysr.index})
+    year_tab = {}
+    for y in yrs:
+        g = lambda x: float((1 + cut(x, f"{y}-01-01", f"{y}-12-31")).prod() - 1)  # noqa: E731
+        year_tab[str(y)] = {"system": round(g(sysr), 4), "ew": round(g(ew), 4), "kospi": round(g(ks), 4), "dm2": round(g(dm), 4)}
+    curve_idx = sysr.index
+    curve = {"date": [str(d.date()) for d in curve_idx]}
+    for k, x in (("system", sysr), ("ew", ew), ("kospi", ks), ("dm2", dm)):
+        x = x.reindex(curve_idx).fillna(0.0)
+        curve[k] = [round(float(v), 4) for v in (1 + x).cumprod()]
+    # 오늘의 규칙 카드: 올해 고른 후보마다 점수 공식 · 규칙 · 지금 들고 있을 종목 · 오늘 살 후보
+    card = today_card(ER, scores, meta, picks)
+    res = {"plan": {"lookback": LOOKBACK, "topn": TOPN, "sel_start": SEL_START, "n_scores": len(scores), "n_rules": len(RULES2),
+                    "extra_factors": EXTRA, "rules": RULES2},
+           "table": table, "pass": ok, "sensitivity": sens, "fixed_best": {"key": dev_best, "score": meta[dev_best]["score"],
+                                                                            "rule": rule_label(meta[dev_best]["rule"]), **fixed_best},
+           "picks": pick_rows, "years": year_tab, "curve": curve, "card": card,
+           "score_weights": {nm: w for nm, (_, w) in scores.items()}, "secs": round(time.time() - t0)}
+    for pn, t in table.items():
+        s_, e_, k_, d_ = t["system"], t["ew"], t["kospi"], t["dm2"]
+        log(f"  {pn:10s} 체계: 연 {s_['cagr']:+.1%} · 샤프 {s_['sharpe']:.2f} · 낙폭 {s_['mdd']:.0%} · 초과 {s_['excess_ann']:+.1%} (t {s_['t_excess']:.1f}) · 비용2배 {t['system_x2']['cagr']:+.1%} "
+            f"| 대형주 {e_['cagr']:+.1%}·{e_['sharpe']:.2f} · 코스피 {k_['cagr']:+.1%}·{k_['sharpe']:.2f} · DM:2 {d_['cagr']:+.1%}·{d_['sharpe']:.2f}")
+    log(f"  통과: {ok}")
+    for k, v in sens.items():
+        log(f"  민감도 {k}: " + " / ".join(f"{pn} 연 {x['cagr']:+.1%} 샤프 {x['sharpe']:.2f}" for pn, x in v.items()))
+    log(f"  한 후보에 계속 (2011~2018 1등: {meta[dev_best]['score']} · {rule_label(meta[dev_best]['rule'])}): " +
+        " / ".join(f"{pn} 연 {x['cagr']:+.1%} 샤프 {x['sharpe']:.2f}" for pn, x in fixed_best.items()))
+    return res
+
+
+def today_card(ER, scores, meta, picks):
+    """올해(마지막 해) 고른 후보들: 점수 공식(올해 가중치) · 규칙 · 지금 들고 있을 종목 · 오늘 점수 상위."""
+    import shadow_wf as SW
+    nm = SW.names()
+    E = ER["B"]
+    y = max(picks)
+    out = []
+    for c in picks[y]["chosen"]:
+        m = meta[c]
+        S, ws = scores[m["score"]]
+        w = ws.get("고정") if "고정" in ws else ws.get(str(y))
+        res = simulate(E, S["B"], m["rule"], "2019-01-01", None)
+        last = int(np.searchsorted(E.dates, E.dates[E.i1 - 1]))
+        Sm = np.where(E.U[last], S["B"][last], np.nan)
+        order = np.argsort(-np.where(np.isfinite(Sm), Sm, -np.inf))[:10]
+        out.append({"key": c, "score": m["score"], "weights": {k: v for k, v in sorted((w or {}).items(), key=lambda x: -abs(x[1]))},
+                    "weight_names": {k: factor_name(k) for k in (w or {})}, "rule": m["rule"], "rule_text": rule_label(m["rule"]),
+                    "holding": [{"code": E.codes[j], "name": nm.get(E.codes[j], E.codes[j]), "share": round(v["value"], 3), "days": v["days"]}
+                                for j, v in sorted(res["pos"].items(), key=lambda x: -x[1]["value"])],
+                    "top_today": [{"rank": i + 1, "code": E.codes[j], "name": nm.get(E.codes[j], E.codes[j])} for i, j in enumerate(order) if np.isfinite(Sm[j])],
+                    "date": str(E.dates[last].date())})
+    return out
+
+
 # ── 실행 ─────────────────────────────────────────────────────────────────────
 
 def save(res):
@@ -608,11 +846,20 @@ def main():
     a = ap.parse_args()
     log = lambda m: print(m, flush=True)                     # noqa: E731
     t0 = time.time()
+    set_factors(a.stage == "r2")
     ER = eras(log)
     res = load()
-    res.update({"generated": time.strftime("%Y-%m-%d %H:%M"), "factors": {k: EL.FEAT[k] for k in FACTORS}, "R0": R0, "grid": GRID,
+    res.update({"generated": time.strftime("%Y-%m-%d %H:%M"), "factors": {k: factor_name(k) for k in BASE}, "factors2": {k: factor_name(k) for k in BASE + list(EXTRA)},
+                "R0": R0, "grid": GRID,
                 "periods": {"pre": PRE, "dev": DEV, "hold": HOLD}, "crit": CRIT})
     st = a.stage
+    if st == "r2":
+        log("■ 2차: 해마다 과거로만 다시 고르는 체계")
+        res["round2"] = round2(ER, log)
+        res["secs"] = round(time.time() - t0)
+        save(res)
+        log(f"끝 ({res['secs']}초) → {OUT}")
+        return
     if st in ("1", "all"):
         log("■ 1단계: 요소 성적표")
         res["stage1"] = stage1(ER, log)
