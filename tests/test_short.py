@@ -1275,6 +1275,18 @@ def test_score_lab_yearly_selection_uses_past_only():
     assert abs(first - (R.loc[r[r.index >= "2011-01-01"].index[0], "A"] - (SC.CB + SC.CS))) < 1e-12   # 처음 고를 때 왕복 비용
 
 
+def test_robust_lab_spa_detects_real_signal_only():
+    """데이터 뒤지기 검정(Hansen SPA): 신호 없는 후보 수백 개(거울상 포함)면 p 가 크고, 진짜 하나가 섞이면 p 가 작다."""
+    import robust_lab as RL
+    rng = np.random.default_rng(1)
+    X = rng.normal(0, 0.01, (2500, 120))
+    assert RL.spa(np.c_[X, -X], B=150)["p"] > 0.1
+    X2 = X.copy()
+    X2[:, 0] += 0.0015
+    assert RL.spa(X2, B=150)["p"] < 0.02
+    assert len(RL.formulas()) == 2 * len(RL.SC.FACTORS) + 4 * len(RL.SC.FACTORS) * (len(RL.SC.FACTORS) - 1) // 2
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 

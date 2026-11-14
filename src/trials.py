@@ -45,6 +45,8 @@ def count():
     exits = jload("data/exit_lab.json", {}) or {}
     wf = jload("data/wf_lab.json", {}) or {}
     sc = jload("data/score_lab.json", {}) or {}
+    rb = jload("data/robust_lab.json", {}) or {}
+    rb_n = int(rb.get("n_candidates") or 0) + (len((rb.get("robustness") or {}).get("leave_one_out") or []) + len((rb.get("robustness") or {}).get("rule_neighbors") or [])) + (3 if rb.get("composite") else 0)
     sc_n = len(sc.get("stage2") or {}) + sum(int(v.get("n_rules") or 0) for v in (sc.get("stage3") or {}).values())
     r2 = sc.get("round2") or {}
     sc_n += int((r2.get("plan") or {}).get("n_scores") or 0) * int((r2.get("plan") or {}).get("n_rules") or 0)
@@ -68,6 +70,7 @@ def count():
         "walk_forward": {"n": int(wf.get("n_trials") or 0), "what": f"해마다 다시 배우는 종목 순위·시장 타이밍·섞기 (최종 확인 연 횟수 {len(wf.get('holdout_opened') or [])})"},
         "exit_rules": {"n": int(exits.get("n_trials") or 0), "what": "매도 규칙 1,464가지(손절·익절 넓게·나눠 팔기·본전 손절·고점 대비 손절·보유) × 매수 자리 3"},
         "score_lab": {"n": sc_n, "what": "점수 매매: 점수 공식 12 + 공식마다 매매 규칙 격자 + 2차 해마다 고르는 체계의 후보 (공식 17 × 규칙 108)"},
+        "robust_lab": {"n": rb_n, "what": "견고한 점수 찾기: 요소 1~2개 공식 2,450 × 규칙 3 + 합친 점수 · 요소 빼기 · 규칙 이웃"},
         "edge_mining": {"n": int(edge.get("n_trials") or 0), "what": "새 재료 36개(수급·밤/낮·종가 위치·회전율·시장 폭·달력) 하나·둘 조합 × 손절=익절 3가지 + 확률 모델"},
     }
     kr_n = kr_models * grid + genomes
