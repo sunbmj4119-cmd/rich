@@ -1,0 +1,130 @@
+{
+ "start": "2026-11-16",
+ "data_until": "2026-11-13",
+ "what": "그림자 기록 — 실제 돈 아님 (토스 도전자: 장기 추세 + 단기 눌림)",
+ "score": {
+  "r250x": 1,
+  "r120": 1,
+  "ma120": 1,
+  "hi52": 1,
+  "r60": 1,
+  "r5": -1,
+  "r1": -1,
+  "ma20": -1,
+  "clv5": -1,
+  "clv1": -1,
+  "r20": -1
+ },
+ "promote_rule": {
+  "min_days": 120,
+  "max_dd": -0.25
+ },
+ "rules": {
+  "10자리": {
+   "rule": "10자리 · 상위 10% 안이면 삼 · 상위 50% 밖이면 팜 · 최소 20일 보유",
+   "days": 0,
+   "equity": 200000,
+   "ret": 0.0,
+   "signal": {
+    "date": "2026-11-13",
+    "sell": [],
+    "buy_candidates": [
+     {
+      "code": "090430",
+      "name": "아모레퍼시픽"
+     },
+     {
+      "code": "011200",
+      "name": "HMM"
+     },
+     {
+      "code": "000810",
+      "name": "삼성화재"
+     },
+     {
+      "code": "000880",
+      "name": "한화"
+     },
+     {
+      "code": "373220",
+      "name": "LG에너지솔루션"
+     },
+     {
+      "code": "207940",
+      "name": "삼성바이오로직스"
+     },
+     {
+      "code": "138040",
+      "name": "메리츠금융지주"
+     },
+     {
+      "code": "096770",
+      "name": "SK이노베이션"
+     },
+     {
+      "code": "278470",
+      "name": "에이피알"
+     },
+     {
+      "code": "009150",
+      "name": "삼성전기"
+     }
+    ]
+   },
+   "promote_check": {
+    "days": false,
+    "beats_ew": false,
+    "dd": false,
+    "vs_dm2": false,
+    "all": false
+   }
+  },
+  "5자리": {
+   "rule": "5자리 · 상위 5% 안이면 삼 · 상위 50% 밖이면 팜 · 최소 20일 보유",
+   "days": 0,
+   "equity": 200000,
+   "ret": 0.0,
+   "signal": {
+    "date": "2026-11-13",
+    "sell": [],
+    "buy_candidates": [
+     {
+      "code": "090430",
+      "name": "아모레퍼시픽"
+     },
+     {
+      "code": "011200",
+      "name": "HMM"
+     },
+     {
+      "code": "000810",
+      "name": "삼성화재"
+     },
+     {
+      "code": "000880",
+      "name": "한화"
+     },
+     {
+      "code": "373220",
+      "name": "LG에너지솔루션"
+     }
+    ]
+   },
+   "promote_check": {
+    "days": false,
+    "beats_ew": false,
+    "dd": false,
+    "vs_dm2": false,
+    "all": false
+   }
+  }
+ },
+ "note": "아직 시작 전",
+ "dm2_same_window": {
+  "start": "2026-11-16",
+  "days": 0,
+  "equity": 200000,
+  "note": "아직 시작 전"
+ },
+ "generated": "2026-11-14 12:23"
+}

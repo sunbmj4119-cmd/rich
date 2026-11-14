@@ -543,6 +543,12 @@ def run(cfg=None, now=None):
                     json.dump(sh, open(os.path.join(DIR, "overnight_shadow.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
                     ch = SZ.challenger_forward(SZ.conf(cfg))   # 공격 엔진 도전자 그림자 (실제 돈 아님)
                     json.dump(ch, open(os.path.join(DIR, "challenger_forward.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+                    try:                                         # 토스 도전자: 장기 추세 + 단기 눌림 (실제 돈 아님)
+                        import trend_shadow as TS
+                        ts = TS.forward()
+                        json.dump(ts, open(os.path.join(DIR, "trend_shadow.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=float)
+                    except Exception as ex:
+                        print(f"  (추세·눌림 그림자 실패: {type(ex).__name__} {ex})")
                 except Exception as ex:
                     print(f"  (규모별 모의 기록 실패: {type(ex).__name__} {ex})")
         except Exception as ex:                         # 전천후 계산이 실패해도 단기 몫은 그대로 돈다
