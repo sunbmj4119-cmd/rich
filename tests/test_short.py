@@ -1309,6 +1309,21 @@ def test_div_lab_dividend_steps():
     assert w[ex] and not w[0]
 
 
+def test_div_project_dca_and_bootstrap():
+    """자산 방향: 수익 0 이면 끝 금액 = 낸 돈 · 매달 1% 면 공식과 같음 · 부트스트랩 자리는 10 ≤ 50 ≤ 90."""
+    import div_project as DP
+    m0 = pd.Series(np.zeros(240), index=pd.period_range("2000-01", periods=240, freq="M"))
+    v = DP.dca_hist(m0, 100_000, years=10)
+    assert v["p50"] == v["paid"] == 200_000 + 100_000 * 120 and v["loss_prob"] == 0.0
+    m1 = pd.Series(np.full(240, 0.01), index=m0.index)
+    v1 = DP.dca_hist(m1, 0, years=10)
+    assert abs(v1["p50"] - 200_000 * 1.01 ** 120) < 2
+    rng = np.random.default_rng(0)
+    mr = pd.Series(rng.normal(0.008, 0.05, 240), index=m0.index)
+    b = DP.bootstrap(mr, 100_000, years=10, n_paths=2000)
+    assert b["p10"] <= b["p50"] <= b["p90"] and len(b["path"]["p50"]) == 121 and b["path"]["paid"][-1] == b["paid"]
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
