@@ -1220,6 +1220,38 @@ def test_shadow_wf_staggered_groups():
     assert e[days[0]] == 1.0 and e[days[4]] == 1.0 and abs(e[days[5]] - 1.1) < 1e-12 and abs(e[days[-1]] - 1.1) < 1e-12   # 마지막 기간은 다음 결정일이 와야 반영
 
 
+def test_score_lab_daily_rules():
+    """점수 매매: 매일 판단 · 순위가 밀리면 다음 날 시가에 팔고 새 1등을 삼 · 손절 · 정수 주식 · 비용."""
+    import types
+    import score_lab as SC
+    T, N = 12, 4
+    dates = pd.bdate_range("2019-01-01", periods=T)
+    px = np.ones((T, N)) * 100.0
+    px[:, 0] = 100 * 1.01 ** np.arange(T)
+    px[:, 3] = 100 * 0.98 ** np.arange(T)
+
+    def era(name):
+        E = types.SimpleNamespace(era=name, dates=dates, U=np.ones((T, N), bool), buyable=np.ones((T, N), bool), px=px, Cf=px.copy())
+        G = np.full((T, N), np.nan)
+        G[:-2] = px[2:] / px[1:-1] - 1
+        E.G, E.ew = G, np.nanmean(G, 1)
+        E.rows = lambda a, b: (0, T)
+        return E
+    rule = {"slots": 1, "q_in": 0.25, "q_out": 0.3, "min_hold": 1, "stop": 0.0, "max_hold": 0}
+    S0 = np.tile([4.0, 3.0, 2.0, 1.0], (T, 1))
+    r = SC.simulate(era("t1"), S0, rule, None, None)
+    assert abs((1 + r["r"]).prod() - 1.01 ** (T - 2) / (1 + SC.CB)) < 1e-12                  # 1등을 계속 들고 감 · 산 비용만
+    S1 = S0.copy()
+    S1[3:, 3] = 9.0                                                                            # 3일째 장 마감부터 3번이 1등
+    r = SC.simulate(era("t2"), S1, rule, None, None)
+    assert list(r["holds"]) == [3] and abs(r["trades"][0] - (1.01 ** 3 * (1 - SC.CS) / (1 + SC.CB) - 1)) < 1e-12
+    S2 = np.tile([1.0, 2.0, 3.0, 9.0], (T, 1))
+    r = SC.simulate(era("t3"), S2, {**rule, "stop": 0.05}, None, None)
+    assert len(r["trades"]) >= 1 and r["trades"][0] < -0.05 and r["holds"][0] == 4             # 종가 −5% 넘으면 다음 날 시가에 손절
+    r = SC.simulate(era("t4"), S0, rule, None, None, cash0=150)
+    assert abs(150 * (1 + r["r"]).prod() - (150 - 101 * (1 + SC.CB) + 100 * 1.01 ** (T - 1))) < 1e-9   # 다음 날 시가(101)에 1주만 사고 나머지는 현금
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
