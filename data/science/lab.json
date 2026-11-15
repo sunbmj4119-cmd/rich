@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-13 23:09",
+ "generated": "2026-11-14 21:54",
  "hypotheses": [
   {
    "name": "단기 몫에 변동성 관리",
@@ -1662,9 +1662,9 @@
    "what": "국내 단기 후보 109개 + 고르는 방식 288가지 중 채택 규칙",
    "dsr": 0.695,
    "sr0_annual": 0.646,
-   "n_trials_all": 387120,
-   "dsr_all": 0.161,
-   "sr0_annual_all": 1.18,
+   "n_trials_all": 406896,
+   "dsr_all": 0.159,
+   "sr0_annual_all": 1.182,
    "random": {
     "n": 120,
     "live": 0.827,
