@@ -14,6 +14,11 @@ ETF 일봉 수집 → data/etf_ohlcv.csv  (전천후 모델이 국면마다 갈�
                    (기타 ETF — 매매차익에 15.4% 배당소득세. 연구·모의투자는 이익 난 매도마다 15.4%를 뗀다 = 보수적)
   ETF 는 모두 매도 때 증권거래세가 없다. 분배금은 가격에 안 들어가 있어 수익이 조금 낮게 잡힌다(보수적).
 
+  ISA 안내용 (ISA_EXTRA — 전천후·단기 몫은 쓰지 않음, allweather.CODES 에 안 들어감 · isa_daily 만 읽음)
+    161510 PLUS 고배당주 · 279530 KODEX 고배당 · 210780 TIGER 코스피고배당
+    446720 SOL 미국배당다우존스 · 458730 TIGER 미국배당다우존스 · 360750 TIGER 미국S&P500
+    이름은 네이버가 알려주는 실제 이름으로 저장 (코드가 바뀌었으면 화면에서 바로 보이게). 이것들이 실패해도 수집은 실패로 치지 않는다.
+
   python src/collect_etf.py                 # 매일: 최근 30거래일 다시 받아 덮어씀, 처음 보는 자산은 저절로 전체 기간
   python src/collect_etf.py --backfill      # 모든 자산 전체 기간 다시
 """
@@ -42,7 +47,15 @@ ASSETS = {
     "143850": ("TIGER 미국S&P500선물(H)", "other", "미국주식"),
     "133690": ("TIGER 미국나스닥100", "other", "미국 기술주"),
 }
-TICKERS = {k: v[0] for k, v in ASSETS.items()}
+ISA_EXTRA = {
+    "161510": ("PLUS 고배당주", "equity", "국내 고배당"),
+    "279530": ("KODEX 고배당", "equity", "국내 고배당"),
+    "210780": ("TIGER 코스피고배당", "equity", "국내 고배당"),
+    "446720": ("SOL 미국배당다우존스", "other", "미국 배당"),
+    "458730": ("TIGER 미국배당다우존스", "other", "미국 배당"),
+    "360750": ("TIGER 미국S&P500", "other", "미국주식"),
+}
+TICKERS = {k: v[0] for k, v in {**ASSETS, **ISA_EXTRA}.items()}
 FULL = 5000          # 전체 기간 요청 일수 (약 20년)
 
 
@@ -51,8 +64,9 @@ def fetch_naver(code, count):
     d = naver.daily(code, count)
     if d.empty:
         return pd.DataFrame(columns=COLS)
+    real = (d.attrs.get("name") or "").strip()
     d["종목코드"] = code
-    d["종목명"] = TICKERS[code]
+    d["종목명"] = real if (code in ISA_EXTRA and real) else TICKERS[code]
     d["거래대금"] = (d["종가"] * d["거래량"]).round()
     d["NAV"] = None
     return d[COLS]
@@ -82,7 +96,7 @@ def main():
     if len(old):
         old["종목코드"] = old["종목코드"].astype(str).str.zfill(6)
     parts, bad = [old], []
-    for code, (name, _, _) in ASSETS.items():
+    for code, (name, _, _) in {**ASSETS, **ISA_EXTRA}.items():
         have = old[old["종목코드"] == code]
         full = bool(a.backfill) or len(have) < 500
         n = FULL if full else 30
@@ -98,7 +112,10 @@ def main():
             except Exception as e:
                 print(f"  {name}: KRX 도 실패 ({type(e).__name__} {str(e)[:60]})")
         if df.empty:
-            bad.append(name)
+            if code in ASSETS:
+                bad.append(name)
+            else:
+                print(f"  (ISA 안내용 {name} 자료 없음 — 건너뜀)")
             continue
         print(f"  {name}: {len(df)}행 ({df['날짜'].min()} ~ {df['날짜'].max()}) · {src}{' · 전체 기간' if full else ''}")
         parts.append(df)

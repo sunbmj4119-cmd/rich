@@ -115,7 +115,7 @@ pre.code { background: var(--soft); border-radius: 10px; padding: 10px 12px; fon
 body { padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)) }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 32; background: var(--bg) }
 
-.bnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(5, 1fr);
+.bnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(6, 1fr);
   background: color-mix(in srgb, var(--card) 94%, transparent); -webkit-backdrop-filter: saturate(1.6) blur(14px); backdrop-filter: saturate(1.6) blur(14px);
   border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px);
   padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px) }

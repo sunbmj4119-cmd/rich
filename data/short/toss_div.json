@@ -1,0 +1,126 @@
+{
+ "strategy": "T1",
+ "name": "고배당 + 추세·눌림 · 3자리",
+ "rule": "3자리 · 상위 5% 안이면 삼 · 상위 30% 밖이면 팜 · 최소 20일 보유",
+ "start": "2026-11-16",
+ "data_until": "2026-11-13",
+ "what": "모의 기록 — 실제 돈 아님 (토스 공격 고배당)",
+ "cash0": 200000,
+ "days": 0,
+ "equity": 200000,
+ "ret": 0.0,
+ "holdings": [],
+ "note": "아직 시작 전",
+ "slot_won": 66667,
+ "signal": {
+  "date": "2026-11-13",
+  "free_slots": 3,
+  "sell": [],
+  "buy": [
+   {
+    "code": "000810",
+    "name": "삼성화재",
+    "price": 528000,
+    "yield": 0.0414,
+    "affordable": false
+   },
+   {
+    "code": "011200",
+    "name": "HMM",
+    "price": 21300,
+    "yield": 0.0308,
+    "affordable": true
+   },
+   {
+    "code": "005830",
+    "name": "DB손해보험",
+    "price": 163500,
+    "yield": 0.0406,
+    "affordable": false
+   }
+  ]
+ },
+ "top": [
+  {
+   "rank": 1,
+   "code": "000810",
+   "name": "삼성화재",
+   "yield": 0.0414,
+   "price": 528000,
+   "held": false
+  },
+  {
+   "rank": 2,
+   "code": "011200",
+   "name": "HMM",
+   "yield": 0.0308,
+   "price": 21300,
+   "held": false
+  },
+  {
+   "rank": 3,
+   "code": "005830",
+   "name": "DB손해보험",
+   "yield": 0.0406,
+   "price": 163500,
+   "held": false
+  },
+  {
+   "rank": 4,
+   "code": "033780",
+   "name": "KT&G",
+   "yield": 0.0378,
+   "price": 176500,
+   "held": false
+  },
+  {
+   "rank": 5,
+   "code": "024110",
+   "name": "기업은행",
+   "yield": 0.0594,
+   "price": 19030,
+   "held": false
+  },
+  {
+   "rank": 6,
+   "code": "029780",
+   "name": "삼성카드",
+   "yield": 0.0496,
+   "price": 40750,
+   "held": false
+  },
+  {
+   "rank": 7,
+   "code": "021240",
+   "name": "코웨이",
+   "yield": 0.0279,
+   "price": 102600,
+   "held": false
+  },
+  {
+   "rank": 8,
+   "code": "078930",
+   "name": "GS",
+   "yield": 0.0487,
+   "price": 83900,
+   "held": false
+  },
+  {
+   "rank": 9,
+   "code": "015760",
+   "name": "한국전력",
+   "yield": 0.0328,
+   "price": 27600,
+   "held": false
+  },
+  {
+   "rank": 10,
+   "code": "003550",
+   "name": "LG",
+   "yield": 0.0242,
+   "price": 86400,
+   "held": false
+  }
+ ],
+ "generated": "2026-11-15 08:06"
+}

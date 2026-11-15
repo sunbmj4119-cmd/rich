@@ -1333,6 +1333,83 @@ def test_trend_shadow_matches_research_and_waits_for_start():
     assert TS.PROMOTE == {"min_days": 120, "max_dd": -0.25} and TS.FORWARD_START == "2026-11-16"
 
 
+def test_div_lab_noncash_steps_kept_out_of_yield():
+    """주식배당·증자: 계단과 함께 주식 수가 늘면 현금 배당에서 빼고(배당수익률 순위에 안 들어감) 가격 메움 몫으로만 남긴다."""
+    import types
+    import div_lab as DV
+    dates = pd.bdate_range("2019-12-02", periods=80)
+    T, N = len(dates), 2
+    raw = np.full((T, N), 100.0)
+    E = types.SimpleNamespace(G=np.zeros((T, N)), Cf=raw, dates=dates, codes=["A", "B"])
+    ex = int(np.searchsorted(dates, pd.Timestamp("2019-12-27")))
+    step = np.where(np.arange(T) < ex, 100 / 1.04, 100.0)                   # 둘 다 4% 계단
+    adj = pd.DataFrame({"A": step, "B": step}, index=dates)
+    shares = np.ones((T, N))
+    shares[ex + 15:, 1] = 1.04                                              # B 는 15일 뒤 신주 상장 = 주식배당
+    Dv, _ = DV.dividend_events(E, adj, shares=shares)
+    assert abs(Dv[ex, 0] - 0.04) < 1e-6 and Dv[ex, 1] == 0.0
+    assert abs(E.Dv_noncash[ex, 1] - 0.04) < 1e-6 and E.Dv_noncash[ex, 0] == 0.0 and E.noncash_dropped == 1
+
+
+def test_collect_etf_isa_extra_kept_out_of_allweather():
+    """ISA 안내용 ETF 는 전천후·단기 몫 자산 목록(allweather.CODES)에 들어가지 않는다 · 수집 이름표에는 들어간다."""
+    import allweather as AW
+    import collect_etf as CE
+    assert not set(CE.ISA_EXTRA) & set(CE.ASSETS)
+    assert AW.CODES == list(CE.ASSETS) and len(AW.CODES) == 12
+    assert all(c in CE.TICKERS for c in CE.ISA_EXTRA) and "161510" in CE.ISA_EXTRA
+
+
+def test_isa_daily_mix_and_todo():
+    """ISA: 해마다 1월에만 50:50 으로 맞추기 · 매달 맞추기와 첫해는 같음 · 할 일 문장은 바꿀 날에만 사고팔기."""
+    import isa_daily as ID
+    idx = pd.date_range("2020-01-31", periods=24, freq="ME")
+    a = pd.Series(np.full(24, 0.02), index=idx)
+    b = pd.Series(np.zeros(24), index=idx)
+    an, mo = ID.mix(a, b), ID.mix(a, b, rebalance="monthly")
+    assert abs(mo.iloc[0] - 0.01) < 1e-12 and abs(an.iloc[0] - 0.01) < 1e-12
+    assert an.iloc[5] > mo.iloc[5]                                          # 1월 사이에는 오른 쪽 비중이 커짐
+    assert abs(an.iloc[12] - 0.01) < 1e-12                                  # 다음 1월에 다시 반반
+    st = ID.mstats(mo)
+    assert st["months"] == 24 and st["mdd"] == 0.0
+    nm = {"A": "가", "B": "나", "C": "다"}
+    t0 = ID.todo_text(None, pd.Timestamp("2026-12-01"), False, {"A": 0.5}, {"A": 0.5}, nm, False)
+    assert len(t0) == 1 and "할 일 없음" in t0[0]
+    t1 = ID.todo_text(None, pd.Timestamp("2026-12-01"), True, {"A": 0.5, "B": 0.5}, {"A": 0.5, "C": 0.5}, nm, False)
+    assert any("나" in x and "판다" in x for x in t1) and any("다 50%" in x for x in t1)
+    t2 = ID.todo_text(None, pd.Timestamp("2027-01-04"), True, {"A": 1.0}, {"A": 1.0}, nm, True)
+    assert any("60%" in x for x in t2)
+    assert ID.first_bday(2026, 11) == pd.Timestamp("2026-11-02")             # 11월 1일은 일요일
+
+
+def test_toss_div_rules_and_page_without_files():
+    """토스 공격 고배당: 후보·규칙은 미리 정한 그대로 · 결과 파일이 없어도 화면 자료가 만들어진다(잔고 없음)."""
+    import toss_div as TD
+    assert set(TD.CANDS) == {"T1", "T2", "T3", "R1", "R2"} and TD.FORWARD_START == "2026-11-16" and TD.CASH0 == 200_000
+    assert TD.CANDS["T1"][1] == ("y", "c") and TD.CANDS["T1"][2] == {"slots": 3, "q_in": 0.05, "q_out": 0.30, "min_hold": 20, "stop": 0.0, "max_hold": 0}
+    cwd = os.getcwd()
+    with tempfile.TemporaryDirectory() as d:
+        os.chdir(d)
+        try:
+            pg = TD.page({})
+            assert TD.picked() == "T1"
+        finally:
+            os.chdir(cwd)
+    assert pg["real"]["strategy"] == "DM:2" and pg["aggr_div"]["forward"] == {} and "readiness" in pg
+    assert "equity" not in json.dumps(pg["real"])
+
+
+def test_research_digest_items():
+    """연구 모음: 모든 항목에 제목·판정(채택/참고/기각)·결과가 있고, 최근 연구가 위에 온다."""
+    import research_digest as RD
+    r = RD.build()
+    assert len(r["items"]) >= 7
+    assert all(x.get("title") and x.get("verdict") in ("채택", "참고", "기각") and x.get("result") for x in r["items"])
+    assert sum(r["counts"].values()) == len(r["items"])
+    dated = [x["date"] for x in r["items"] if len(x.get("date", "")) == 10]
+    assert dated[0] >= dated[-1]
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
