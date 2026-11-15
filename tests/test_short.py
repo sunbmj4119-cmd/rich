@@ -1410,6 +1410,25 @@ def test_research_digest_items():
     assert dated[0] >= dated[-1]
 
 
+def test_income_goal_years_and_income_path():
+    """배당 목표: 수익 0 이면 걸리는 해 = 목표 ÷ (매달 넣는 돈 × 12) · 물가를 넣으면 더 늦음 · 끝나지 않은 해와 자료 빠진 해는 흔들림에서 뺌."""
+    import income_goal as IG
+    m0 = np.zeros(120)
+    r = IG.years_to_target(m0, 0, 1_000_000, 120_000_000, n_paths=50)
+    assert r["p50"] == 10.0 and r["within10"] == 1.0
+    r2 = IG.years_to_target(m0, 0, 1_000_000, 120_000_000, infl=0.02, n_paths=50)
+    assert r2["p50"] > 10.0 and r2["within10"] == 0.0
+    idx = pd.bdate_range("2015-01-01", "2020-06-30")
+    inc = pd.Series(0.0, index=idx)
+    for y in range(2015, 2021):
+        inc[inc.index[inc.index.year == y][-1]] = 0.04 if y != 2017 else 0.02          # 2017 은 배당 절반
+    val = pd.Series(1.0, index=idx)
+    out = IG.yearly_income(inc, val, "2015-01-01")
+    assert 2020 not in out["years"]                                                   # 6월에 끝난 해는 뺌
+    assert out["worst_year"] == 2017 and abs(out["worst_drop"] + 0.5) < 1e-9
+    assert 2018 in out["years"] and out["n"] == 2                                     # 2018(자료 이음매)과 그다음 해의 변화는 뺌
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
