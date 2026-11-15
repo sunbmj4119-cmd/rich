@@ -91,10 +91,10 @@ tr.pick td:first-child { box-shadow: inset 3px 0 0 var(--green) }
       <header><h2>내 숫자로 계산</h2><span class="mut small">이 기기에만 저장 · 어디에도 보내지 않음</span></header>
       <div class="calc">
         <label>핵심(고배당) 평가금액<input id="c-core" inputmode="numeric" placeholder="예: 500000"></label>
-        <label>회전 몫 평가금액<input id="c-rot" inputmode="numeric" placeholder="예: 480000"></label>
-        <label>예수금 (이번 입금 포함)<input id="c-cash" inputmode="numeric" placeholder="예: 100000"></label>
+        <label>회전 ETF 평가금액 (지금 들고 있는 것 합계)<input id="c-rot" inputmode="numeric" placeholder="예: 480000"></label>
+        <label>예수금 (주식모으기에 쓸 돈은 빼고)<input id="c-cash" inputmode="numeric" placeholder="예: 100000"></label>
       </div>
-      <div class="out" id="c-out">세 칸을 채우면 무엇을 몇 주 살지 계산합니다.</div>
+      <div class="out" id="c-out">세 칸을 채우면 회전 몫을 무엇을 몇 주로 맞출지 계산합니다. 핵심은 주식모으기가 삽니다.</div>
     </section>
     <section class="card" id="isa-etf"></section>
     <section class="card" id="isa-hist"></section>
@@ -168,7 +168,7 @@ tr.pick td:first-child { box-shadow: inset 3px 0 0 var(--green) }
       <div class="split" aria-hidden="true"><i style="width:50%;background:var(--up)"></i><i style="width:50%;background:var(--down)"></i></div>
       <div class="alloc">
         <div><span class="eyebrow">핵심 · 고배당</span><span class="w">50%</span><b>${esc(core.name || "PLUS 고배당주")}</b>
-          <span class="mut small">${esc(core.code || "")} · 사서 오래 · 분배금 재투자 · 떨어져도 안 팜${core.have ? "" : " · 앱에서 못 찾으면 " + esc(nm[core.alt] || "KODEX 고배당") + " (" + esc(core.alt || "") + ")"}</span></div>
+          <span class="mut small">${esc(core.code || "")} · <b>주식모으기로 자동</b> (매달 넣는 돈의 절반) · 분배금 재투자 · 떨어져도 안 팜${core.have ? "" : " · 앱에서 못 찾으면 " + esc(nm[core.alt] || "KODEX 고배당") + " (" + esc(core.alt || "") + ")"}</span></div>
         <div><span class="eyebrow">회전 · 매달 1·2등</span><span class="w">50%</span><b>${(rot.held || []).map((x) => esc(x.name)).join(" + ") || "—"}</b>
           <span class="mut small">${esc(md(rot.held_since))}에 고름 · 6개 중 120일 수익 상위 2개 반반, 단기채보다 못하면 단기채</span></div>
       </div>
@@ -189,7 +189,7 @@ tr.pick td:first-child { box-shadow: inset 3px 0 0 var(--green) }
       <div class="note">${same ? "지금 순위로도 들고 있는 것과 같습니다." : `<b>지금 순위대로라면</b> ${wouldTxt} — 하지만 바꾸는 것은 <b>${esc(md(isa.next_action_day))}</b> (다음 달 첫 거래일) 순위로 정합니다. 그 전에는 그대로 둡니다.`}</div>`;
 
     // 내 숫자로 계산 (localStorage 만)
-    const KEY = "rich.isa.calc.v1";
+    const KEY = "rich.isa.calc.v2";
     const px = {}; (isa.etfs || []).forEach((e) => { if (e.have) px[e.code] = e.price; });
     const inputs = ["c-core", "c-rot", "c-cash"].map((id) => $("#" + id));
     try { const s = JSON.parse(localStorage.getItem(KEY) || "{}"); inputs.forEach((el) => { if (s[el.id]) el.value = s[el.id]; }); } catch { /* 저장 없음 */ }
@@ -197,23 +197,24 @@ tr.pick td:first-child { box-shadow: inset 3px 0 0 var(--green) }
     const calc = () => {
       const [vc, vr, cash] = inputs.map(val);
       try { localStorage.setItem(KEY, JSON.stringify(Object.fromEntries(inputs.map((el) => [el.id, el.value])))); } catch { /* 저장 불가 */ }
-      if (!(vc || vr || cash)) { $("#c-out").textContent = "세 칸을 채우면 무엇을 몇 주 살지 계산합니다."; return; }
+      if (!(vc || vr || cash)) { $("#c-out").textContent = "세 칸을 채우면 회전 몫을 무엇을 몇 주로 맞출지 계산합니다. 핵심은 주식모으기가 삽니다."; return; }
       const tot = vc + vr + cash;
-      const coreNeed = Math.max(0, tot / 2 - vc), rotNeed = Math.max(0, tot / 2 - vr);
-      let toCore = Math.min(cash, coreNeed), toRot = Math.max(0, cash - toCore);
-      const cp = px[core.code] || px[core.alt];
-      const lines = [];
-      lines.push(`전체 <b>${won(tot)}</b> · 핵심 ${P(vc / tot, 0, false)} · 회전 ${P(vr / tot, 0, false)} · 예수금 ${P(cash / tot, 0, false)}`);
-      if (cp) lines.push(`핵심(${esc(core.name)}): ${won(toCore)} → <b>${Math.floor(toCore / cp)}주</b> (${won(cp)} 기준)`);
-      else lines.push(`핵심(${esc(core.name)}): ${won(toCore)} 어치 — 가격 자료가 아직 없어 앱 가격으로 ${won(toCore)} ÷ 1주 값`);
-      const tgt = act ? (rot.next || []) : (rot.held || []);
-      if (toRot > 0 || act) {
-        const base = vr + toRot;
-        const parts = tgt.map((x) => { const p = px[x.code]; const amt = base * x.w; return `${esc(x.name)} ${won(amt)}${p ? ` → 모두 합쳐 <b>${Math.floor(amt / p)}주</b>가 되게` : ""}`; });
-        lines.push(`회전: 몫 ${won(base)} → ${parts.join(" · ") || "—"}`);
-      }
-      if (!act) lines.push(`<span class="mut">오늘은 할 일 없는 날 — 이 계산은 ${esc(md(isa.next_action_day))}에 씁니다. 1월이면 한쪽이 60% 를 넘는지도 봅니다.</span>`);
-      if (vc / tot > 0.6 || vr / tot > 0.6) lines.push(`<b>한쪽이 60% 를 넘음</b> — 1월 첫 거래일이면 넘는 만큼 팔아 50:50 으로.`);
+      const lines = [`전체 <b>${won(tot)}</b> · 핵심 ${P(vc / tot, 0, false)} · 회전 ${P(vr / tot, 0, false)} · 예수금 ${P(cash / tot, 0, false)}`];
+      const order = (rot.rank || []).map((r) => r.code);
+      const tgt = (act ? (rot.next || []) : (rot.held || [])).slice().sort((x, y) => (order.indexOf(x.code) + 1 || 99) - (order.indexOf(y.code) + 1 || 99));
+      const base = vr + cash;
+      let left = base;
+      const parts = tgt.map((x) => {
+        const p = px[x.code], amt = base * x.w;
+        if (!p) return `${esc(x.name)} ${won(amt)} 어치 (가격 자료 없음 — 앱 가격으로 나눔)`;
+        const q = Math.floor(Math.min(amt, left) / p);
+        left -= q * p;
+        return q > 0 ? `${esc(x.name)} <b>모두 합쳐 ${q}주</b> (${won(p)} · ${won(q * p)})` : `${esc(x.name)} <b>아직 1주 안 됨</b> (1주 ${won(p)} > ${won(amt)}) — 모아 둠`;
+      });
+      lines.push(`회전 몫 ${won(base)} (들고 있는 것 + 예수금) → ${parts.join(" · ") || "—"} · 남는 돈 ${won(left)}`);
+      lines.push(`<span class="mut">'모두 합쳐 N주' = 판 뒤 · 산 뒤 그 ETF 를 N주 들고 있게. 순위 밖 ETF 는 0주 (전부 판다).</span>`);
+      if (!act) lines.push(`<span class="mut">오늘은 할 일 없는 날 — 이 계산은 ${esc(md(isa.next_action_day))}에 씁니다.</span>`);
+      if (vc / tot > 0.6 || (vr + cash) / tot > 0.6) lines.push(`<b>한쪽이 60% 를 넘음</b> — 1월 첫 거래일이면 넘는 만큼 팔아 50:50 으로 (또는 주식모으기 금액을 잠시 조정).`);
       $("#c-out").innerHTML = lines.join("<br>");
     };
     inputs.forEach((el) => el.addEventListener("input", calc));
