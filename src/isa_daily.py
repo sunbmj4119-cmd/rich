@@ -4,11 +4,11 @@ ISA (미래에셋 중개형) 매일 안내 — 사람이 그대로 따라 하는
 계획 후보 (2026-11-15, 결과 보기 전에 적음)
   P0  핵심 고배당 50 + KODEX 200 50  (지난 카드, docs/ACCOUNTS.md 2026-11-14)
   P1  핵심 고배당 50 + 회전 DM:2 50
-      핵심  PLUS 고배당주(161510) — 사서 오래 들고 간다 · 분배금은 꺼내지 않음(재투자) · 떨어져도 팔지 않음
+      핵심  PLUS 고배당주(161510) — 증권사 '주식모으기'로 매달 자동 매수 (넣는 돈의 절반) · 분배금은 꺼내지 않음 · 떨어져도 팔지 않음
       회전  DM:2 — 매달 첫 거래일, 6개(KODEX 200 · TIGER 미국S&P500선물(H) · TIGER 미국나스닥100 · KODEX 골드선물(H) ·
             KODEX 미국달러선물 · KOSEF 국고채10년) 중 120일 수익 상위 2개를 반반 · 단기채(KODEX 단기채권)보다 못한 자리는 단기채
             → 순위 밖으로 밀린 ETF 를 파는 것이 '익절·손절' (가격 기준 % 가 아니라 규칙으로 정해짐)
-      매달 넣는 돈은 핵심·회전 중 적은 쪽 먼저 · 매년 1월 첫 거래일 한쪽이 60% 를 넘으면 50:50 으로
+      새 돈은 반반 (핵심 = 주식모으기 자동, 회전 = 첫 거래일에 사람이) · 매년 1월 첫 거래일 한쪽이 60% 를 넘으면 50:50 으로
   고르는 규칙: 세 시기(2005~2007 · 2008~2018 · 2019~) 중 두 시기 이상에서 P1 샤프 ≥ P0 이면 P1, 아니면 P0 (회전 신호는 참고로만)
               (DM:2 기록이 2005 부터라 첫 시기는 2005~2007)
   재료: 고배당 ETF = div_project 'ETF대용' (배당 재투자 · 배당세 15.4% · 보수 0.3% — ISA 는 세금이 더 적어 보수적)
@@ -210,24 +210,25 @@ def dm2_now():
 
 
 def todo_text(now_date, nxt_date, is_reb, held, nxt, nm, january):
+    """핵심(고배당)은 증권사 '주식모으기'가 자동으로 사므로, 사람이 할 일은 회전 몫(매달 첫 거래일)과 1월 비중 점검뿐."""
     lines = []
     if is_reb:
         lines.append(f"{nxt_date:%m월 %d일}(이번 달 첫 거래일) 10:00~14:30 에 앱을 연다.")
-        lines.append("① 입금된 돈 + 남은 돈 + 들어온 분배금 = 예수금. 핵심(고배당)과 회전 중 평가금액이 적은 쪽부터 채운다.")
+        lines.append("① 핵심: 주식모으기가 고배당 ETF 를 정한 날 자동으로 샀는지만 확인 (직접 사지 않음).")
         sell = [c for c in held if c not in nxt]
         buy = [c for c in nxt if c not in held]
+        if sell:
+            lines.append("② 회전 몫: " + ", ".join(nm.get(c, c) for c in sell) + " 을(를) 전부 판다 (순위 밖 = 익절·손절).")
+        tgt = " · ".join(f"{nm.get(c, c)} {int(round(w * 100))}%" for c, w in nxt.items())
         if sell or buy:
-            if sell:
-                lines.append("② 회전 몫: " + ", ".join(nm.get(c, c) for c in sell) + " 을(를) 전부 판다 (순위 밖).")
-            if buy:
-                lines.append("③ 회전 몫: 판 돈 + 회전 몫 예수금으로 " + " · ".join(f"{nm.get(c, c)} {int(round(w * 100))}%" for c, w in nxt.items()) +
-                             " 가 되게 정수 주로 산다 (지정가 = 매도 1호가).")
+            lines.append(f"③ 회전 몫: 판 돈 + 남아 있는 예수금(주식모으기 몫 제외)으로 {tgt} 가 되게 1등부터 정수 주로 산다 (지정가 = 매도 1호가).")
         else:
-            lines.append("② 회전 몫: 그대로 (" + " · ".join(nm.get(c, c) for c in nxt) + "). 새 돈이 회전 쪽이면 같은 비중으로 더 산다.")
+            lines.append(f"② 회전 몫: 종목은 그대로 ({tgt}). 남아 있는 예수금으로 같은 비중이 되게 1등부터 더 산다.")
+        lines.append("1주 값보다 돈이 적은 자리는 사지 말고 예수금으로 모아 둔다 (다음 달에 합쳐 산다).")
         if january:
             lines.append("④ 1월: 핵심·회전 중 한쪽이 전체의 60% 를 넘으면 넘는 만큼 그쪽을 팔아 다른 쪽을 산다 (50:50).")
     else:
-        lines.append("할 일 없음 — 들고 있기. 떨어져도 팔지 않는다.")
+        lines.append("할 일 없음 — 들고 있기. 주식모으기는 그대로 두고, 떨어져도 팔지 않는다.")
     return lines
 
 
@@ -267,8 +268,8 @@ def daily(log=print):
            "plan": {"picked": lab.get("picked", "P1"), "name": PLANS.get(lab.get("picked", "P1")),
                     "core": {"code": CORE, "alt": CORE_ALT, "name": nm2.get(CORE, "PLUS 고배당주"), "share": 0.5, "have": bool(core_m.get("have"))},
                     "rotation": {"share": 0.5, "universe": ROT, "safe": SAFE, "rule": "매달 첫 거래일 · 6개 중 120일 수익 상위 2개 반반 · 단기채보다 못하면 단기채"},
-                    "rules": ["매달 첫 거래일 한 번만 본다 (그 사이에는 아무것도 안 함)",
-                              "새 돈은 핵심·회전 중 평가금액이 적은 쪽부터",
+                    "rules": ["핵심(고배당)은 주식모으기로 자동 — 매달 넣는 돈의 절반, 입금 다음 날로 설정",
+                              "나머지 절반은 예수금으로 두었다가 매달 첫 거래일에 회전 몫으로 직접 산다 (그 사이에는 아무것도 안 함)",
                               "회전 몫은 순위 밖으로 밀린 ETF 를 전부 팔고 새 1·2등을 반반 — 이것이 익절·손절",
                               "핵심(고배당)은 떨어져도 팔지 않는다 · 분배금은 꺼내지 않는다",
                               "매년 1월 첫 거래일: 한쪽이 60% 를 넘으면 50:50 으로",
