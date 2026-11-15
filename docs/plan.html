@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>내 계좌 계획</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="ui.css">
+<style>
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.duo > a { background: var(--soft); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; color: inherit; text-decoration: none; min-width: 0 }
+.duo b { font-size: 16px; letter-spacing: -0.02em }
+.duo .s { font-size: 13px; color: var(--mut); line-height: 1.5 }
+@media (max-width: 380px) { .duo { grid-template-columns: 1fr } }
+.steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; counter-reset: st }
+.steps li { display: flex; gap: 10px; font-size: 15px; line-height: 1.6 }
+.steps li::before { counter-increment: st; content: counter(st); flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--fg); color: var(--bg);
+  font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-top: 1px }
+.steps.plain li::before { content: "·"; background: none; color: var(--mut); font-size: 18px; width: 12px }
+.big-date { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1.2 }
+.split { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: var(--soft) }
+.split > i { display: block; height: 100% }
+.alloc { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.alloc > div { background: var(--soft); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0 }
+.alloc b { font-size: 16px }
+.alloc .w { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums }
+.rrow { display: flex; align-items: center; gap: 10px; padding-block: 9px; border-bottom: 1px solid var(--line) }
+.rrow:last-child { border-bottom: 0 }
+.rrow .n { width: 22px; text-align: center; font-weight: 800; color: var(--mut); flex-shrink: 0 }
+.rrow .nm { flex: 1; min-width: 0; font-weight: 600 }
+.rrow .nm small { display: block; font-weight: 400; color: var(--mut); font-size: 12px }
+.rrow .v { font-variant-numeric: tabular-nums; font-weight: 700; flex-shrink: 0 }
+.bar-in { height: 6px; border-radius: 3px; background: var(--soft); margin-top: 4px; position: relative; overflow: hidden }
+.bar-in > i { position: absolute; top: 0; bottom: 0; border-radius: 3px }
+.calc { display: grid; grid-template-columns: 1fr; gap: 8px }
+.calc label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--mut) }
+.calc input { font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 12px; border: 0; background: var(--soft); color: var(--fg); font-variant-numeric: tabular-nums; width: 100% }
+.calc input:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px }
+@media (min-width: 560px) { .calc { grid-template-columns: 1fr 1fr 1fr } }
+.out { background: var(--soft); border-radius: 14px; padding: 12px 14px; font-size: 14.5px; line-height: 1.7 }
+.out b { font-variant-numeric: tabular-nums }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap }
+th { color: var(--mut); font-weight: 600; text-align: left; padding: 6px 6px; border-bottom: 1px solid var(--line); white-space: nowrap }
+td { padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top }
+tr.pick td { background: var(--pos-bg) }
+tr.pick td:first-child { box-shadow: inset 3px 0 0 var(--green) }
+.vd { font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; white-space: nowrap }
+.vd-채택 { background: var(--pos-bg); color: var(--green) }
+.vd-참고 { background: var(--warn-bg); color: var(--orange) }
+.vd-기각 { background: var(--soft); color: var(--mut) }
+.study summary .sum b { font-size: 15px; line-height: 1.45; white-space: normal }
+.study summary .sum span { white-space: normal }
+.kvs { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px }
+.kvs > div { background: var(--soft); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; min-width: 0 }
+.kvs span { font-size: 11.5px; color: var(--mut) }
+.kvs b { font-size: 15px; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis }
+.tally { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px }
+.tally > button { border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; background: var(--soft); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px }
+.tally > button[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--fg) }
+.tally b { font-size: 22px; font-variant-numeric: tabular-nums }
+.lock { display: flex; gap: 10px; align-items: flex-start; padding-block: 8px; border-bottom: 1px solid var(--line); font-size: 14px }
+.lock:last-child { border-bottom: 0 }
+.lock .ic { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; margin-top: 1px }
+.lock .ic.y { background: var(--pos-bg); color: var(--green) } .lock .ic.n { background: var(--soft); color: var(--mut) }
+.lock .grow small { display: block; color: var(--mut); font-size: 12.5px }
+.stock { display: flex; align-items: center; gap: 10px; padding-block: 9px; border-bottom: 1px solid var(--line) }
+.stock:last-child { border-bottom: 0 }
+.stock .grow, .lock .grow { flex: 1; min-width: 0 }
+.stock .grow b { font-weight: 600 }
+.stock .grow small { display: block; color: var(--mut); font-size: 12px }
+.stock .r { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; flex-shrink: 0 }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav" id="topnav" aria-label="페이지"></nav>
+  <header class="phead"><h1>내 계좌 계획</h1><div class="mut small" id="sub">불러오는 중…</div></header>
+
+  <section class="card" id="hero"><div class="skeleton" style="height:110px"></div></section>
+
+  <div class="stick"><div class="tabs" id="tabs">
+    <button data-t="isa">ISA · 내가</button><button data-t="toss">토스 · 자동</button><button data-t="res">연구 결과</button>
+  </div></div>
+
+  <!-- ISA ─────────────────────────────── -->
+  <div class="tabpane" data-tab="isa">
+    <section class="card" id="isa-todo"><div class="skeleton" style="height:120px"></div></section>
+    <section class="card" id="isa-plan"></section>
+    <section class="card" id="isa-rot"></section>
+    <section class="card" id="isa-calc">
+      <header><h2>내 숫자로 계산</h2><span class="mut small">이 기기에만 저장 · 어디에도 보내지 않음</span></header>
+      <div class="calc">
+        <label>핵심(고배당) 평가금액<input id="c-core" inputmode="numeric" placeholder="예: 500000"></label>
+        <label>회전 몫 평가금액<input id="c-rot" inputmode="numeric" placeholder="예: 480000"></label>
+        <label>예수금 (이번 입금 포함)<input id="c-cash" inputmode="numeric" placeholder="예: 100000"></label>
+      </div>
+      <div class="out" id="c-out">세 칸을 채우면 무엇을 몇 주 살지 계산합니다.</div>
+    </section>
+    <section class="card" id="isa-etf"></section>
+    <section class="card" id="isa-hist"></section>
+    <details class="fold"><summary><div class="sum"><b>세금 · 지킬 것</b><span>ISA 를 쓰는 이유와 하지 않는 것</span></div></summary>
+      <div class="body" id="isa-tax"></div></details>
+  </div>
+
+  <!-- 토스 ─────────────────────────────── -->
+  <div class="tabpane" data-tab="toss">
+    <section class="card" id="t-real"><div class="skeleton" style="height:120px"></div></section>
+    <section class="card" id="t-aggr"></section>
+    <section class="card" id="t-cands"></section>
+    <section class="card" id="t-trend"></section>
+    <details class="fold"><summary><div class="sum"><b>왜 토스는 이렇게</b><span>ISA 로 못 하는 것 · 바꾸는 조건</span></div></summary>
+      <div class="body" id="t-why"></div></details>
+  </div>
+
+  <!-- 연구 결과 ─────────────────────────── -->
+  <div class="tabpane" data-tab="res">
+    <section class="card" id="r-top"><div class="skeleton" style="height:100px"></div></section>
+    <div id="r-list" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+  <p class="guide" style="text-align:center;padding:8px 0 4px">과거 기록으로 잰 값이며 앞날을 약속하지 않습니다. 주문은 ISA 는 직접, 토스는 잠금이 다 풀린 뒤에만 시스템이 냅니다.</p>
+</div>
+
+<script src="ui.js"></script>
+<script>
+(async () => {
+  const { esc, ok, num, won, $ } = U;
+  U.nav("plan.html");
+  const P = (v, d = 1, s = true) => (ok(v) ? U.pct(v * 100, d, s) : "—");
+  const C = (v) => (ok(v) ? (v > 0 ? "pos" : v < 0 ? "neg" : "") : "");
+  const eok = (v) => (ok(v) ? (v >= 1e8 ? `${num(v / 1e8, v >= 1e10 ? 0 : 1)}억` : `${num(v / 1e4, 0)}만`) : "—");
+  const md = (s) => { if (!s) return "—"; const d = new Date(s + "T00:00:00"); return `${d.getMonth() + 1}월 ${d.getDate()}일 (${"일월화수목금토"[d.getDay()]})`; };
+  const load = async (f) => { try { return await U.j(f); } catch { return null; } };
+  const [isa, toss, res] = await Promise.all([load("isa.json"), load("toss.json"), load("research_all.json")]);
+  $("#sub").textContent = `ISA 는 내가 따라 하고, 토스는 시스템이 자동으로 · 자료 ${isa?.data_until || "—"} 장 마감 기준 · 매일 갱신`;
+
+  /* ── 맨 위 한눈에 ── */
+  {
+    const act = isa?.is_action_day;
+    const rv = toss?.readiness?.verdict || "—";
+    const tf = toss?.aggr_div?.forward || {};
+    $("#hero").innerHTML = `<header><h2>한눈에</h2><span class="mut small">${esc(isa?.generated || "")}</span></header>
+      <div class="duo">
+        <a href="#isa" data-go="isa"><span class="eyebrow">ISA · 미래에셋 (내가)</span>
+          <b>${act ? `${esc(md(isa.next_day))} 할 일 있음` : "할 일 없음 · 들고 있기"}</b>
+          <span class="s">${act ? "이번 달 첫 거래일 — 아래 순서대로" : `다음 할 일 ${esc(md(isa?.next_action_day))}`}</span></a>
+        <a href="#toss" data-go="toss"><span class="eyebrow">토스 · 종합계좌 (자동)</span>
+          <b>실제 주문 ${rv === "준비됨" ? "가능" : "잠김"} <span class="badge ${rv === "준비됨" ? "b-ok" : "b-mut"}">준비도 ${esc(rv)}</span></b>
+          <span class="s">공격 고배당 모의 ${tf.days ? `${tf.days}일 · ${P(tf.ret)}` : `${esc(md(tf.start))} 시작`}</span></a>
+      </div>`;
+  }
+  const tb = U.tabs($("#tabs"), "plan");
+  document.querySelectorAll("[data-go]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); tb.show(a.dataset.go, true); }));
+
+  /* ════════ ISA ════════ */
+  if (!isa) { $("#isa-todo").innerHTML = `<p class="mut">ISA 안내 자료(isa.json)를 아직 못 만들었습니다.</p>`; }
+  else {
+    const nm = {}; (isa.etfs || []).forEach((e) => (nm[e.code] = e.name));
+    const act = isa.is_action_day;
+    $("#isa-todo").innerHTML = `<header><h2>${act ? "다음 거래일 할 일" : "지금 할 일"}</h2>${act ? '<span class="badge b-ref">할 일 있음</span>' : '<span class="badge b-ok">없음</span>'}</header>
+      <div><div class="big-date">${esc(md(act ? isa.next_day : isa.next_action_day))}</div>
+        <div class="mut" style="font-size:13.5px">${act ? "이번 달 첫 거래일 · 10:00 ~ 14:30 사이" : "다음에 앱을 열 날 (이번 달 첫 거래일에 다시 안내 · 공휴일이면 그다음 거래일)"}</div></div>
+      <ol class="steps ${act ? "" : "plain"}">${(isa.todo || []).map((t) => `<li><span>${esc(t.replace(/^[①-⑨]\s*/, ""))}</span></li>`).join("")}</ol>
+      ${act ? "" : `<div class="note">매달 첫 거래일 한 번만 봅니다. 그 사이 오르내림에는 아무것도 하지 않는 것이 계획입니다 (과거 기록에서 자주 손대면 비용·실수로 나빠졌습니다).</div>`}`;
+
+    const pl = isa.plan || {};
+    const core = pl.core || {}, rot = isa.rotation || {};
+    $("#isa-plan").innerHTML = `<header><h2>계획 — 반은 오래 들고, 반은 매달 갈아타기</h2><span class="badge b-ok">${esc(pl.picked || "")}</span></header>
+      <div class="split" aria-hidden="true"><i style="width:50%;background:var(--up)"></i><i style="width:50%;background:var(--down)"></i></div>
+      <div class="alloc">
+        <div><span class="eyebrow">핵심 · 고배당</span><span class="w">50%</span><b>${esc(core.name || "PLUS 고배당주")}</b>
+          <span class="mut small">${esc(core.code || "")} · 사서 오래 · 분배금 재투자 · 떨어져도 안 팜${core.have ? "" : " · 앱에서 못 찾으면 " + esc(nm[core.alt] || "KODEX 고배당") + " (" + esc(core.alt || "") + ")"}</span></div>
+        <div><span class="eyebrow">회전 · 매달 1·2등</span><span class="w">50%</span><b>${(rot.held || []).map((x) => esc(x.name)).join(" + ") || "—"}</b>
+          <span class="mut small">${esc(md(rot.held_since))}에 고름 · 6개 중 120일 수익 상위 2개 반반, 단기채보다 못하면 단기채</span></div>
+      </div>
+      <ol class="steps plain">${(pl.rules || []).map((r) => `<li><span>${esc(r)}</span></li>`).join("")}</ol>`;
+
+    const rk = rot.rank || [];
+    const cr = rot.cash_r120;
+    const mx = Math.max(0.05, ...rk.map((r) => Math.abs(r.r120 || 0)));
+    const heldSet = new Set((rot.held || []).map((x) => x.code));
+    const wouldTxt = (rot.would_now || []).map((x) => `${esc(x.name)} ${Math.round(x.w * 100)}%`).join(" · ");
+    const same = JSON.stringify((rot.would_now || []).map((x) => x.code).sort()) === JSON.stringify((rot.held || []).map((x) => x.code).sort());
+    $("#isa-rot").innerHTML = `<header><h2>회전 몫 — 지금 순위</h2><span class="mut small">최근 120거래일 수익 · ${esc(isa.data_until)}</span></header>
+      <div>${rk.map((r, i) => `<div class="rrow"><span class="n">${i + 1}</span>
+        <div class="nm">${esc(r.name)}${heldSet.has(r.code) ? ' <span class="badge b-ok">들고 있음</span>' : ""}<small>${r.beats_cash ? "단기채보다 나음" : "단기채보다 못함 → 이 자리면 단기채"}</small>
+          <div class="bar-in"><i style="${r.r120 >= 0 ? `left:50%;width:${(r.r120 / mx) * 50}%;background:var(--up)` : `right:50%;width:${(-r.r120 / mx) * 50}%;background:var(--down)`}"></i></div></div>
+        <span class="v ${C(r.r120)}">${P(r.r120)}</span></div>`).join("")}
+        <div class="rrow"><span class="n">·</span><div class="nm">KODEX 단기채권 (기준)<small>이보다 못한 자리는 단기채로</small></div><span class="v">${P(cr)}</span></div></div>
+      <div class="note">${same ? "지금 순위로도 들고 있는 것과 같습니다." : `<b>지금 순위대로라면</b> ${wouldTxt} — 하지만 바꾸는 것은 <b>${esc(md(isa.next_action_day))}</b> (다음 달 첫 거래일) 순위로 정합니다. 그 전에는 그대로 둡니다.`}</div>`;
+
+    // 내 숫자로 계산 (localStorage 만)
+    const KEY = "rich.isa.calc.v1";
+    const px = {}; (isa.etfs || []).forEach((e) => { if (e.have) px[e.code] = e.price; });
+    const inputs = ["c-core", "c-rot", "c-cash"].map((id) => $("#" + id));
+    try { const s = JSON.parse(localStorage.getItem(KEY) || "{}"); inputs.forEach((el) => { if (s[el.id]) el.value = s[el.id]; }); } catch { /* 저장 없음 */ }
+    const val = (el) => +String(el.value).replace(/[^0-9.]/g, "") || 0;
+    const calc = () => {
+      const [vc, vr, cash] = inputs.map(val);
+      try { localStorage.setItem(KEY, JSON.stringify(Object.fromEntries(inputs.map((el) => [el.id, el.value])))); } catch { /* 저장 불가 */ }
+      if (!(vc || vr || cash)) { $("#c-out").textContent = "세 칸을 채우면 무엇을 몇 주 살지 계산합니다."; return; }
+      const tot = vc + vr + cash;
+      const coreNeed = Math.max(0, tot / 2 - vc), rotNeed = Math.max(0, tot / 2 - vr);
+      let toCore = Math.min(cash, coreNeed), toRot = Math.max(0, cash - toCore);
+      const cp = px[core.code] || px[core.alt];
+      const lines = [];
+      lines.push(`전체 <b>${won(tot)}</b> · 핵심 ${P(vc / tot, 0, false)} · 회전 ${P(vr / tot, 0, false)} · 예수금 ${P(cash / tot, 0, false)}`);
+      if (cp) lines.push(`핵심(${esc(core.name)}): ${won(toCore)} → <b>${Math.floor(toCore / cp)}주</b> (${won(cp)} 기준)`);
+      else lines.push(`핵심(${esc(core.name)}): ${won(toCore)} 어치 — 가격 자료가 아직 없어 앱 가격으로 ${won(toCore)} ÷ 1주 값`);
+      const tgt = act ? (rot.next || []) : (rot.held || []);
+      if (toRot > 0 || act) {
+        const base = vr + toRot;
+        const parts = tgt.map((x) => { const p = px[x.code]; const amt = base * x.w; return `${esc(x.name)} ${won(amt)}${p ? ` → 모두 합쳐 <b>${Math.floor(amt / p)}주</b>가 되게` : ""}`; });
+        lines.push(`회전: 몫 ${won(base)} → ${parts.join(" · ") || "—"}`);
+      }
+      if (!act) lines.push(`<span class="mut">오늘은 할 일 없는 날 — 이 계산은 ${esc(md(isa.next_action_day))}에 씁니다. 1월이면 한쪽이 60% 를 넘는지도 봅니다.</span>`);
+      if (vc / tot > 0.6 || vr / tot > 0.6) lines.push(`<b>한쪽이 60% 를 넘음</b> — 1월 첫 거래일이면 넘는 만큼 팔아 50:50 으로.`);
+      $("#c-out").innerHTML = lines.join("<br>");
+    };
+    inputs.forEach((el) => el.addEventListener("input", calc));
+    calc();
+
+    // ETF 표
+    const et = isa.etfs || [];
+    const row = (e) => `<tr><td><b>${esc(e.name)}</b><div class="mut small">${esc(e.code)} · ${esc(e.note || e.group || "")}</div></td>
+      ${e.have ? `<td class="num">${num(e.price)}</td><td class="num ${C(e.r1m)}">${P(e.r1m)}</td><td class="num ${C(e.r6m)}">${P(e.r6m)}</td><td class="num ${C(e.r12m)}">${P(e.r12m)}</td>
+      <td class="num neg">${P(e.mdd1y, 0)}</td><td class="num">${P(e.vol1y, 0, false)}</td><td class="num">${eok(e.value20)}</td><td>${e.above200 === null ? "—" : e.above200 ? "위" : "아래"}</td>`
+        : `<td colspan="8" class="mut">자료 없음 — 다음 수집 때 채워집니다 (코드가 바뀌었으면 여기 이름이 다르게 나옵니다)</td>`}</tr>`;
+    const grp = (t, list) => list.length ? `<tr><td colspan="9" style="background:var(--soft);font-weight:700">${t}</td></tr>${list.map(row).join("")}` : "";
+    $("#isa-etf").innerHTML = `<header><h2>ETF 고르는 법 · 지금 지표</h2><span class="mut small">${esc(isa.data_until)}</span></header>
+      <div class="note">고배당이면서 비용이 적고 오래 들고 가기 좋은 것: ① 같은 지수라면 <b>총보수가 낮고</b> (앱의 '총보수'·'실부담비용') ② <b>하루 거래대금이 큰</b> 것 (사고팔 때 손해가 적음)
+        ③ 분배금은 꺼내지 않고 다시 사기 ④ 상장 3년 이상. 분배금 수익률과 총보수는 이 화면 자료로 잴 수 없어 앱에서 확인합니다.</div>
+      <div class="scroll"><table><thead><tr><th>ETF</th><th class="num">종가</th><th class="num">1달</th><th class="num">6달</th><th class="num">1년</th><th class="num">1년 최대낙폭</th><th class="num">변동성</th><th class="num">거래대금/일</th><th>200일선</th></tr></thead>
+      <tbody>${grp("핵심 후보 · 고배당", et.filter((e) => /고배당|배당/.test(e.group || "")))}${grp("회전 후보 6개 + 피난처", et.filter((e) => e.rot || e.safe))}${grp("그 밖에", et.filter((e) => !/배당/.test(e.group || "") && !e.rot && !e.safe))}</tbody></table></div>
+      <p class="guide">거래대금 = 최근 20일 평균 (종가 × 거래량). 미국 배당 ETF(SOL·TIGER 미국배당다우존스)는 상장이 짧아(2022~2023) 계획의 핵심으로는 넣지 않고 '다른 후보'로만 봅니다.</p>`;
+
+    // 과거라면
+    const H = isa.history || {};
+    const E = H.eras || {};
+    const eraN = ["2005~2007", "2008~2018", "2019~", "전체 2005~"];
+    const keys = [["P1", "고배당+회전", "지금 계획"], ["P0", "고배당+코스피200", "지난 카드"], ["고배당만", "고배당만", ""], ["KODEX 200", "코스피200만", ""], ["DM:2", "회전만", ""]];
+    const pj = (H.projection || {})["2008~2018 (보수적)"]?.boot, pa = (H.projection || {})["2005~ 전체"]?.boot;
+    $("#isa-hist").innerHTML = `<header><h2>과거였다면</h2><span class="mut small">달 단위 · 배당 재투자 · 비용 포함</span></header>
+      <div class="note">규칙(결과 보기 전에 정함): 세 시기 중 두 시기 이상에서 '회전 50' 안의 샤프(위험 대비 수익)가 '코스피200 50' 안 이상이면 회전 안을 쓴다 → <b>${H.p1_wins ?? "—"}/3 시기</b>에서 이겨 <b>${esc(H.picked || "")}</b>.
+        고배당 ETF 와 회전 몫의 달 수익 상관 ${H.corr?.["고배당-DM:2"] ?? "—"} (코스피200 과는 ${H.corr?.["고배당-KODEX200"] ?? "—"}) — 덜 같이 움직여서 빠질 때 덜 빠졌습니다.</div>
+      <div class="scroll"><table><thead><tr><th>계획</th>${eraN.map((e) => `<th class="num">${e}</th>`).join("")}</tr></thead><tbody>
+        ${keys.map(([k, n, t]) => `<tr class="${k === H.picked ? "pick" : ""}"><td style="white-space:nowrap"><b>${esc(n)}</b>${t ? `<div class="mut small">${esc(t)}</div>` : ""}</td>${eraN.map((e) => { const s = E[e]?.[k]; return s ? `<td class="num"><span class="${C(s.cagr)}">${P(s.cagr)}</span><div class="mut small">샤프 ${num(s.sharpe, 2)} · 낙폭 ${P(s.mdd, 0)}</div></td>` : "<td>—</td>"; }).join("")}</tr>`).join("")}
+      </tbody></table></div>
+      <div class="chart" id="isa-curve"></div>
+      <div class="legend"><span><i style="background:var(--up)"></i>지금 계획</span><span><i style="background:var(--faint)"></i>고배당 ETF 만</span><span><i style="background:var(--down)"></i>KODEX 200 만</span></div>
+      ${pj ? `<h3 style="margin:8px 0 0;font-size:15px">20만 원 + 매달 10만 원 · 10년 (낸 돈 ${won(pj.paid)})</h3>
+      <div class="kvs"><div><span>약한 시기(2008~2018) 바탕 · 나쁜 쪽</span><b>${won(pj.p10)}</b></div><div><span>가운데</span><b>${won(pj.p50)}</b></div><div><span>좋은 쪽</span><b>${won(pj.p90)}</b></div><div><span>원금보다 적을 확률</span><b>${P(pj.loss_prob, 0, false)}</b></div>
+      ${pa ? `<div><span>2005~ 전체 바탕 · 가운데</span><b>${won(pa.p50)}</b></div>` : ""}</div>
+      <div class="chart" id="isa-fan"></div>
+      <p class="guide">과거 달 수익을 12개월 덩어리로 다시 이어 붙인 길 1만 개의 10·50·90% 자리. 고배당 ETF 는 실제 가격이 아니라 같은 방식의 대용(30종목, 보수 0.3%, 배당세 15.4% — ISA 에서는 세금이 더 적어 보수적)으로 잰 값.</p>` : ""}`;
+    if (H.curve?.date) {
+      const cv = H.curve;
+      U.line($("#isa-curve"), { labels: cv.date.map((d) => d.slice(0, 7)), h: 200, yfmt: (v) => `${num(v, 1)}배`, tipfmt: (v) => `${num(v, 2)}배`,
+        series: [{ name: "고배당 ETF 만", data: cv["고배당만"], color: "var(--faint)", width: 1.5 }, { name: "KODEX 200 만", data: cv["KODEX 200"], color: "var(--down)", width: 1.5 },
+                 { name: "지금 계획", data: cv.plan, color: "var(--up)", width: 2.4, end: true }], aria: "ISA 계획 과거 곡선" });
+    }
+    if (pj?.path) {
+      const p = pj.path;
+      U.line($("#isa-fan"), { labels: p.month.map((m) => (m % 12 === 0 ? `${m / 12}년` : `${Math.floor(m / 12)}년 ${m % 12}달`)), h: 200,
+        yfmt: (v) => eok(v), tipfmt: (v) => won(v),
+        bands: [{ lo: p.p10, hi: p.p90, color: "var(--up)", opacity: 0.14, name: "10~90%" }],
+        series: [{ name: "낸 돈", data: p.paid, color: "var(--faint)", dash: "4 4", width: 1.5 }, { name: "가운데", data: p.p50, color: "var(--up)", width: 2.2, end: true }], aria: "10년 범위" });
+    }
+    $("#isa-tax").innerHTML = `<ol class="steps plain">
+      <li><span>ISA 안에서는 배당·분배금과 해외지수 ETF 매매차익이 <b>순이익 200만 원(서민형 400만 원)까지 세금 없음</b>, 넘는 부분 9.9% — 일반 계좌의 15.4% 보다 적음. 그래서 <b>배당이 나오는 몫과 해외지수 ETF 를 갈아타는 몫</b>을 ISA 에 둡니다.</span></li>
+      <li><span>의무 3년 · 한 해 2,000만 원 · 총 1억 원까지 넣을 수 있음 (가입 때 앱 안내로 다시 확인).</span></li>
+      <li><span>3년 안에 해지하면 받은 세금 혜택을 돌려내야 합니다. 만기 때는 연장하거나 연금계좌로 옮깁니다 (옮긴 금액의 10%, 최대 300만 원 세액공제 — 그때 법 확인).</span></li>
+      <li><span>하지 않는 것: 떨어졌다고 핵심을 팔기 · 뉴스나 추천으로 종목 바꾸기 · 매수일을 당기거나 미루기 · 레버리지/인버스 ETF.</span></li>
+      <li><span>토스 오픈API 는 ISA 계좌로 주문을 못 내서 ISA 는 자동매매가 안 됩니다. 이 화면이 매일 저녁 바뀌고, 할 일이 있는 날만 '할 일 있음'으로 바뀝니다.</span></li></ol>`;
+  }
+
+  /* ════════ 토스 ════════ */
+  if (!toss) { $("#t-real").innerHTML = `<p class="mut">토스 자료(toss.json)를 아직 못 만들었습니다.</p>`; }
+  else {
+    const rd = toss.readiness || {}, real = toss.real || {}, pp = real.paper || {};
+    $("#t-real").innerHTML = `<header><h2>실제 주문 — 지금은 DM:2</h2><span class="badge ${rd.verdict === "준비됨" ? "b-ok" : "b-mut"}">준비도 ${esc(rd.verdict || "—")}</span></header>
+      <p style="font-size:14.5px;line-height:1.65;margin:0">${esc(real.desc || "")}</p>
+      <div class="kvs"><div><span>모의 시작</span><b>${esc(md(pp.start))}</b></div><div><span>모의 기록</span><b>${pp.days ?? 0}일</b></div><div><span>수익</span><b class="${C(pp.ret)}">${P(pp.ret)}</b></div><div><span>최대 낙폭</span><b>${P(pp.mdd)}</b></div></div>
+      <h3 style="margin:4px 0 0;font-size:15px">실제 돈이 나가려면 (모두 만족해야)</h3>
+      <div>${(rd.items || []).map((i) => `<div class="lock"><span class="ic ${i.ok ? "y" : "n"}">${i.ok ? "✓" : ""}</span><div class="grow">${esc(i.name)}<small>지금 ${esc(i.now ?? "—")} · 필요 ${esc(i.need ?? "—")}${i.eta ? ` · 빠르면 ${esc(i.eta)}` : ""}</small></div></div>`).join("")}
+        ${(real.locks || []).map((l) => `<div class="lock"><span class="ic n"></span><div class="grow">${esc(l)}<small>사용자가 직접 (서버에서)</small></div></div>`).join("")}</div>`;
+
+    const ag = toss.aggr_div || {}, fw = ag.forward || {}, cd = ag.cands || {}, pk = cd[ag.picked] || {};
+    const sig = fw.signal || {};
+    const yl = (v) => (ok(v) ? `배당 ${P(v, 1, false)}` : "배당 —");
+    $("#t-aggr").innerHTML = `<header><h2>공격 고배당 — ${esc(pk.name || fw.name || "")}</h2><span class="badge b-ref">모의 · 실제 돈 아님</span></header>
+      <p style="font-size:14.5px;line-height:1.65;margin:0">ISA 에 담는 ETF 대신 <b>배당 많이 주는 대형주 가운데 추세가 살아 있고 최근 잠깐 눌린 3종목</b>에 몰아 담습니다.
+        점수 = 최근 1년 배당수익률 순위 + 장기 추세·단기 눌림 순위 · 상위 5% 안이면 빈자리에 사고 · 30% 밖으로 밀리면 팝니다 (최소 20거래일 보유) · 매일 장 마감 판단 → 다음 날 시가.</p>
+      <div class="kvs"><div><span>모의 시작</span><b>${esc(md(fw.start))}</b></div><div><span>모의 기록</span><b>${fw.days ?? 0}일</b></div><div><span>평가액 (20만 원 시작)</span><b>${won(fw.equity)}</b></div><div><span>수익</span><b class="${C(fw.ret)}">${P(fw.ret)}</b></div></div>
+      <h3 style="margin:4px 0 0;font-size:15px">${esc(md(sig.date))} 장 마감 판단 → 다음 거래일 시가</h3>
+      <div>${(sig.sell || []).map((x) => `<div class="stock"><span class="badge b-no" style="background:var(--down-bg);color:var(--down)">팜</span><div class="grow"><b>${esc(x.name)}</b><small>${esc(x.code)} · 순위 밖</small></div></div>`).join("")}
+        ${(sig.buy || []).map((x) => `<div class="stock"><span class="badge" style="background:var(--up-bg);color:var(--up)">살 후보</span><div class="grow"><b>${esc(x.name)}</b><small>${esc(x.code)} · ${yl(x.yield)}${x.affordable ? "" : ` · 1주(${won(x.price)})가 한 자리(${won(fw.slot_won)})보다 비싸 20만 원으로는 건너뜀`}</small></div><div class="r">${won(x.price)}</div></div>`).join("")}
+        ${!(sig.sell || []).length && !(sig.buy || []).length ? `<p class="mut">바꿀 것 없음</p>` : ""}</div>
+      ${(fw.holdings || []).length ? `<h3 style="margin:4px 0 0;font-size:15px">들고 있는 것 (모의)</h3><div>${fw.holdings.map((h) => `<div class="stock"><div class="grow"><b>${esc(h.name)}</b><small>${esc(h.code)} · ${h.days}일째</small></div><div class="r">${P(h.share, 0, false)}</div></div>`).join("")}</div>` : ""}
+      <details class="fold" style="box-shadow:none;background:var(--soft)"><summary><div class="sum"><b>오늘 점수 상위 10</b><span>배당수익률 함께</span></div></summary>
+        <div class="body">${(fw.top || []).map((t) => `<div class="stock"><span class="n" style="width:20px;font-weight:800;color:var(--mut)">${t.rank}</span><div class="grow"><b>${esc(t.name)}</b><small>${esc(t.code)} · ${yl(t.yield)}</small></div><div class="r">${won(t.price)}</div></div>`).join("")}</div></details>
+      <div class="note">${esc(ag.switch_rule || "")}</div>`;
+
+    const order = ["T1", "T2", "T3", "R1", "R2"];
+    const eraN = ["2003~2007", "2008~2018", "2019~", "전체 2003~"];
+    $("#t-cands").innerHTML = `<header><h2>어떻게 골랐나 — 후보 5개</h2><span class="mut small">2003~ 과거 · 배당 세후 · 비용 포함</span></header>
+      <div class="note">규칙(결과 보기 전에 정함): T1~T3 가운데 <b>세 시기 모두 대형주 평균보다 초과 수익 &gt; 0</b> 이고 <b>2019~ 20만 원 정수 주식으로 실제 산 비율 ≥ 60%</b> 인 것 중 샤프가 가장 높은 것. 통과: <b>${esc((ag.passed || []).join(", ") || "없음")}</b> → <b>${esc(ag.picked || "")}</b>.
+        <br>처음 계산 때는 주식배당·유상증자를 현금배당으로 잘못 센 자료 오류(셀트리온·유한양행·한화솔루션 등)가 있어 통과가 없었고, 그 오류를 고친 뒤 같은 규칙으로 다시 계산한 결과입니다.</div>
+      <div class="scroll"><table><thead><tr><th>후보</th>${eraN.map((e) => `<th class="num">${e}<div class="mut small" style="font-weight:400">연 수익 · 초과</div></th>`).join("")}<th class="num">20만 원 2019~</th><th class="num">거래/년</th></tr></thead><tbody>
+      ${order.filter((k) => cd[k]).map((k) => { const c = cd[k]; return `<tr class="${k === ag.picked ? "pick" : ""}"><td><b>${k}</b> ${esc(c.name)}</td>${eraN.map((e) => { const s = c.eras?.[e]; return s ? `<td class="num"><span class="${C(s.cagr)}">${P(s.cagr)}</span><div class="small ${C(s.excess_ann)}">${e.startsWith("전체") ? `샤프 ${num(s.sharpe, 2)} · 낙폭 ${P(s.mdd, 0)}` : `초과 ${P(s.excess_ann)}`}</div></td>` : "<td>—</td>"; }).join("")}
+        <td class="num">${c.acc200k ? `${P(c.acc200k.cagr)}<div class="mut small">산 비율 ${P(c.acc200k.invested, 0, false)}</div>` : "—"}</td><td class="num">${num(c.trades_per_year)}</td></tr>`; }).join("")}
+      </tbody></table></div>
+      <p class="guide">초과 = 같은 날 '배당자료 있는 대형주를 똑같이 산 평균'보다 연 몇 %p 더 (산술 평균). 낙폭이 −50% 를 넘는 공격형이라 토스의 작은 돈에만 씁니다. 2019 이후로는 대형주 평균과 비슷했고, 같은 기간 DM:2(연 +16.5%, 샤프 0.89)보다 위험 대비 성적은 낮았습니다.</p>`;
+
+    const tr = toss.trend || {};
+    $("#t-trend").innerHTML = `<header><h2>도전자 — 장기 추세 + 단기 눌림 (배당 안 봄)</h2><span class="badge b-mut">모의</span></header>
+      <div>${Object.entries(tr.rules || {}).map(([k, r]) => `<div class="stock"><div class="grow"><b>${esc(k)}</b><small>${esc(r.rule || "")} · ${r.days ?? 0}일 · 승격 조건 ${r.promote_check?.all ? "모두 만족" : "아직"}</small></div><div class="r ${C(r.ret)}">${P(r.ret)}</div></div>`).join("") || `<p class="mut">${esc(tr.note || "아직 시작 전")}</p>`}</div>
+      <p class="guide">연구에서 가장 견고했던 점수(2019~ 연 +28%, 샤프 0.98)지만 낙폭이 크고 20만 원으로는 대부분 못 사서 모의로만 쌓습니다. 120거래일 · 대형주 평균 이상 · 낙폭 −25% 보다 얕음 · DM:2 이상이면 '토스 자금 절반'을 제안합니다.</p>`;
+
+    $("#t-why").innerHTML = `<ol class="steps plain">
+      <li><span>토스 오픈API 는 종합매매 계좌만 주문할 수 있어 자동매매는 토스에서만 됩니다.</span></li>
+      <li><span>ISA 는 ETF 2묶음(고배당 + 매달 회전)을 사람이 한 달에 한 번 — 개별 고배당주를 매일 보고 사고파는 일은 사람이 하기 어려워 토스 자동매매로 둡니다.</span></li>
+      <li><span>국내 주식 매매차익은 일반 계좌에서도 세금이 없어 자주 사고파는 몫에 맞고, 배당은 15.4% 를 떼므로 계산에서도 뗐습니다.</span></li>
+      <li><span>실제 주문은 지금 DM:2 로 준비 중입니다. 공격 고배당으로 바꾸려면 ① 준비도 '준비됨' ② 이 모의 기록 60거래일 이상 ③ 같은 기간 대형주 평균 이상 ④ 사용자 승인 — 넷 다 필요합니다. 바꾸는 것도 자동이 아닙니다.</span></li>
+      <li><span>미국 고배당주·ETF(SCHD 등)는 ISA 로 못 사지만, 지금 자료에 미국 주식 배당 기록이 없어 아직 검증하지 못했습니다 (검증 없이 넣지 않습니다).</span></li></ol>`;
+  }
+
+  /* ════════ 연구 결과 ════════ */
+  if (!res) { $("#r-top").innerHTML = `<p class="mut">연구 모음(research_all.json)을 아직 못 만들었습니다.</p>`; }
+  else {
+    const it = res.items || [];
+    const cnt = (v) => it.filter((x) => x.verdict === v).length;
+    let flt = "";
+    $("#r-top").innerHTML = `<header><h2>지금까지 연구 ${it.length}개</h2><span class="mut small">${esc(res.generated || "")}</span></header>
+      <p style="font-size:14.5px;line-height:1.65;margin:0">${esc(res.lead || "")}</p>
+      <div class="tally">${["채택", "참고", "기각"].map((v) => `<button type="button" data-v="${v}" aria-pressed="false"><span class="vd vd-${v}" style="align-self:flex-start">${v}</span><b>${cnt(v)}</b></button>`).join("")}</div>
+      <p class="guide">채택 = 지금 계좌에 쓰는 것 · 참고 = 일부만 쓰거나 확신 부족 · 기각 = 검증에서 떨어짐. 칸을 누르면 그것만 봅니다.</p>`;
+    const draw = () => {
+      const list = it.filter((x) => !flt || x.verdict === flt);
+      $("#r-list").innerHTML = list.map((x) => `<details class="fold study"><summary><span class="vd vd-${esc(x.verdict)}">${esc(x.verdict)}</span><div class="sum"><b>${esc(x.title)}</b><span>${esc(x.date || "")}${x.src ? " · " + esc(x.src) : ""}</span></div></summary>
+        <div class="body"><p style="margin:0;font-size:14px;color:var(--mut)">${esc(x.q || "")}</p><p style="margin:0;font-size:14.5px;line-height:1.7">${esc(x.result || "")}</p>
+        ${(x.nums || []).length ? `<div class="kvs">${x.nums.map((n) => `<div><span>${esc(n.k)}</span><b>${esc(n.v)}</b></div>`).join("")}</div>` : ""}
+        ${x.used_now ? `<div class="note"><b>지금 쓰는 곳</b> ${esc(x.used_now)}</div>` : ""}</div></details>`).join("");
+    };
+    $("#r-top").querySelectorAll(".tally button").forEach((b) => b.addEventListener("click", () => {
+      flt = flt === b.dataset.v ? "" : b.dataset.v;
+      $("#r-top").querySelectorAll(".tally button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.v === flt)));
+      draw();
+    }));
+    draw();
+  }
+})();
+</script>
+</body>
+</html>

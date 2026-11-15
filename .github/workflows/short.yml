@@ -32,10 +32,15 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           python src/short_trader.py 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: 내 계좌 화면 (토스 공격 고배당 모의 · ISA 매일 안내 · 연구 모음)
+        run: |
+          python src/toss_div.py 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY || echo "토스 공격 고배당 실패"
+          python src/isa_daily.py 2>&1 | grep -v Warning | tee -a $GITHUB_STEP_SUMMARY || echo "ISA 안내 실패"
+          python src/research_digest.py || echo "연구 모음 실패"
       - name: 커밋
         run: |
           git config user.name github-actions
           git config user.email actions@github.com
-          git add data/etf_ohlcv.csv data/short/ docs/short.json docs/short_lab.json
+          git add data/etf_ohlcv.csv data/short/ docs/short.json docs/short_lab.json docs/toss.json docs/isa.json docs/research_all.json
           git commit -m "short $(date +%F)" || echo "no change"
           git pull --rebase && git push

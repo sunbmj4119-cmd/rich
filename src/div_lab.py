@@ -23,7 +23,8 @@
   E  배당자료 있는 대형주 똑같이 (기준)
 
   결과를 본 뒤 더한 것 (탐색): 작은 계좌용 3자리 (D1·D4, 상위 5% 안이면 삼) · C 와 D4 반반 섞기
-  한계: 수정가는 주식배당·유상증자도 '배당'처럼 반영 → 그런 종목(예: 셀트리온)이 고배당으로 잘못 잡힐 수 있음 (수익 계산은 실제가의 빠짐을 메우는 쪽이라 크게 안 틀림)
+  한계: 수정가는 주식배당·유상증자도 '배당'처럼 반영 → 2026-11-15 부터 주식 수(시총 ÷ 종가)가 함께 는 계단은 뺀다
+        (셀트리온·유한양행 주식배당, 한화솔루션·삼성중공업 유상증자 등. 같은 때 합병·전환으로 주식 수가 는 진짜 배당도 빠질 수 있음 = 보수적)
         2024 뒤 배당일을 옮긴 회사의 배당 일부가 빠짐(보수적) · 2018 연말 배당은 두 자료 이음매라 빠짐
 
   python src/div_lab.py → data/div_lab.json
@@ -61,16 +62,22 @@ def adjusted_prices():
     return h.pivot_table(index="날짜", columns="종목코드", values="종가")
 
 
-def dividend_events(E, adj, raw_close=None):
+def dividend_events(E, adj, raw_close=None, shares=None):
     """시대 E 의 T×N 배당 (배당락일에 '배당 ÷ 전날 종가', 아니면 0) · 배당자료가 있는 칸 표시.
     배당으로 세는 조건: 비율의 오른 폭이 0.2%~15% · 1·3·5·10·20 거래일 뒤에도 오른 폭의 80% 이상이 남음
-    (자료가 며칠 비어 앞 값으로 채운 구간에서 생기는 '올랐다 돌아오는' 어긋남을 버림) · 그날과 전날 실제 종가 기록이 있음."""
+    (자료가 며칠 비어 앞 값으로 채운 구간에서 생기는 '올랐다 돌아오는' 어긋남을 버림) · 그날과 전날 실제 종가 기록이 있음.
+    shares(T×N, 시총 ÷ 종가 = 상장 주식 수)가 있으면: 그날부터 60거래일 안에 주식 수가 계단의 절반 이상 늘면
+    주식배당·무상증자·유상증자로 보고 현금 배당에서 뺀다 (2026-11-15 더함 — 셀트리온·유한양행 주식배당, 한화솔루션 유상증자가
+    고배당으로 잡혔음). 뺀 계단은 E.Dv_noncash 에 남긴다: 실제가가 그만큼 떨어진 것이라 수익 계산에서는 메워 줘야 함 (세금 없이)."""
     T, N = E.G.shape
     raw = pd.DataFrame(E.Cf, index=E.dates, columns=E.codes)
     A = adj.reindex(E.dates)
     Dv = np.zeros((T, N), np.float32)
     cov = np.zeros((T, N), bool)
     has = np.isfinite(raw_close) if raw_close is not None else np.ones((T, N), bool)
+    shf = pd.DataFrame(shares).ffill().to_numpy() if shares is not None else None
+    nonc = [0]
+    NC = np.zeros((T, N), np.float32)
     for j, c in enumerate(E.codes):
         if c not in A.columns:
             continue
@@ -88,6 +95,13 @@ def dividend_events(E, adj, raw_close=None):
             base = qf[t - 1]
             if all((qf[t + k] - base) >= 0.8 * d[t] for k in (1, 3, 5, 10, 20)):
                 Dv[t, j] = np.expm1(d[t])
+                if shf is not None and t > 3:
+                    s0 = np.nanmedian(shf[max(0, t - 25):t - 2, j])
+                    s1 = np.nanmax(shf[t:min(T, t + 60), j])
+                    if np.isfinite(s0) and s0 > 0 and np.isfinite(s1) and s1 / s0 - 1 >= 0.5 * Dv[t, j]:
+                        NC[t, j] = Dv[t, j]
+                        Dv[t, j] = 0.0
+                        nonc[0] += 1
     # 배당 일정 거르기: 3·6·9·12월 마지막 7거래일 (2023 배당 절차 개편 뒤로는 2~4월 전부) 밖의 계단은
     #   그날 여러 종목(4개 이상)에서 함께 생겼거나 1% 미만이면 자료 어긋남으로 보고 버린다.
     win = dividend_windows(E.dates)
@@ -96,7 +110,18 @@ def dividend_events(E, adj, raw_close=None):
     Dv[off & (cnt > 3)] = 0.0
     small = (Dv < 0.01) & off[:, None]
     Dv[small] = 0.0
+    E.noncash_dropped = nonc[0]
+    E.Dv_noncash = NC
     return Dv, cov
+
+
+def shares_out(P):
+    """패널 → 상장 주식 수 (시총 ÷ 종가). 시총이 없으면 None."""
+    if "MC" not in P:
+        return None
+    with np.errstate(all="ignore"):
+        sh = np.where((P["C"] > 0) & (P["MC"] > 0), P["MC"] / P["C"], np.nan)
+    return sh
 
 
 def dividend_windows(dates):
@@ -115,7 +140,8 @@ def attach_dividends(ER, log=print):
     import setup_lab as SLB
     adj = adjusted_prices()
     for e, E in ER.items():
-        Dv, cov = dividend_events(E, adj, raw_close=SLB.panel(e)[0]["C"])
+        P = SLB.panel(e)[0]
+        Dv, cov = dividend_events(E, adj, raw_close=P["C"], shares=shares_out(P))
         T, N = Dv.shape
         E.Dv, E.cov = Dv, cov
         ttm = pd.DataFrame(Dv).rolling(250, min_periods=240).sum().to_numpy()
@@ -123,16 +149,20 @@ def attach_dividends(ER, log=print):
         E.ttm = np.where(ok_hist & E.U, ttm, np.nan)
         inc = np.zeros((T, N))
         inc[:-2] = Dv[2:]                                        # 다음 날 시가 → 그다음 날 시가 사이에 배당락이 오면 그 구간에 받음
+        nc = np.zeros((T, N))
+        NC = getattr(E, "Dv_noncash", None)
+        if NC is not None and NC.shape == Dv.shape:
+            nc[:-2] = NC[2:]                                     # 주식배당·증자로 실제가가 떨어진 몫 — 가격 수익으로 메움 (배당 아님)
         E.inc = (1 - TAX) * inc
-        E.G_price = E.G.copy()
-        E.G_div = np.where(np.isfinite(E.G), E.G + E.inc, np.nan)
+        E.G_price = np.where(np.isfinite(E.G), E.G + nc, np.nan)
+        E.G_div = np.where(np.isfinite(E.G), E.G + nc + E.inc, np.nan)
         Ucov = E.U & cov
         with np.errstate(all="ignore"):
             E.ew_cov_div = np.nanmean(np.where(Ucov, E.G_div, np.nan), axis=1)
             E.ew_cov_price = np.nanmean(np.where(Ucov, E.G_price, np.nan), axis=1)
             E.ew_all_div = np.nanmean(np.where(E.U, np.where(cov, E.G_div, E.G), np.nan), axis=1)
         y = np.nansum(np.where(Ucov, Dv, 0), axis=1)
-        log(f"  {e}: 배당 계단 {int((Dv > 0).sum()):,}번 · 배당자료 덮는 비율(상위 100 일수) {Ucov.sum() / E.U.sum():.0%} · "
+        log(f"  {e}: 배당 계단 {int((Dv > 0).sum()):,}번 (주식 수가 늘어 뺀 것 {getattr(E, 'noncash_dropped', 0)}번) · 배당자료 덮는 비율(상위 100 일수) {Ucov.sum() / E.U.sum():.0%} · "
             f"덮는 종목 평균 배당수익률/년 {float(np.nansum(y) / max(1, Ucov.sum()) * 252):.1%}")
     return ER
 

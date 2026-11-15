@@ -253,14 +253,16 @@ const U = (() => {
     report: '<rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/>',
     pick: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
     book: '<path d="M5 5.5A1.5 1.5 0 0 1 6.5 4H18v14H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H18v-3"/><path d="M9 8h5M9 11h4"/>',
+    wallet: '<rect x="4" y="6" width="16" height="13" rx="2.5"/><path d="M4 9.5h16"/><path d="M15.5 14h1.5"/><path d="M7 6l8-2.5 1 2.5"/>',
   };
-  const PAGES = [["index.html", "홈", "home"], ["autotrade.html", "자동매매", "bot"], ["explain.html", "해설", "book"],
+  const PAGES = [["index.html", "홈", "home"], ["plan.html", "내 계좌", "wallet"], ["autotrade.html", "자동매매", "bot"], ["explain.html", "해설", "book"],
                  ["stock.html", "종목", "stock"], ["report.html", "성과", "report"]];
   function nav(active) {
     const top = document.getElementById("topnav");
     if (top) top.innerHTML = PAGES.map(([h, l]) => `<a href="${h}" class="${h === active ? "on" : ""}">${l}</a>`).join("");
     const b = document.createElement("nav");
     b.className = "bnav";
+    b.style.gridTemplateColumns = `repeat(${PAGES.length}, 1fr)`;
     b.setAttribute("aria-label", "페이지 이동");
     b.innerHTML = PAGES.map(([h, l, ic]) => `<a href="${h}" class="${h === active ? "on" : ""}" ${h === active ? 'aria-current="page"' : ""}>
       <svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[ic]}</svg><span>${l}</span></a>`).join("");
