@@ -1429,6 +1429,17 @@ def test_income_goal_years_and_income_path():
     assert 2018 in out["years"] and out["n"] == 2                                     # 2018(자료 이음매)과 그다음 해의 변화는 뺌
 
 
+def test_income_goal_draw_success():
+    """일부 팔아 쓰기: 수익 0 이면 꺼낸 합보다 조금 많으면 버티고 조금 적으면 바닥 · 90% 버티는 돈은 그 사이."""
+    import income_goal as IG
+    m0 = np.zeros(120)
+    total = 500_000 * 12 * 30
+    assert IG.draw_success(m0, total * 1.01, 500_000, infl=0.0, n_paths=20)["ok"] == 1.0
+    assert IG.draw_success(m0, total * 0.99, 500_000, infl=0.0, n_paths=20)["ok"] == 0.0
+    need = IG.capital_for(m0, 500_000, infl=0.0, n_paths=20)
+    assert total * 0.99 < need < total * 1.01
+
+
 def glob_any(d, prefix):
     return os.path.isdir(d) and any(n.startswith(prefix) for n in os.listdir(d))
 
