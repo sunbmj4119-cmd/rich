@@ -106,12 +106,15 @@ def recent():
     if ig:
         n = g(ig, "need", "고배당·저변동") or {}
         ip = g(ig, "income_path", "고배당·저변동", "2003-01-01") or {}
-        row = next((r for r in ig.get("years_table") or [] if r["base"] == "2008~2018 (보수적)" and r["monthly"] == 1_000_000 and r["infl"] == 0), {})
-        out.append({"id": "새로", "date": "2026-11-15", "title": "배당으로 매달 100만 원", "src": "src/income_goal.py", "verdict": "채택",
-                    "q": "세후 배당 매달 100만 원(연 1,200만 원)을 받으려면 얼마가 필요하고, 몇 년 걸리고, 받는 배당은 얼마나 흔들리나?",
-                    "result": f"고배당·덜 흔들림 10종목의 지금 배당률(세후 {p(n.get('yield_now_after'), 1, False)})이면 {n.get('need_now', 0) / 1e8:.2f}억 원. "
+        row = next((r for r in ig.get("years_table") or [] if r["base"] == "2008~2018 (보수적)" and r["monthly"] == 500_000 and r["infl"] == 0), {})
+        na = g(ig, "need_by_acct", "고배당·저변동") or {}
+        d90 = g(ig, "draw", "need90") or {}
+        out.append({"id": "새로", "date": "2026-11-15", "title": f"배당으로 매달 {ig.get('goal_month', 0) // 10000}만 원", "src": "src/income_goal.py", "verdict": "채택",
+                    "q": f"세후 배당 매달 {ig.get('goal_month', 0) // 10000}만 원을 받으려면 계좌별로 얼마가 필요하고, 몇 년 걸리고, 받는 배당은 얼마나 흔들리나? 일부를 팔아 쓰면?",
+                    "result": f"고배당·덜 흔들림 10종목의 지금 배당률(세전 {p(n.get('yield_now_gross'), 1, False)})이면 일반 계좌 {na.get('일반', 0) / 1e8:.2f}억 · ISA {na.get('ISA', 0) / 1e8:.2f}억 · 연금 {na.get('연금', 0) / 1e8:.2f}억. "
+                              f"일부를 팔아 쓰면 30년 10번 중 9번 버티는 데 보통 시기 {d90.get('2005~ 전체', 0) / 1e8:.2f}억 · 약한 시기 {d90.get('2008~2018 (보수적)', 0) / 1e8:.2f}억. "
                               f"2003 에 사 두고 배당만 꺼내 썼다면 받은 배당은 해마다 {p(ip.get('growth'))} 늘었지만 {ip.get('worst_year')} 년에는 {p(ip.get('worst_drop'), 0)} 줄었다 → 1년치 비상금과 배당 통장으로 받는다.",
-                    "nums": [{"k": "필요한 돈 (10종목)", "v": f"{n.get('need_now', 0) / 1e8:.2f}억"}, {"k": "매달 100만 넣으면 (약한 시기)", "v": f"{row.get('p50', '—')}년"},
+                    "nums": [{"k": "필요한 돈 (10종목 · ISA)", "v": f"{na.get('ISA', 0) / 1e8:.2f}억"}, {"k": "매달 50만 넣으면 (약한 시기)", "v": f"{row.get('p50', '—')}년"},
                              {"k": "배당 가장 크게 준 해", "v": p(ip.get("worst_drop"), 0)}, {"k": "12월 배당락 몫", "v": p(g(ig, "current", "ex_month_share", "12"), 0, False)}],
                     "used_now": "'내 계좌' 화면의 '배당 100만' 탭 (계산기 · 세 단계 계획)"})
     return out

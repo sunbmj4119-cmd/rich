@@ -1,7 +1,11 @@
 """
-배당으로 매달 100만 원 — 얼마가 필요하고, 몇 년 걸리고, 어떻게 받나 (2026-11-15)
+배당으로 매달 50만 원 — 얼마가 필요하고, 몇 년 걸리고, 어떻게 받나 (2026-11-15 · 같은 날 100만 원 → 50만 원으로 목표 고침)
 
-  목표: 세후 배당 매달 1,000,000원 = 연 12,000,000원
+  목표: 세후 배당 매달 500,000원 = 연 6,000,000원
+  0) 계좌별 세금: 일반 15.4% · ISA 는 비과세 한도(순이익 200만, 서민형 400만 — 계좌 기간 전체 합) 넘는 몫 9.9% → 9.9% 로 잡음(보수적) ·
+     연금계좌 55~69세 5.5% (70~79세 4.4%, 80세~ 3.3%)
+  5) 배당 대신 일부를 팔아 꺼내 쓰면: 모은 돈에서 매달 50만 원(물가만큼 늘림)을 꺼낼 때 30년 버틸 확률 (ISA 계획 달 수익) ·
+     90% 버티려면 얼마가 필요한가
   1) 필요한 돈 = 연 1,200만 ÷ 세후 배당률. 배당률은 지금 사면 받는 값(최근 1년 배당 ÷ 오늘 가격, 시총 상위 100 중 배당자료 있는 종목)과
      2003~ 지나온 평균 두 가지로 · 고배당 30종목(ETF 대용) / 고배당·저변동 10종목 / 고배당 3종목
   2) 받는 동안의 흔들림: 2003 년(또는 2008 년)에 한 번 사 두고 배당을 꺼내 쓰기만 했다면 해마다 받은 배당이 어떻게 변했나 (배당 줄어든 해 · 최악)
@@ -26,9 +30,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 OUT = "data/income_goal.json"
 DOCS = "docs/income_goal.json"
-GOAL_MONTH = 1_000_000
+GOAL_MONTH = 500_000
 GOAL_YEAR = 12 * GOAL_MONTH
 TAX = 0.154
+ACCT_TAX = {"일반": 0.154, "ISA": 0.099, "연금": 0.055}
+ACCT_NAME = {"일반": "일반 계좌 (토스 등) 15.4%", "ISA": "ISA — 비과세 한도 넘는 몫 9.9%", "연금": "연금계좌 55~69세 5.5%"}
+DRAW_CAPS = [60_000_000, 80_000_000, 100_000_000, 120_000_000, 150_000_000, 200_000_000]
+DRAW_YEARS = 30
 INFL = 0.02
 CONTRIB = [300_000, 500_000, 1_000_000, 1_500_000, 2_000_000, 3_000_000]
 NPATH = 4000
@@ -159,6 +167,36 @@ def years_to_target(m, start_cash, monthly, target, infl=0.0, n_paths=NPATH, blo
             "within30": round(float((hit <= 30).mean()), 3)}
 
 
+def draw_success(m, capital, draw, years=DRAW_YEARS, infl=INFL, n_paths=NPATH, block=12, seed=0):
+    """모은 돈 capital 에서 매달 draw 원(해마다 물가만큼 늘림)을 꺼낼 때: years 년 동안 바닥나지 않을 확률 · 끝에 남은 돈(지금 돈 가치) 가운데."""
+    rng = np.random.default_rng(seed)
+    arr = np.asarray(m, float)
+    L, n = len(arr), years * 12
+    nb = math.ceil(n / block)
+    starts = rng.integers(0, L - block + 1, size=(n_paths, nb))
+    idx = (starts[:, :, None] + np.arange(block)[None, None, :]).reshape(n_paths, -1)[:, :n]
+    R = arr[idx]
+    V = np.full(n_paths, float(capital))
+    dead = np.zeros(n_paths, bool)
+    for k in range(n):
+        V = V * (1 + R[:, k]) - draw * (1 + infl) ** (k / 12)
+        dead |= V <= 0
+        V = np.where(dead, 0.0, V)
+    real = V / (1 + infl) ** years
+    return {"ok": round(float((~dead).mean()), 3), "end_real_p50": round(float(np.median(real))), "end_real_p10": round(float(np.percentile(real, 10)))}
+
+
+def capital_for(m, draw, prob=0.9, **kw):
+    lo, hi = 1e7, 3e9
+    for _ in range(30):
+        mid = (lo + hi) / 2
+        if draw_success(m, mid, draw, **kw)["ok"] >= prob:
+            hi = mid
+        else:
+            lo = mid
+    return round(hi, -6)
+
+
 def run(log=print):
     import div_lab as DL
     import score_lab as SC
@@ -193,6 +231,13 @@ def run(log=print):
         log(f"  {PORTS[k]:20s}: 지금 배당률 세전 {cy[k]:.1%} → 세후 {a_now:.1%} → 필요한 돈 {need[k]['need_now'] / 1e8:.2f}억 · "
             f"2019~ 평균 세후 {hist[k]['2019~']:.1%} → {need[k]['need_hist'] / 1e8:.2f}억 · 2003~ 평균 {hist[k]['all']:.1%}")
     res["need"] = need
+    # 계좌별 (세전 배당률 × (1 − 계좌 세율))
+    res["acct"] = ACCT_NAME
+    res["need_by_acct"] = {k: {a: round(GOAL_YEAR / (cy[k] * (1 - t)), -5) for a, t in ACCT_TAX.items()} for k in PORTS}
+    for k in PORTS:
+        log(f"  {PORTS[k]:20s}: 계좌별 필요한 돈 " + " · ".join(f"{a} {v / 1e8:.2f}억" for a, v in res["need_by_acct"][k].items()))
+    res["ten_pct"] = {"capital": 60_000_000, "best_yield_now": max(t["yield"] for t in cy["top10"]),
+                      "income_now_by_port": {k: round(60_000_000 * cy[k] * (1 - ACCT_TAX["ISA"]) / 12, -3) for k in PORTS}}
     res["flat_yields"] = [{"after_tax": y, "need": round(GOAL_YEAR / y, -5)} for y in (0.03, 0.035, 0.04, 0.045, 0.05, 0.06)]
     # 받는 동안의 흔들림
     res["income_path"] = paths
@@ -207,8 +252,8 @@ def run(log=print):
     m = m[m.index < pd.Timestamp("2026-11-01")]                      # 끝 달은 덜 찬 달이라 뺌
     res["accum"] = {"what": "ISA 계획 (고배당 ETF 50 + 매달 회전 50) 달 수익 · 2005~", "monthly": [round(float(x), 5) for x in m],
                     "dates": [str(d.date())[:7] for d in m.index], "conservative": ["2008-01", "2018-12"]}
-    target = need["고배당·저변동"]["need_now"]
-    res["target_main"] = {"port": "고배당·저변동", "capital": target}
+    target = res["need_by_acct"]["고배당·저변동"]["ISA"]
+    res["target_main"] = {"port": "고배당·저변동", "acct": "ISA", "capital": target}
     tab = []
     for base, (a, b) in {"2005~ 전체": ("2005-01-01", None), "2008~2018 (보수적)": ("2008-01-01", "2018-12-31")}.items():
         mm = m[(m.index >= pd.Timestamp(a)) & ((m.index <= pd.Timestamp(b)) if b else True)]
@@ -219,6 +264,17 @@ def run(log=print):
                 if infl == 0.0:
                     log(f"  [{base}] 0원 + 매달 {c / 1e4:,.0f}만 → {target / 1e8:.2f}억: 가운데 {r['p50']}년 · 나쁜 쪽 {r['p90']}년 · 20년 안 {r['within20']:.0%}")
     res["years_table"] = tab
+    # 배당 대신 일부를 팔아 꺼내 쓰면 (매달 GOAL_MONTH, 물가만큼 늘림, 30년)
+    dr = {"draw": GOAL_MONTH, "years": DRAW_YEARS, "rows": [], "need90": {}}
+    for base, (a, b) in {"2005~ 전체": ("2005-01-01", None), "2008~2018 (보수적)": ("2008-01-01", "2018-12-31")}.items():
+        mm = m[(m.index >= pd.Timestamp(a)) & ((m.index <= pd.Timestamp(b)) if b else True)].to_numpy()
+        for cap in DRAW_CAPS:
+            r = draw_success(mm, cap, GOAL_MONTH, seed=zlib.crc32(f'draw|{base}|{cap}'.encode()))
+            dr["rows"].append({"base": base, "capital": cap, **r})
+            log(f"  [{base}] {cap / 1e8:.1f}억에서 매달 {GOAL_MONTH / 1e4:.0f}만(물가 2%) 꺼냄 → 30년 버틸 확률 {r['ok']:.0%} · 남은 돈(지금 가치) 가운데 {r['end_real_p50'] / 1e8:.2f}억")
+        dr["need90"][base] = capital_for(mm, GOAL_MONTH, seed=zlib.crc32(f'need|{base}'.encode()))
+        log(f"  [{base}] 90% 버티려면 {dr['need90'][base] / 1e8:.2f}억")
+    res["draw"] = dr
     res["generated"] = time.strftime("%Y-%m-%d %H:%M")
     res["secs"] = round(time.time() - t0)
     for fn in (OUT, DOCS):
