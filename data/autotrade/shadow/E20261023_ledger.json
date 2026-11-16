@@ -7,7 +7,8 @@
   "028050": "2026-11-09",
   "006800": "2026-11-09",
   "001450": "2026-11-11",
-  "120110": "2026-11-13"
+  "120110": "2026-11-13",
+  "475150": "2026-11-16"
  },
  "078930": {
   "entry_date": "2026-10-30",
@@ -39,14 +40,19 @@
   "partial_done": false,
   "last_shares": 32
  },
- "475150": {
-  "entry_date": "2026-11-09",
-  "partial_done": false,
-  "last_shares": 25
- },
  "001450": {
   "entry_date": "2026-11-12",
   "partial_done": false,
   "last_shares": 25
+ },
+ "028050": {
+  "entry_date": "2026-11-16",
+  "partial_done": false,
+  "last_shares": 14
+ },
+ "003490": {
+  "entry_date": "2026-11-16",
+  "partial_done": false,
+  "last_shares": 30
  }
 }
