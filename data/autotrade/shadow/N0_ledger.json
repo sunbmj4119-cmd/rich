@@ -1,5 +1,7 @@
 {
- "_exits": {},
+ "_exits": {
+  "000990": "2026-11-17"
+ },
  "034730": {
   "entry_date": "2026-11-12",
   "partial_done": false,
@@ -24,10 +26,5 @@
   "entry_date": "2026-11-12",
   "partial_done": false,
   "last_shares": 3
- },
- "000990": {
-  "entry_date": "2026-11-12",
-  "partial_done": false,
-  "last_shares": 10
  }
 }

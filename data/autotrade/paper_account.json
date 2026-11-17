@@ -26,7 +26,24 @@
    "avg": 34852.2
   }
  },
- "pending": [],
+ "pending": [
+  {
+   "side": "sell",
+   "code": "034730",
+   "qty": 1,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-17"
+  },
+  {
+   "side": "sell",
+   "code": "006800",
+   "qty": 44,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-17"
+  }
+ ],
  "fills": [
   {
    "side": "buy",
