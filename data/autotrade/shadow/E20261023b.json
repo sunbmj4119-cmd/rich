@@ -1,5 +1,5 @@
 {
- "cash": 3822873.5,
+ "cash": 4808393.0,
  "positions": {
   "078930": {
    "shares": 11,
@@ -8,10 +8,6 @@
   "089860": {
    "shares": 18,
    "avg": 51176.65
-  },
-  "034730": {
-   "shares": 2,
-   "avg": 446669.0
   },
   "001450": {
    "shares": 25,
@@ -28,20 +24,28 @@
  },
  "pending": [
   {
-   "side": "sell",
+   "side": "buy",
    "code": "034730",
-   "qty": 2,
-   "kind": "market",
-   "limit": null,
-   "date": "2026-11-17"
+   "qty": 1,
+   "kind": "limit",
+   "limit": 498000,
+   "date": "2026-11-18"
   },
   {
    "side": "buy",
    "code": "005830",
    "qty": 5,
    "kind": "limit",
-   "limit": 167200,
-   "date": "2026-11-17"
+   "limit": 169700,
+   "date": "2026-11-18"
+  },
+  {
+   "side": "buy",
+   "code": "088350",
+   "qty": 253,
+   "kind": "limit",
+   "limit": 3740,
+   "date": "2026-11-18"
   }
  ],
  "fills": [
@@ -400,6 +404,28 @@
    "fill": 248000.0,
    "fill_date": "2026-11-17",
    "pnl": -6738.75
+  },
+  {
+   "side": "sell",
+   "code": "034730",
+   "qty": 2,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-17",
+   "status": "체결",
+   "fill": 493500.0,
+   "fill_date": "2026-11-18",
+   "pnl": 92181.5
+  },
+  {
+   "side": "buy",
+   "code": "005830",
+   "qty": 5,
+   "kind": "limit",
+   "limit": 167200,
+   "date": "2026-11-17",
+   "status": "미체결(지정가 초과)",
+   "fill": null
   }
  ],
  "start": "2026-10-29",
@@ -459,6 +485,10 @@
   {
    "date": "2026-11-17",
    "equity": 9457224
+  },
+  {
+   "date": "2026-11-18",
+   "equity": 9496443
   }
  ]
 }

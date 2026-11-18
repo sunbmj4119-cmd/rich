@@ -1,31 +1,10 @@
 {
- "date": "2026-11-17",
- "created": "2026-11-17T22:23:50+09:00",
+ "date": "2026-11-18",
+ "created": "2026-11-19T02:51:07+09:00",
  "broker": "paper",
- "equity": 9824950.774999999,
- "cash": 4966310.7749999985,
- "orders": [
-  {
-   "side": "sell",
-   "code": "034730",
-   "name": "SK",
-   "qty": 1,
-   "kind": "market",
-   "price": null,
-   "ref_price": 463500.0,
-   "reason": "트레일 고점대비 -8.6% (폭 -8%, 고점수익 +1%)"
-  },
-  {
-   "side": "sell",
-   "code": "006800",
-   "name": "미래에셋증권",
-   "qty": 44,
-   "kind": "market",
-   "price": null,
-   "ref_price": 19860.0,
-   "reason": "트레일 고점대비 -8.2% (폭 -8%, 고점수익 +0%)"
-  }
- ],
+ "equity": 9929027.424999999,
+ "cash": 6353127.424999999,
+ "orders": [],
  "dropped": 0,
  "issues": [],
  "approval": "auto",

@@ -1,8 +1,23 @@
 {
- "made": "2026-11-16",
+ "made": "2026-11-18",
  "model": "S:MOM:10:BAND:none",
- "orders": [],
- "equity_usd": 7409.77,
+ "orders": [
+  {
+   "side": "sell",
+   "code": "MSFT",
+   "qty": 0.9575,
+   "est_price": 504.99,
+   "sleeve": "us"
+  },
+  {
+   "side": "buy",
+   "code": "TGT",
+   "usd": 725.15,
+   "est_price": 170.87,
+   "sleeve": "us"
+  }
+ ],
+ "equity_usd": 7251.51,
  "target": [
   "ABBV",
   "AMGN",
@@ -12,7 +27,7 @@
   "LLY",
   "MA",
   "MDT",
-  "MSFT",
+  "TGT",
   "TMO"
  ],
  "risk": {
@@ -22,40 +37,40 @@
   ],
   "sleeves": {
    "us": {
-    "days": 13,
-    "sr_star": 0.529,
+    "days": 15,
+    "sr_star": 0.528,
     "vol_star": 0.1848,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 4% (100% 면 경보) · 낙폭 -3.0% (경고선 -7.9%)"
+     "정상 — 감쇠 누적 11% (100% 면 경보) · 낙폭 -3.9% (경고선 -8.3%)"
     ],
     "cusum": {
-     "S": 0.0482,
-     "h": 1.0977,
-     "level": 0.044,
+     "S": 0.1209,
+     "h": 1.096,
+     "level": 0.11,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 823,
+     "detect_days_if_zero": 824,
      "false_alarm_years": 7.0
     },
     "dd": {
-     "now": -0.0299,
-     "p95": -0.079,
-     "p99": -0.1072
+     "now": -0.0394,
+     "p95": -0.0833,
+     "p99": -0.1169
     },
     "expect": {
-     "sr_bt": 1.058,
+     "sr_bt": 1.056,
      "vol": 0.1848,
      "src": "미국 추세 상위 10 2016~",
-     "sr_star": 0.529
+     "sr_star": 0.528
     }
    }
   },
   "log": [],
-  "orders_before": 0,
-  "orders_after": 0,
+  "orders_before": 2,
+  "orders_after": 2,
   "limits": {
    "decay_action": "alert",
    "drawdown_action": "alert",

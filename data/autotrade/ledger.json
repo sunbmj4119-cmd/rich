@@ -1,9 +1,7 @@
 {
- "_exits": {},
- "034730": {
-  "entry_date": "2026-11-12",
-  "partial_done": false,
-  "last_shares": 1
+ "_exits": {
+  "034730": "2026-11-18",
+  "006800": "2026-11-18"
  },
  "078930": {
   "entry_date": "2026-11-12",
@@ -19,11 +17,6 @@
   "entry_date": "2026-11-12",
   "partial_done": false,
   "last_shares": 7
- },
- "006800": {
-  "entry_date": "2026-11-12",
-  "partial_done": false,
-  "last_shares": 44
  },
  "120110": {
   "entry_date": "2026-11-12",

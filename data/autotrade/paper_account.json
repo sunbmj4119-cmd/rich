@@ -1,10 +1,6 @@
 {
- "cash": 4966310.7749999985,
+ "cash": 6353127.424999999,
  "positions": {
-  "034730": {
-   "shares": 1,
-   "avg": 501751.5
-  },
   "078930": {
    "shares": 11,
    "avg": 83324.8
@@ -17,33 +13,12 @@
    "shares": 7,
    "avg": 124586.6
   },
-  "006800": {
-   "shares": 44,
-   "avg": 21632.4
-  },
   "120110": {
    "shares": 25,
    "avg": 34852.2
   }
  },
- "pending": [
-  {
-   "side": "sell",
-   "code": "034730",
-   "qty": 1,
-   "kind": "market",
-   "limit": null,
-   "date": "2026-11-17"
-  },
-  {
-   "side": "sell",
-   "code": "006800",
-   "qty": 44,
-   "kind": "market",
-   "limit": null,
-   "date": "2026-11-17"
-  }
- ],
+ "pending": [],
  "fills": [
   {
    "side": "buy",
@@ -110,6 +85,30 @@
    "status": "체결",
    "fill": 34800.0,
    "fill_date": "2026-11-12"
+  },
+  {
+   "side": "sell",
+   "code": "034730",
+   "qty": 1,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-17",
+   "status": "체결",
+   "fill": 493500.0,
+   "fill_date": "2026-11-18",
+   "pnl": -8991.75
+  },
+  {
+   "side": "sell",
+   "code": "006800",
+   "qty": 44,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-17",
+   "status": "체결",
+   "fill": 20350.0,
+   "fill_date": "2026-11-18",
+   "pnl": -57768.69999999997
   }
  ]
 }
