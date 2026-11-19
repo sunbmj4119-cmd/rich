@@ -1,5 +1,5 @@
 {
- "cash": 4808393.0,
+ "cash": 2531913.395,
  "positions": {
   "078930": {
    "shares": 11,
@@ -20,32 +20,44 @@
   "017670": {
    "shares": 11,
    "avg": 84426.45000000001
+  },
+  "034730": {
+   "shares": 1,
+   "avg": 495241.75
+  },
+  "005830": {
+   "shares": 5,
+   "avg": 169253.5
+  },
+  "088350": {
+   "shares": 253,
+   "avg": 3695.5350000000003
   }
  },
  "pending": [
   {
-   "side": "buy",
-   "code": "034730",
-   "qty": 1,
-   "kind": "limit",
-   "limit": 498000,
-   "date": "2026-11-18"
+   "side": "sell",
+   "code": "001450",
+   "qty": 25,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-19"
+  },
+  {
+   "side": "sell",
+   "code": "028050",
+   "qty": 14,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-19"
   },
   {
    "side": "buy",
-   "code": "005830",
-   "qty": 5,
+   "code": "003490",
+   "qty": 28,
    "kind": "limit",
-   "limit": 169700,
-   "date": "2026-11-18"
-  },
-  {
-   "side": "buy",
-   "code": "088350",
-   "qty": 253,
-   "kind": "limit",
-   "limit": 3740,
-   "date": "2026-11-18"
+   "limit": 32900,
+   "date": "2026-11-19"
   }
  ],
  "fills": [
@@ -426,6 +438,39 @@
    "date": "2026-11-17",
    "status": "미체결(지정가 초과)",
    "fill": null
+  },
+  {
+   "side": "buy",
+   "code": "034730",
+   "qty": 1,
+   "kind": "limit",
+   "limit": 498000,
+   "date": "2026-11-18",
+   "status": "체결",
+   "fill": 494500.0,
+   "fill_date": "2026-11-19"
+  },
+  {
+   "side": "buy",
+   "code": "005830",
+   "qty": 5,
+   "kind": "limit",
+   "limit": 169700,
+   "date": "2026-11-18",
+   "status": "체결",
+   "fill": 169000.0,
+   "fill_date": "2026-11-19"
+  },
+  {
+   "side": "buy",
+   "code": "088350",
+   "qty": 253,
+   "kind": "limit",
+   "limit": 3740,
+   "date": "2026-11-18",
+   "status": "체결",
+   "fill": 3690.0,
+   "fill_date": "2026-11-19"
   }
  ],
  "start": "2026-10-29",
@@ -489,6 +534,10 @@
   {
    "date": "2026-11-18",
    "equity": 9496443
+  },
+  {
+   "date": "2026-11-19",
+   "equity": 9407433
   }
  ]
 }

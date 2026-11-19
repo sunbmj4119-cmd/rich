@@ -1,0 +1,23 @@
+{
+ "date": "2026-11-19",
+ "created": "2026-11-19T19:29:42+09:00",
+ "broker": "paper",
+ "equity": 9865777.424999999,
+ "cash": 6353127.424999999,
+ "orders": [
+  {
+   "side": "sell",
+   "code": "001450",
+   "name": "현대해상",
+   "qty": 25,
+   "kind": "market",
+   "price": null,
+   "ref_price": 34450.0,
+   "reason": "트레일 고점대비 -8.6% (폭 -8%, 고점수익 +2%)"
+  }
+ ],
+ "dropped": 0,
+ "issues": [],
+ "approval": "auto",
+ "status": "자동"
+}

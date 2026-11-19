@@ -1,47 +1,10 @@
 {
- "made": "2026-11-18",
+ "made": "2026-11-19",
  "model": "S:REV3_LV:5:H5:crash",
  "model_desc": "3일반전+저변동 · 5종목 · 5일 보유 · 급락장 제외",
- "orders": [
-  {
-   "session": "open",
-   "kind": "stock",
-   "code": "011200",
-   "name": "HMM",
-   "side": "sell",
-   "qty": 18,
-   "est_price": 22300.0
-  },
-  {
-   "session": "open",
-   "kind": "stock",
-   "code": "029780",
-   "name": "삼성카드",
-   "side": "sell",
-   "qty": 8,
-   "est_price": 41450.0
-  },
-  {
-   "session": "open",
-   "kind": "stock",
-   "code": "138040",
-   "name": "메리츠금융지주",
-   "side": "sell",
-   "qty": 2,
-   "est_price": 123300.0
-  },
-  {
-   "session": "open",
-   "kind": "stock",
-   "code": "271560",
-   "name": "오리온",
-   "side": "sell",
-   "qty": 3,
-   "est_price": 115400.0
-  }
- ],
+ "orders": [],
  "notes": [],
- "equity_est": 1934211,
+ "equity_est": 1941826,
  "aw": {
   "regime": "급락",
   "target": [
@@ -120,18 +83,18 @@
   "rebalance": false,
   "card": "DM:2",
   "px": {
-   "069500": 79400.0,
-   "114800": 1329.0,
-   "122630": 54400.0,
-   "252670": 122.0,
-   "229200": 10825.0,
-   "153130": 113240.0,
+   "069500": 80630.0,
+   "114800": 1309.0,
+   "122630": 56035.0,
+   "252670": 119.0,
+   "229200": 11320.0,
+   "153130": 113245.0,
    "114260": 62630.0,
-   "148070": 108445.0,
-   "261240": 13860.0,
-   "132030": 21085.0,
-   "143850": 73560.0,
-   "133690": 160075.0
+   "148070": 108800.0,
+   "261240": 13840.0,
+   "132030": 20840.0,
+   "143850": 74060.0,
+   "133690": 162425.0
   }
  },
  "risk": {
@@ -141,72 +104,72 @@
   ],
   "sleeves": {
    "live": {
-    "days": 17,
-    "sr_star": 0.414,
+    "days": 18,
+    "sr_star": 0.42,
     "vol_star": 0.2873,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 1% (100% 면 경보) · 낙폭 -4.2% (경고선 -13.7%)"
+     "정상 — 감쇠 누적 1% (100% 면 경보) · 낙폭 -4.2% (경고선 -14.2%)"
     ],
     "cusum": {
-     "S": 0.0125,
-     "h": 0.8966,
-     "level": 0.014,
+     "S": 0.0073,
+     "h": 0.9075,
+     "level": 0.008,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 948,
+     "detect_days_if_zero": 941,
      "false_alarm_years": 7.0
     },
     "dd": {
      "now": -0.042,
-     "p95": -0.1371,
-     "p99": -0.1917
+     "p95": -0.1418,
+     "p99": -0.1865
     },
     "expect": {
-     "sr_bt": 0.829,
+     "sr_bt": 0.84,
      "vol": 0.2873,
      "src": "short_lab 채택 규칙 2019~",
-     "sr_star": 0.414
+     "sr_star": 0.42
     }
    },
    "aw": {
-    "days": 17,
-    "sr_star": 0.57,
+    "days": 18,
+    "sr_star": 0.569,
     "vol_star": 0.0583,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 12% (100% 면 경보) · 낙폭 -1.3% (경고선 -2.8%)"
+     "정상 — 감쇠 누적 10% (100% 면 경보) · 낙폭 -1.3% (경고선 -3.0%)"
     ],
     "cusum": {
-     "S": 0.1363,
-     "h": 1.1654,
-     "level": 0.117,
+     "S": 0.1197,
+     "h": 1.1638,
+     "level": 0.103,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 785,
+     "detect_days_if_zero": 786,
      "false_alarm_years": 7.0
     },
     "dd": {
      "now": -0.0128,
-     "p95": -0.0283,
-     "p99": -0.04
+     "p95": -0.0297,
+     "p99": -0.0392
     },
     "expect": {
-     "sr_bt": 1.139,
+     "sr_bt": 1.137,
      "vol": 0.0583,
      "src": "전천후 혼합 2016~",
      "sr_oos": 0.985,
-     "sr_star": 0.57
+     "sr_star": 0.569
     }
    }
   },
   "log": [],
-  "orders_before": 4,
-  "orders_after": 4,
+  "orders_before": 0,
+  "orders_after": 0,
   "limits": {
    "decay_action": "alert",
    "drawdown_action": "alert",

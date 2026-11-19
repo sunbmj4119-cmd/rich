@@ -18,7 +18,16 @@
    "avg": 34852.2
   }
  },
- "pending": [],
+ "pending": [
+  {
+   "side": "sell",
+   "code": "001450",
+   "qty": 25,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-19"
+  }
+ ],
  "fills": [
   {
    "side": "buy",
