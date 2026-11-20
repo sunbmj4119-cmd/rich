@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-18 23:56",
+ "generated": "2026-11-20 00:18",
  "common_from": "2007-03-01",
  "cost_us_side": 0.00131,
  "us_tax": 0.22,
@@ -1851,7 +1851,7 @@
    ],
    "freq": "매수일 43%",
    "start": "2014-08-05",
-   "turnover_yr": 214.5,
+   "turnover_yr": 214.4,
    "proxies": {},
    "krw_after_tax": {
     "full": {
@@ -1883,17 +1883,17 @@
     },
     "rolling": {
      "1y": {
-      "n": 2763,
+      "n": 2764,
       "p_loss": 0.533,
-      "median": -0.0095,
+      "median": -0.0093,
       "p5": -0.1105,
       "worst": -0.1653,
       "best": 0.8761
      },
      "3y": {
-      "n": 2259,
+      "n": 2260,
       "p_loss": 0.391,
-      "median": 0.0448,
+      "median": 0.045,
       "p5": -0.1843,
       "worst": -0.2437,
       "best": 0.676
@@ -1907,7 +1907,7 @@
     },
     "post": {
      "cagr": 0.0611,
-     "vol": 0.1373,
+     "vol": 0.1372,
      "sharpe": 0.501,
      "mdd": -0.3055
     },
@@ -1922,7 +1922,7 @@
    "group": "kr",
    "parts": {
     "intraday": 0.0162,
-    "overnight": 0.0966,
+    "overnight": 0.0965,
     "cost": 0.0695
    },
    "reference": false,
@@ -1940,7 +1940,7 @@
    ],
    "freq": "매수일 24%",
    "start": "2014-08-05",
-   "turnover_yr": 123.4,
+   "turnover_yr": 123.3,
    "proxies": {},
    "krw_after_tax": {
     "full": {
@@ -1972,7 +1972,7 @@
     },
     "rolling": {
      "1y": {
-      "n": 2763,
+      "n": 2764,
       "p_loss": 0.459,
       "median": 0.0113,
       "p5": -0.1083,
@@ -1980,9 +1980,9 @@
       "best": 0.6473
      },
      "3y": {
-      "n": 2259,
+      "n": 2260,
       "p_loss": 0.342,
-      "median": 0.0606,
+      "median": 0.0607,
       "p5": -0.1361,
       "worst": -0.1679,
       "best": 0.6982
@@ -2010,7 +2010,7 @@
    },
    "group": "kr",
    "parts": {
-    "intraday": 0.0062,
+    "intraday": 0.0061,
     "overnight": 0.0676,
     "cost": 0.0398
    },
@@ -2029,17 +2029,17 @@
    ],
    "freq": "매수일 41%",
    "start": "2014-08-05",
-   "turnover_yr": 205.3,
+   "turnover_yr": 205.2,
    "proxies": {},
    "krw_after_tax": {
     "full": {
-     "cagr": 0.0253,
+     "cagr": 0.0252,
      "vol": 0.1269,
      "sharpe": 0.26,
      "mdd": -0.2733
     },
     "common": {
-     "cagr": 0.0253,
+     "cagr": 0.0252,
      "vol": 0.1269,
      "sharpe": 0.26,
      "mdd": -0.2733
@@ -2061,15 +2061,15 @@
     },
     "rolling": {
      "1y": {
-      "n": 2763,
-      "p_loss": 0.523,
-      "median": -0.0041,
+      "n": 2764,
+      "p_loss": 0.522,
+      "median": -0.004,
       "p5": -0.1019,
       "worst": -0.1668,
       "best": 0.5558
      },
      "3y": {
-      "n": 2259,
+      "n": 2260,
       "p_loss": 0.371,
       "median": 0.0527,
       "p5": -0.1509,
@@ -2086,7 +2086,7 @@
     "post": {
      "cagr": 0.0416,
      "vol": 0.1374,
-     "sharpe": 0.366,
+     "sharpe": 0.365,
      "mdd": -0.2733
     },
     "crises": {
@@ -2100,7 +2100,7 @@
    "group": "kr",
    "parts": {
     "intraday": 0.0179,
-    "overnight": 0.0815,
+    "overnight": 0.0814,
     "cost": 0.0664
    },
    "reference": false,
