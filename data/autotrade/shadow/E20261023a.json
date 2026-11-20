@@ -1,5 +1,5 @@
 {
- "cash": 650187.3099999996,
+ "cash": 2297163.135,
  "positions": {
   "078930": {
    "shares": 11,
@@ -21,14 +21,6 @@
    "shares": 29,
    "avg": 31597.325
   },
-  "001450": {
-   "shares": 25,
-   "avg": 36805.125
-  },
-  "028050": {
-   "shares": 14,
-   "avg": 65798.55
-  },
   "028670": {
    "shares": 192,
    "avg": 4962.4325
@@ -45,19 +37,51 @@
  "pending": [
   {
    "side": "sell",
-   "code": "001450",
-   "qty": 25,
+   "code": "078930",
+   "qty": 11,
    "kind": "market",
    "limit": null,
-   "date": "2026-11-19"
+   "date": "2026-11-20"
   },
   {
    "side": "sell",
-   "code": "028050",
-   "qty": 14,
+   "code": "006360",
+   "qty": 31,
    "kind": "market",
    "limit": null,
-   "date": "2026-11-19"
+   "date": "2026-11-20"
+  },
+  {
+   "side": "sell",
+   "code": "017670",
+   "qty": 12,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-20"
+  },
+  {
+   "side": "buy",
+   "code": "001450",
+   "qty": 27,
+   "kind": "limit",
+   "limit": 33350,
+   "date": "2026-11-20"
+  },
+  {
+   "side": "buy",
+   "code": "088350",
+   "qty": 255,
+   "kind": "limit",
+   "limit": 3520,
+   "date": "2026-11-20"
+  },
+  {
+   "side": "buy",
+   "code": "005440",
+   "qty": 77,
+   "kind": "limit",
+   "limit": 11620,
+   "date": "2026-11-20"
   }
  ],
  "fills": [
@@ -483,6 +507,30 @@
    "status": "체결",
    "fill": 169000.0,
    "fill_date": "2026-11-19"
+  },
+  {
+   "side": "sell",
+   "code": "001450",
+   "qty": 25,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-19",
+   "status": "체결",
+   "fill": 33050.0,
+   "fill_date": "2026-11-20",
+   "pnl": -95117.49999999993
+  },
+  {
+   "side": "sell",
+   "code": "028050",
+   "qty": 14,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-19",
+   "status": "체결",
+   "fill": 58800.0,
+   "fill_date": "2026-11-20",
+   "pnl": -99214.5
   }
  ],
  "start": "2026-10-29",
@@ -550,6 +598,10 @@
   {
    "date": "2026-11-19",
    "equity": 9537567
+  },
+  {
+   "date": "2026-11-20",
+   "equity": 9005113
   }
  ]
 }

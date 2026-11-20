@@ -1,0 +1,33 @@
+{
+ "date": "2026-11-20",
+ "created": "2026-11-20T22:01:32+09:00",
+ "broker": "paper",
+ "equity": 9681038.049999999,
+ "cash": 7178138.049999999,
+ "orders": [
+  {
+   "side": "sell",
+   "code": "267250",
+   "name": "HD현대",
+   "qty": 7,
+   "kind": "market",
+   "price": null,
+   "ref_price": 112400.0,
+   "reason": "트레일 고점대비 -10.2% (폭 -8%, 고점수익 +0%)"
+  },
+  {
+   "side": "sell",
+   "code": "078930",
+   "name": "GS",
+   "qty": 11,
+   "kind": "market",
+   "price": null,
+   "ref_price": 75100.0,
+   "reason": "트레일 고점대비 -10.6% (폭 -8%, 고점수익 +1%)"
+  }
+ ],
+ "dropped": 0,
+ "issues": [],
+ "approval": "auto",
+ "status": "자동"
+}
