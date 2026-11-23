@@ -1,17 +1,10 @@
 {
  "start": "2026-10-23",
- "cash": 1579426.33214,
+ "cash": 1919310.94334,
  "initial_cash": 10000000.0,
- "positions": {
-  "003550": {
-   "qty": 4,
-   "avg": 87259.8192,
-   "since": "2026-11-16",
-   "name": "LG"
-  }
- },
+ "positions": {},
  "etf": {},
- "last_date": "2026-11-20",
+ "last_date": "2026-11-23",
  "model": "S:REV3_LV:5:H5:crash",
  "selected_at": "2026-11-02",
  "aw": {

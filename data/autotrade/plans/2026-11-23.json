@@ -1,0 +1,23 @@
+{
+ "date": "2026-11-23",
+ "created": "2026-11-24T05:44:48+09:00",
+ "broker": "paper",
+ "equity": 9538354.299999999,
+ "cash": 8698354.299999999,
+ "orders": [
+  {
+   "side": "sell",
+   "code": "120110",
+   "name": "코오롱인더",
+   "qty": 25,
+   "kind": "market",
+   "price": null,
+   "ref_price": 33600.0,
+   "reason": "트레일 고점대비 -9.4% (폭 -8%, 고점수익 +6%)"
+  }
+ ],
+ "dropped": 0,
+ "issues": [],
+ "approval": "auto",
+ "status": "자동"
+}

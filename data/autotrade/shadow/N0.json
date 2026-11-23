@@ -1,21 +1,7 @@
 {
- "cash": 8698364.95,
- "positions": {
-  "078930": {
-   "shares": 11,
-   "avg": 83324.8
-  }
- },
- "pending": [
-  {
-   "side": "sell",
-   "code": "078930",
-   "qty": 11,
-   "kind": "market",
-   "limit": null,
-   "date": "2026-11-20"
-  }
- ],
+ "cash": 9467209.95,
+ "positions": {},
+ "pending": [],
  "fills": [
   {
    "side": "buy",
@@ -142,6 +128,18 @@
    "fill": 58800.0,
    "fill_date": "2026-11-20",
    "pnl": -99214.5
+  },
+  {
+   "side": "sell",
+   "code": "078930",
+   "qty": 11,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-20",
+   "status": "체결",
+   "fill": 70000.0,
+   "fill_date": "2026-11-23",
+   "pnl": -147727.80000000005
   }
  ],
  "start": "2026-10-29",
@@ -213,6 +211,10 @@
   {
    "date": "2026-11-20",
    "equity": 9524465
+  },
+  {
+   "date": "2026-11-23",
+   "equity": 9467210
   }
  ]
 }
