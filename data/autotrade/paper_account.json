@@ -1,21 +1,7 @@
 {
- "cash": 8698354.299999999,
- "positions": {
-  "120110": {
-   "shares": 25,
-   "avg": 34852.2
-  }
- },
- "pending": [
-  {
-   "side": "sell",
-   "code": "120110",
-   "qty": 25,
-   "kind": "market",
-   "limit": null,
-   "date": "2026-11-23"
-  }
- ],
+ "cash": 9558312.424999999,
+ "positions": {},
+ "pending": [],
  "fills": [
   {
    "side": "buy",
@@ -142,6 +128,18 @@
    "fill": 70000.0,
    "fill_date": "2026-11-23",
    "pnl": -147727.80000000005
+  },
+  {
+   "side": "sell",
+   "code": "120110",
+   "qty": 25,
+   "kind": "market",
+   "limit": null,
+   "date": "2026-11-23",
+   "status": "체결",
+   "fill": 34450.0,
+   "fill_date": "2026-11-24",
+   "pnl": -11346.874999999818
   }
  ]
 }
