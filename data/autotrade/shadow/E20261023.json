@@ -38,6 +38,22 @@
    "kind": "limit",
    "limit": 491500,
    "date": "2026-11-24"
+  },
+  {
+   "side": "buy",
+   "code": "034730",
+   "qty": 1,
+   "kind": "limit",
+   "limit": 491500,
+   "date": "2026-11-24"
+  },
+  {
+   "side": "buy",
+   "code": "028670",
+   "qty": 187,
+   "kind": "limit",
+   "limit": 4695,
+   "date": "2026-11-24"
   }
  ],
  "fills": [

@@ -1,30 +1,30 @@
 {
- "made": "2026-11-23",
+ "made": "2026-11-24",
  "model": "S:MOM:10:BAND:none",
  "orders": [
   {
    "side": "sell",
-   "code": "LLY",
-   "qty": 0.5655,
-   "est_price": 1364.22,
+   "code": "MA",
+   "qty": 1.1311,
+   "est_price": 646.02,
    "sleeve": "us"
   },
   {
    "side": "buy",
-   "code": "MA",
-   "usd": 718.31,
-   "est_price": 635.61,
+   "code": "LLY",
+   "usd": 728.42,
+   "est_price": 1412.41,
    "sleeve": "us"
   }
  ],
- "equity_usd": 7183.08,
+ "equity_usd": 7284.18,
  "target": [
   "ABBV",
   "BRK-B",
   "DHR",
   "GILD",
   "KO",
-  "MA",
+  "LLY",
   "MDT",
   "PG",
   "TGT",
@@ -37,34 +37,34 @@
   ],
   "sleeves": {
    "us": {
-    "days": 18,
-    "sr_star": 0.517,
-    "vol_star": 0.1849,
+    "days": 19,
+    "sr_star": 0.519,
+    "vol_star": 0.1848,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 14% (100% 면 경보) · 낙폭 -6.0% (경고선 -9.2%)"
+     "정상 — 감쇠 누적 10% (100% 면 경보) · 낙폭 -6.0% (경고선 -9.4%)"
     ],
     "cusum": {
-     "S": 0.1457,
-     "h": 1.0775,
-     "level": 0.135,
+     "S": 0.1074,
+     "h": 1.0809,
+     "level": 0.099,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 835,
+     "detect_days_if_zero": 833,
      "false_alarm_years": 7.0
     },
     "dd": {
      "now": -0.0605,
-     "p95": -0.0922,
-     "p99": -0.1217
+     "p95": -0.0941,
+     "p99": -0.1267
     },
     "expect": {
-     "sr_bt": 1.035,
-     "vol": 0.1849,
+     "sr_bt": 1.038,
+     "vol": 0.1848,
      "src": "미국 추세 상위 10 2016~",
-     "sr_star": 0.517
+     "sr_star": 0.519
     }
    }
   },
