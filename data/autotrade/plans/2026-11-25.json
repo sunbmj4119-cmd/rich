@@ -1,0 +1,12 @@
+{
+ "date": "2026-11-25",
+ "created": "2026-11-25T23:24:03+09:00",
+ "broker": "paper",
+ "equity": 9558312.424999999,
+ "cash": 9558312.424999999,
+ "orders": [],
+ "dropped": 0,
+ "issues": [],
+ "approval": "auto",
+ "status": "자동"
+}

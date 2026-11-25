@@ -6,18 +6,18 @@
    "side": "sell",
    "code": "MA",
    "qty": 1.1311,
-   "est_price": 646.02,
+   "est_price": 647.44,
    "sleeve": "us"
   },
   {
    "side": "buy",
    "code": "LLY",
-   "usd": 728.42,
-   "est_price": 1412.41,
+   "usd": 729.22,
+   "est_price": 1407.59,
    "sleeve": "us"
   }
  ],
- "equity_usd": 7284.18,
+ "equity_usd": 7292.22,
  "target": [
   "ABBV",
   "BRK-B",
@@ -38,8 +38,8 @@
   "sleeves": {
    "us": {
     "days": 19,
-    "sr_star": 0.519,
-    "vol_star": 0.1848,
+    "sr_star": 0.522,
+    "vol_star": 0.1849,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
@@ -47,12 +47,12 @@
      "정상 — 감쇠 누적 10% (100% 면 경보) · 낙폭 -6.0% (경고선 -9.4%)"
     ],
     "cusum": {
-     "S": 0.1074,
-     "h": 1.0809,
+     "S": 0.108,
+     "h": 1.0859,
      "level": 0.099,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 833,
+     "detect_days_if_zero": 830,
      "false_alarm_years": 7.0
     },
     "dd": {
@@ -61,10 +61,10 @@
      "p99": -0.1267
     },
     "expect": {
-     "sr_bt": 1.038,
-     "vol": 0.1848,
+     "sr_bt": 1.045,
+     "vol": 0.1849,
      "src": "미국 추세 상위 10 2016~",
-     "sr_star": 0.519
+     "sr_star": 0.522
     }
    }
   },
