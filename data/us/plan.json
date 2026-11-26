@@ -1,34 +1,48 @@
 {
- "made": "2026-11-24",
+ "made": "2026-11-25",
  "model": "S:MOM:10:BAND:none",
  "orders": [
   {
    "side": "sell",
-   "code": "MA",
-   "qty": 1.1311,
-   "est_price": 647.44,
+   "code": "TMO",
+   "qty": 1.0712,
+   "est_price": 685.52,
+   "sleeve": "us"
+  },
+  {
+   "side": "sell",
+   "code": "LLY",
+   "qty": 0.519,
+   "est_price": 1392.22,
    "sleeve": "us"
   },
   {
    "side": "buy",
-   "code": "LLY",
-   "usd": 729.22,
-   "est_price": 1407.59,
+   "code": "AMGN",
+   "usd": 723.51,
+   "est_price": 469.24,
+   "sleeve": "us"
+  },
+  {
+   "side": "buy",
+   "code": "DIS",
+   "usd": 723.51,
+   "est_price": 125.6,
    "sleeve": "us"
   }
  ],
- "equity_usd": 7292.22,
+ "equity_usd": 7235.08,
  "target": [
   "ABBV",
+  "AMGN",
   "BRK-B",
   "DHR",
+  "DIS",
   "GILD",
   "KO",
-  "LLY",
   "MDT",
   "PG",
-  "TGT",
-  "TMO"
+  "TGT"
  ],
  "risk": {
   "state": "ACTIVE",
@@ -37,40 +51,40 @@
   ],
   "sleeves": {
    "us": {
-    "days": 19,
-    "sr_star": 0.522,
-    "vol_star": 0.1849,
+    "days": 20,
+    "sr_star": 0.523,
+    "vol_star": 0.185,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 10% (100% 면 경보) · 낙폭 -6.0% (경고선 -9.4%)"
+     "정상 — 감쇠 누적 12% (100% 면 경보) · 낙폭 -6.0% (경고선 -9.6%)"
     ],
     "cusum": {
-     "S": 0.108,
-     "h": 1.0859,
-     "level": 0.099,
+     "S": 0.1278,
+     "h": 1.0876,
+     "level": 0.117,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 830,
+     "detect_days_if_zero": 829,
      "false_alarm_years": 7.0
     },
     "dd": {
      "now": -0.0605,
-     "p95": -0.0941,
-     "p99": -0.1267
+     "p95": -0.0962,
+     "p99": -0.1295
     },
     "expect": {
-     "sr_bt": 1.045,
-     "vol": 0.1849,
+     "sr_bt": 1.047,
+     "vol": 0.185,
      "src": "미국 추세 상위 10 2016~",
-     "sr_star": 0.522
+     "sr_star": 0.523
     }
    }
   },
   "log": [],
-  "orders_before": 2,
-  "orders_after": 2,
+  "orders_before": 4,
+  "orders_after": 4,
   "limits": {
    "decay_action": "alert",
    "drawdown_action": "alert",
