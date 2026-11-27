@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-26 01:37",
+ "generated": "2026-11-27 01:35",
  "oos_end": "2013-12-31",
  "assumptions": {
   "div": 0.015,
@@ -2538,9 +2538,9 @@
  "kr_attr": [
   {
    "sector": "건설·건자재",
-   "trades": 2619,
-   "avg_bp": 155.5,
-   "win": 0.478
+   "trades": 2627,
+   "avg_bp": 152.6,
+   "win": 0.476
   },
   {
    "sector": "운송·물류",
@@ -2556,8 +2556,8 @@
   },
   {
    "sector": "조선·기계·방산",
-   "trades": 5735,
-   "avg_bp": 69.5,
+   "trades": 5737,
+   "avg_bp": 69.8,
    "win": 0.484
   },
   {
@@ -2586,38 +2586,38 @@
   },
   {
    "sector": "소비·유통",
-   "trades": 11502,
-   "avg_bp": 2.6,
+   "trades": 11505,
+   "avg_bp": 2.7,
    "win": 0.453
   },
   {
    "sector": "화학·에너지",
-   "trades": 13728,
-   "avg_bp": -5.7,
+   "trades": 13731,
+   "avg_bp": -5.5,
    "win": 0.453
   },
   {
    "sector": "지주",
-   "trades": 10512,
-   "avg_bp": -8.1,
+   "trades": 10528,
+   "avg_bp": -7.1,
    "win": 0.475
   },
   {
    "sector": "통신·인터넷",
-   "trades": 8154,
-   "avg_bp": -14.5,
+   "trades": 8159,
+   "avg_bp": -14.3,
    "win": 0.454
   },
   {
    "sector": "철강·금속",
-   "trades": 2397,
-   "avg_bp": -33.3,
+   "trades": 2398,
+   "avg_bp": -33.4,
    "win": 0.411
   },
   {
    "sector": "금융",
-   "trades": 6461,
-   "avg_bp": -38.0,
+   "trades": 6463,
+   "avg_bp": -38.2,
    "win": 0.445
   },
   {
