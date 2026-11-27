@@ -1,10 +1,71 @@
 {
- "date": "2026-11-26",
- "created": "2026-11-26T20:04:00+09:00",
+ "date": "2026-11-27",
+ "created": "2026-11-28T03:42:10+09:00",
  "broker": "paper",
  "equity": 9558312.424999999,
  "cash": 9558312.424999999,
- "orders": [],
+ "orders": [
+  {
+   "side": "buy",
+   "code": "001450",
+   "name": "현대해상",
+   "qty": 27,
+   "kind": "limit",
+   "price": 34500,
+   "ref_price": 34200.0,
+   "reason": "2위 · 모든 조건 통과 · 손절가 30,780원"
+  },
+  {
+   "side": "buy",
+   "code": "088350",
+   "name": "한화생명",
+   "qty": 260,
+   "kind": "limit",
+   "price": 3675,
+   "ref_price": 3640.0,
+   "reason": "3위 · 모든 조건 통과 · 손절가 3,276원"
+  },
+  {
+   "side": "buy",
+   "code": "402340",
+   "name": "SK스퀘어",
+   "qty": 1,
+   "kind": "limit",
+   "price": 693000,
+   "ref_price": 687000.0,
+   "reason": "4위 · 모든 조건 통과 · 손절가 618,300원"
+  },
+  {
+   "side": "buy",
+   "code": "267250",
+   "name": "HD현대",
+   "qty": 7,
+   "kind": "limit",
+   "price": 120200,
+   "ref_price": 119100.0,
+   "reason": "5위 · 모든 조건 통과 · 손절가 107,190원"
+  },
+  {
+   "side": "buy",
+   "code": "005830",
+   "name": "DB손해보험",
+   "qty": 5,
+   "kind": "limit",
+   "price": 162800,
+   "ref_price": 161200.0,
+   "reason": "7위 · 모든 조건 통과 · 손절가 145,080원"
+  },
+  {
+   "side": "buy",
+   "code": "002380",
+   "name": "KCC",
+   "qty": 2,
+   "kind": "limit",
+   "price": 353500,
+   "ref_price": 350000.0,
+   "reason": "8위 · 모든 조건 통과 · 손절가 315,000원"
+  }
+ ],
  "dropped": 0,
  "issues": [],
  "approval": "auto",

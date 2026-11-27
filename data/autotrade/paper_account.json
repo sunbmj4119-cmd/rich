@@ -1,7 +1,56 @@
 {
  "cash": 9558312.424999999,
  "positions": {},
- "pending": [],
+ "pending": [
+  {
+   "side": "buy",
+   "code": "001450",
+   "qty": 27,
+   "kind": "limit",
+   "limit": 34500,
+   "date": "2026-11-27"
+  },
+  {
+   "side": "buy",
+   "code": "088350",
+   "qty": 260,
+   "kind": "limit",
+   "limit": 3675,
+   "date": "2026-11-27"
+  },
+  {
+   "side": "buy",
+   "code": "402340",
+   "qty": 1,
+   "kind": "limit",
+   "limit": 693000,
+   "date": "2026-11-27"
+  },
+  {
+   "side": "buy",
+   "code": "267250",
+   "qty": 7,
+   "kind": "limit",
+   "limit": 120200,
+   "date": "2026-11-27"
+  },
+  {
+   "side": "buy",
+   "code": "005830",
+   "qty": 5,
+   "kind": "limit",
+   "limit": 162800,
+   "date": "2026-11-27"
+  },
+  {
+   "side": "buy",
+   "code": "002380",
+   "qty": 2,
+   "kind": "limit",
+   "limit": 353500,
+   "date": "2026-11-27"
+  }
+ ],
  "fills": [
   {
    "side": "buy",

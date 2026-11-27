@@ -1,45 +1,31 @@
 {
- "made": "2026-11-25",
+ "made": "2026-11-27",
  "model": "S:MOM:10:BAND:none",
  "orders": [
   {
    "side": "sell",
-   "code": "TMO",
-   "qty": 1.0712,
-   "est_price": 685.52,
-   "sleeve": "us"
-  },
-  {
-   "side": "sell",
-   "code": "LLY",
-   "qty": 0.519,
-   "est_price": 1392.22,
+   "code": "DHR",
+   "qty": 3.1298,
+   "est_price": 228.89,
    "sleeve": "us"
   },
   {
    "side": "buy",
-   "code": "AMGN",
-   "usd": 723.51,
-   "est_price": 469.24,
-   "sleeve": "us"
-  },
-  {
-   "side": "buy",
-   "code": "DIS",
-   "usd": 723.51,
-   "est_price": 125.6,
+   "code": "MA",
+   "usd": 724.72,
+   "est_price": 667.04,
    "sleeve": "us"
   }
  ],
- "equity_usd": 7235.08,
+ "equity_usd": 7247.2,
  "target": [
   "ABBV",
   "AMGN",
   "BRK-B",
-  "DHR",
   "DIS",
   "GILD",
   "KO",
+  "MA",
   "MDT",
   "PG",
   "TGT"
@@ -51,40 +37,40 @@
   ],
   "sleeves": {
    "us": {
-    "days": 20,
-    "sr_star": 0.523,
-    "vol_star": 0.185,
+    "days": 21,
+    "sr_star": 0.521,
+    "vol_star": 0.1849,
     "review": false,
     "action": "ACTIVE",
     "size": 1.0,
     "why": [
-     "정상 — 감쇠 누적 12% (100% 면 경보) · 낙폭 -6.0% (경고선 -9.6%)"
+     "정상 — 감쇠 누적 11% (100% 면 경보) · 낙폭 -6.0% (경고선 -9.9%)"
     ],
     "cusum": {
-     "S": 0.1278,
-     "h": 1.0876,
-     "level": 0.117,
+     "S": 0.1231,
+     "h": 1.0842,
+     "level": 0.114,
      "alarms": 0,
      "last_alarm_idx": null,
-     "detect_days_if_zero": 829,
+     "detect_days_if_zero": 831,
      "false_alarm_years": 7.0
     },
     "dd": {
      "now": -0.0605,
-     "p95": -0.0962,
-     "p99": -0.1295
+     "p95": -0.0992,
+     "p99": -0.1299
     },
     "expect": {
-     "sr_bt": 1.047,
-     "vol": 0.185,
+     "sr_bt": 1.043,
+     "vol": 0.1849,
      "src": "미국 추세 상위 10 2016~",
-     "sr_star": 0.523
+     "sr_star": 0.521
     }
    }
   },
   "log": [],
-  "orders_before": 4,
-  "orders_after": 4,
+  "orders_before": 2,
+  "orders_after": 2,
   "limits": {
    "decay_action": "alert",
    "drawdown_action": "alert",
